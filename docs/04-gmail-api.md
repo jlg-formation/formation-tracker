@@ -50,7 +50,7 @@ L'application utilise l'API Gmail pour récupérer les emails d'ORSYS. L'authent
 ### Configuration
 
 ```typescript
-// src/services/gmail/config.ts
+// project/src/services/gmail/config.ts
 
 // Client ID par défaut (jlg-formation), peut être remplacé par l'utilisateur
 export const DEFAULT_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -73,7 +73,7 @@ export function getGmailConfig() {
 ### Initialisation de l'API Google
 
 ```typescript
-// src/services/gmail/auth.ts
+// project/src/services/gmail/auth.ts
 
 import { GMAIL_CONFIG } from "./config";
 
@@ -154,7 +154,7 @@ const GMAIL_QUERY = "from:orsys.fr after:2014/01/01";
 ### Listing des messages
 
 ```typescript
-// src/services/gmail/api.ts
+// project/src/services/gmail/api.ts
 
 interface GmailMessage {
   id: string;
@@ -314,7 +314,7 @@ export function extractEmailHeaders(message: GmailFullMessage): {
 ### Structure de la base
 
 ```typescript
-// src/stores/db.ts
+// project/src/stores/db.ts
 
 import Dexie, { Table } from "dexie";
 import { EmailRaw, Formation, GeocacheEntry, AppSettings } from "../types";

@@ -28,15 +28,18 @@ Tu es un développeur expert React/TypeScript. Ce prompt est **itératif et idem
 
 **Critères de complétion :**
 
-- [ ] `package.json` existe avec React, TypeScript, Vite
-- [ ] `vite.config.ts` configuré
-- [ ] `src/main.tsx` existe
-- [ ] `src/App.tsx` existe
-- [ ] `bun run dev` fonctionne
+- [ ] Répertoire `project/` existe
+- [ ] `project/package.json` existe avec React, TypeScript, Vite
+- [ ] `project/vite.config.ts` configuré
+- [ ] `project/src/main.tsx` existe
+- [ ] `project/src/App.tsx` existe
+- [ ] `bun run dev` fonctionne (depuis project/)
 
 **Actions si incomplet :**
 
 ```bash
+mkdir project
+cd project
 bun create vite . --template react-ts
 bun install
 ```
@@ -51,8 +54,8 @@ Configurer `vite.config.ts` avec base pour GitHub Pages.
 
 - [ ] `vitest` dans les devDependencies
 - [ ] `@testing-library/react` et `@testing-library/jest-dom` installés
-- [ ] `vitest.config.ts` configuré
-- [ ] `src/test/setup.ts` existe (setup testing-library)
+- [ ] `project/vitest.config.ts` configuré
+- [ ] `project/src/test/setup.ts` existe (setup testing-library)
 - [ ] Script `"test": "vitest"` dans package.json
 - [ ] Script `"test:coverage": "vitest run --coverage"` dans package.json
 - [ ] `bun run test` fonctionne (même sans tests)
@@ -60,10 +63,11 @@ Configurer `vite.config.ts` avec base pour GitHub Pages.
 **Actions si incomplet :**
 
 ```bash
+cd project
 bun add -d vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom @vitest/coverage-v8
 ```
 
-Créer `vitest.config.ts` :
+Créer `project/vitest.config.ts` :
 
 ```typescript
 import { defineConfig } from "vitest/config";
@@ -84,7 +88,7 @@ export default defineConfig({
 });
 ```
 
-Créer `src/test/setup.ts` :
+Créer `project/src/test/setup.ts` :
 
 ```typescript
 import "@testing-library/jest-dom";
@@ -96,19 +100,19 @@ import "@testing-library/jest-dom";
 
 **Critères de complétion :**
 
-- [ ] `src/types/index.ts` existe avec tous les types de `docs/02-data-model.ts`
-- [ ] `src/services/` dossier créé
-- [ ] `src/components/` dossier créé
-- [ ] `src/stores/` dossier créé
-- [ ] `src/hooks/` dossier créé
-- [ ] `src/utils/` dossier créé
-- [ ] `src/types/index.test.ts` avec tests de validation des enums
+- [ ] `project/src/types/index.ts` existe avec tous les types de `docs/02-data-model.ts`
+- [ ] `project/src/services/` dossier créé
+- [ ] `project/src/components/` dossier créé
+- [ ] `project/src/stores/` dossier créé
+- [ ] `project/src/hooks/` dossier créé
+- [ ] `project/src/utils/` dossier créé
+- [ ] `project/src/types/index.test.ts` avec tests de validation des enums
 
 **Actions si incomplet :**
 
 1. Créer la structure de dossiers
-2. Copier les types depuis `docs/02-data-model.ts` vers `src/types/index.ts`
-3. Créer `src/utils/constants.ts` avec les constantes de base
+2. Copier les types depuis `docs/02-data-model.ts` vers `project/src/types/index.ts`
+3. Créer `project/src/utils/constants.ts` avec les constantes de base
 4. Créer tests pour les fonctions utilitaires (generateId, getFormationKey)
 
 ---
@@ -118,14 +122,15 @@ import "@testing-library/jest-dom";
 **Critères de complétion :**
 
 - [ ] `dexie` dans les dépendances
-- [ ] `src/stores/db.ts` existe avec schéma Dexie
+- [ ] `project/src/stores/db.ts` existe avec schéma Dexie
 - [ ] Tables : `emails`, `formations`, `geocache`, `settings`
-- [ ] `src/stores/formationsStore.ts` avec fonctions CRUD basiques
-- [ ] `src/stores/formationsStore.test.ts` avec tests CRUD (utiliser fake-indexeddb)
+- [ ] `project/src/stores/formationsStore.ts` avec fonctions CRUD basiques
+- [ ] `project/src/stores/formationsStore.test.ts` avec tests CRUD (utiliser fake-indexeddb)
 
 **Actions si incomplet :**
 
 ```bash
+cd project
 bun add dexie
 bun add -d fake-indexeddb
 ```
@@ -145,14 +150,15 @@ import "fake-indexeddb/auto";
 **Critères de complétion :**
 
 - [ ] `react-router-dom` dans les dépendances
-- [ ] `src/components/layout/Header.tsx` existe
-- [ ] `src/components/layout/Footer.tsx` existe
-- [ ] `src/App.tsx` avec routes : `/`, `/carte`, `/formations`, `/parametres`
+- [ ] `project/src/components/layout/Header.tsx` existe
+- [ ] `project/src/components/layout/Footer.tsx` existe
+- [ ] `project/src/App.tsx` avec routes : `/`, `/carte`, `/formations`, `/parametres`
 - [ ] Navigation fonctionnelle entre les pages
 
 **Actions si incomplet :**
 
 ```bash
+cd project
 bun add react-router-dom
 ```
 
@@ -164,12 +170,12 @@ Créer les composants layout et configurer le router.
 
 **Critères de complétion :**
 
-- [ ] `src/components/settings/SettingsPage.tsx` existe
+- [ ] `project/src/components/settings/SettingsPage.tsx` existe
 - [ ] Formulaire pour saisir la clé API OpenAI
 - [ ] Formulaire pour choisir le provider de géocodage
 - [ ] Stockage dans IndexedDB via `settingsStore`
 - [ ] Hook `useSettings()` pour récupérer les paramètres
-- [ ] `src/hooks/useSettings.test.ts` avec tests du hook
+- [ ] `project/src/hooks/useSettings.test.ts` avec tests du hook
 
 **Actions si incomplet :**
 Créer la page paramètres selon `docs/06-ui-specs.md`.
@@ -180,8 +186,8 @@ Créer la page paramètres selon `docs/06-ui-specs.md`.
 
 **Critères de complétion :**
 
-- [ ] `src/services/gmail/auth.ts` existe
-- [ ] `src/services/gmail/api.ts` existe
+- [ ] `project/src/services/gmail/auth.ts` existe
+- [ ] `project/src/services/gmail/api.ts` existe
 - [ ] Intégration Google Identity Services (GIS)
 - [ ] Bouton "Se connecter avec Gmail" fonctionnel
 - [ ] Token stocké dans IndexedDB
@@ -196,7 +202,7 @@ Utiliser `accounts.google.com/gsi/client` pour OAuth côté client.
 
 **Critères de complétion :**
 
-- [ ] `src/components/extraction/ExtractionPanel.tsx` existe
+- [ ] `project/src/components/extraction/ExtractionPanel.tsx` existe
 - [ ] Query Gmail : `from:orsys.fr`
 - [ ] Emails stockés dans IndexedDB (table `emails`)
 - [ ] Barre de progression pendant l'extraction
@@ -211,10 +217,10 @@ Créer le panneau d'extraction avec appels Gmail API selon `docs/04-gmail-api.md
 
 **Critères de complétion :**
 
-- [ ] `src/services/llm/parser.ts` existe
-- [ ] `src/services/llm/prompts.ts` avec prompts de classification
+- [ ] `project/src/services/llm/parser.ts` existe
+- [ ] `project/src/services/llm/prompts.ts` avec prompts de classification
 - [ ] Fonction `classifyEmail(email)` → `TypeEmail`
-- [ ] `src/services/llm/parser.test.ts` avec mocks OpenAI
+- [ ] `project/src/services/llm/parser.test.ts` avec mocks OpenAI
 - [ ] Tests avec exemples de `input/emails-samples/`
 
 **Actions si incomplet :**
@@ -247,9 +253,9 @@ Compléter le service LLM avec l'extraction selon `docs/03-llm-prompts.md`.
 
 **Critères de complétion :**
 
-- [ ] `src/services/geocoding/adapter.ts` interface
-- [ ] `src/services/geocoding/nominatim.ts` implémentation
-- [ ] `src/services/geocoding/geocoding.test.ts` avec tests (mocker fetch)
+- [ ] `project/src/services/geocoding/adapter.ts` interface
+- [ ] `project/src/services/geocoding/nominatim.ts` implémentation
+- [ ] `project/src/services/geocoding/geocoding.test.ts` avec tests (mocker fetch)
 - [ ] Cache des résultats dans IndexedDB (table `geocache`)
 - [ ] Rate limiting (1 req/s pour Nominatim)
 
@@ -262,8 +268,8 @@ Créer le service géocodage selon `docs/05-geocoding.md`.
 
 **Critères de complétion :**
 
-- [ ] `src/utils/fusion.ts` existe
-- [ ] `src/utils/fusion.test.ts` avec tests complèts
+- [ ] `project/src/utils/fusion.ts` existe
+- [ ] `project/src/utils/fusion.test.ts` avec tests complèts
 - [ ] Fusion des emails relatifs à la même formation
 - [ ] Clé unique : `codeEtendu + dateDebut`
 - [ ] Gestion annulations (met à jour statut)
@@ -283,11 +289,11 @@ Créer la logique de fusion des formations.
 
 **Critères de complétion :**
 
-- [ ] `src/components/dashboard/Dashboard.tsx` existe
-- [ ] `src/components/dashboard/StatsCards.tsx` avec 4 KPI
+- [ ] `project/src/components/dashboard/Dashboard.tsx` existe
+- [ ] `project/src/components/dashboard/StatsCards.tsx` avec 4 KPI
 - [ ] Hook `useFormations()` pour récupérer les données
-- [ ] `src/utils/stats.ts` avec calcul des statistiques
-- [ ] `src/utils/stats.test.ts` avec tests des calculs
+- [ ] `project/src/utils/stats.ts` avec calcul des statistiques
+- [ ] `project/src/utils/stats.test.ts` avec tests des calculs
 
 **Actions si incomplet :**
 Créer le dashboard selon `docs/06-ui-specs.md`.
@@ -299,13 +305,14 @@ Créer le dashboard selon `docs/06-ui-specs.md`.
 **Critères de complétion :**
 
 - [ ] `d3` dans les dépendances
-- [ ] `src/components/dashboard/YearlyChart.tsx` (bar chart par année)
-- [ ] `src/components/dashboard/TopCoursesChart.tsx` (top 10 formations)
-- [ ] `src/components/dashboard/TypePieChart.tsx` (inter vs intra)
+- [ ] `project/src/components/dashboard/YearlyChart.tsx` (bar chart par année)
+- [ ] `project/src/components/dashboard/TopCoursesChart.tsx` (top 10 formations)
+- [ ] `project/src/components/dashboard/TypePieChart.tsx` (inter vs intra)
 
 **Actions si incomplet :**
 
 ```bash
+cd project
 bun add d3 @types/d3
 ```
 
@@ -318,7 +325,7 @@ Créer les graphiques D3.js.
 **Critères de complétion :**
 
 - [ ] `leaflet` et `react-leaflet` dans les dépendances
-- [ ] `src/components/map/MapView.tsx` existe
+- [ ] `project/src/components/map/MapView.tsx` existe
 - [ ] Marqueurs pour chaque lieu de formation
 - [ ] Clustering des marqueurs (Leaflet.markercluster)
 - [ ] Popup avec détails de la formation
@@ -326,6 +333,7 @@ Créer les graphiques D3.js.
 **Actions si incomplet :**
 
 ```bash
+cd project
 bun add leaflet react-leaflet leaflet.markercluster @types/leaflet
 ```
 
@@ -337,9 +345,9 @@ Créer la carte selon `docs/06-ui-specs.md`.
 
 **Critères de complétion :**
 
-- [ ] `src/components/formations/FormationList.tsx` existe
-- [ ] `src/components/formations/FormationCard.tsx`
-- [ ] `src/components/formations/Filters.tsx`
+- [ ] `project/src/components/formations/FormationList.tsx` existe
+- [ ] `project/src/components/formations/FormationCard.tsx`
+- [ ] `project/src/components/formations/Filters.tsx`
 - [ ] Filtres par année, type, statut
 - [ ] Recherche textuelle
 
@@ -353,15 +361,16 @@ Créer la liste des formations selon `docs/06-ui-specs.md`.
 **Critères de complétion :**
 
 - [ ] `jspdf` dans les dépendances
-- [ ] `src/services/export/json.ts`
-- [ ] `src/services/export/csv.ts`
-- [ ] `src/services/export/pdf.ts`
-- [ ] `src/services/export/export.test.ts` (tests JSON et CSV)
+- [ ] `project/src/services/export/json.ts`
+- [ ] `project/src/services/export/csv.ts`
+- [ ] `project/src/services/export/pdf.ts`
+- [ ] `project/src/services/export/export.test.ts` (tests JSON et CSV)
 - [ ] Boutons d'export dans le dashboard
 
 **Actions si incomplet :**
 
 ```bash
+cd project
 bun add jspdf
 ```
 
@@ -390,11 +399,11 @@ Finaliser l'application et préparer le déploiement.
 
 Pour déterminer l'étape courante, vérifie dans cet ordre :
 
-1. `package.json` existe ? → Sinon étape 0
-2. `vitest.config.ts` existe ? → Sinon étape 1
-3. `src/types/index.ts` existe ? → Sinon étape 2
-4. `src/stores/db.ts` existe ? → Sinon étape 3
-5. `src/components/layout/Header.tsx` existe ? → Sinon étape 4
+1. `project/package.json` existe ? → Sinon étape 0
+2. `project/vitest.config.ts` existe ? → Sinon étape 1
+3. `project/src/types/index.ts` existe ? → Sinon étape 2
+4. `project/src/stores/db.ts` existe ? → Sinon étape 3
+5. `project/src/components/layout/Header.tsx` existe ? → Sinon étape 4
 6. Continue ainsi jusqu'à trouver la première étape incomplète
 
 Vérifie aussi que les **tests correspondants existent** pour chaque module.

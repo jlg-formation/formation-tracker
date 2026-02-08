@@ -76,7 +76,7 @@ ORSYS Training Tracker est une **Single Page Application (SPA)** React qui perme
 ## Structure des composants React
 
 ```
-src/
+project/src/
 ├── main.tsx                    # Point d'entrée
 ├── App.tsx                     # Router principal
 │

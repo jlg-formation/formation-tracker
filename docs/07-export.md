@@ -62,7 +62,7 @@ L'application permet d'exporter les données des formations dans 3 formats :
 ### Implémentation
 
 ```typescript
-// src/services/export/json.ts
+// project/src/services/export/json.ts
 
 import { ExportData, Formation } from "../../types";
 import { db } from "../../stores/db";
@@ -121,7 +121,7 @@ ID,Code,Titre,Statut,Date Debut,Date Fin,Jours,Lieu,Adresse,Type,Niveau,Particip
 ### Implémentation
 
 ```typescript
-// src/services/export/csv.ts
+// project/src/services/export/csv.ts
 
 import { Formation } from "../../types";
 
@@ -245,7 +245,7 @@ function downloadFile(
 ### Implémentation
 
 ```typescript
-// src/services/export/pdf.ts
+// project/src/services/export/pdf.ts
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -393,7 +393,7 @@ bun add jspdf jspdf-autotable
 ### Réimporter un fichier JSON
 
 ```typescript
-// src/services/export/import.ts
+// project/src/services/export/import.ts
 
 import { ExportData, Formation } from "../../types";
 import { db } from "../../stores/db";

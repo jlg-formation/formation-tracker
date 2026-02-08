@@ -15,7 +15,7 @@ L'application utilise un **Adapter Pattern** permettant de switcher facilement e
 ## Interface Adapter
 
 ```typescript
-// src/services/geocoding/adapter.ts
+// project/src/services/geocoding/adapter.ts
 
 import { CoordonneesGPS } from "../../types";
 
@@ -42,7 +42,7 @@ export interface GeocodingAdapter {
 ## Implémentation Nominatim (OpenStreetMap)
 
 ```typescript
-// src/services/geocoding/nominatim.ts
+// project/src/services/geocoding/nominatim.ts
 
 import { GeocodingAdapter, GeocodingResult } from "./adapter";
 
@@ -123,7 +123,7 @@ export const nominatimAdapter: GeocodingAdapter = {
 ## Implémentation Google Geocoding
 
 ```typescript
-// src/services/geocoding/google.ts
+// project/src/services/geocoding/google.ts
 
 import { GeocodingAdapter, GeocodingResult } from "./adapter";
 import { db } from "../../stores/db";
@@ -190,7 +190,7 @@ export const googleAdapter: GeocodingAdapter = {
 ## Implémentation Mapbox
 
 ```typescript
-// src/services/geocoding/mapbox.ts
+// project/src/services/geocoding/mapbox.ts
 
 import { GeocodingAdapter, GeocodingResult } from "./adapter";
 import { db } from "../../stores/db";
@@ -250,7 +250,7 @@ export const mapboxAdapter: GeocodingAdapter = {
 ## Service de géocodage avec cache
 
 ```typescript
-// src/services/geocoding/index.ts
+// project/src/services/geocoding/index.ts
 
 import { GeocodingAdapter, GeocodingResult } from "./adapter";
 import { nominatimAdapter } from "./nominatim";
@@ -333,7 +333,7 @@ export async function geocodeBatch(
 Pour les lieux ORSYS fréquents, on peut pré-remplir le cache :
 
 ```typescript
-// src/services/geocoding/known-locations.ts
+// project/src/services/geocoding/known-locations.ts
 
 import { db } from "../../stores/db";
 

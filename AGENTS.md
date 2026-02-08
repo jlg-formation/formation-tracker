@@ -52,13 +52,20 @@ orsys-gmail/
 │       ├── confirmation-inter.txt
 │       ├── confirmation-intra.txt
 │       └── info-facturation.txt
-└── src/                        # Code source (à créer)
-    ├── components/             # Composants React
-    ├── services/               # Services (Gmail, LLM, Geocoding, Export)
-    ├── stores/                 # IndexedDB et state management
-    ├── hooks/                  # Custom hooks React
-    ├── types/                  # Types TypeScript partagés
-    └── utils/                  # Utilitaires
+└── project/                    # Projet technique (code source)
+    ├── src/                    # Code source React
+    │   ├── components/         # Composants React
+    │   ├── services/           # Services (Gmail, LLM, Geocoding, Export)
+    │   ├── stores/             # IndexedDB et state management
+    │   ├── hooks/              # Custom hooks React
+    │   ├── types/              # Types TypeScript partagés
+    │   └── utils/              # Utilitaires
+    ├── public/                 # Fichiers statiques
+    ├── index.html
+    ├── package.json
+    ├── vite.config.ts
+    ├── vitest.config.ts
+    └── tsconfig.json
 ```
 
 ---
@@ -67,12 +74,12 @@ orsys-gmail/
 
 Avant de modifier le code, **consulter obligatoirement** :
 
-| Fichier                                            | Contenu                                                     |
-| -------------------------------------------------- | ----------------------------------------------------------- |
-| [docs/01-architecture.md](docs/01-architecture.md) | Architecture, flux de données, structure composants         |
-| [docs/02-data-model.ts](docs/02-data-model.ts)     | **Types TypeScript complets** (à copier dans `/src/types/`) |
-| [docs/03-llm-prompts.md](docs/03-llm-prompts.md)   | Prompts LLM pour classification et extraction               |
-| [input/brief.md](input/brief.md)                   | Spécifications fonctionnelles complètes                     |
+| Fichier                                            | Contenu                                                             |
+| -------------------------------------------------- | ------------------------------------------------------------------- |
+| [docs/01-architecture.md](docs/01-architecture.md) | Architecture, flux de données, structure composants                 |
+| [docs/02-data-model.ts](docs/02-data-model.ts)     | **Types TypeScript complets** (à copier dans `/project/src/types/`) |
+| [docs/03-llm-prompts.md](docs/03-llm-prompts.md)   | Prompts LLM pour classification et extraction                       |
+| [input/brief.md](input/brief.md)                   | Spécifications fonctionnelles complètes                             |
 
 ---
 
@@ -128,8 +135,8 @@ Le type `Formation` (voir `docs/02-data-model.ts`) contient :
 ### Patterns architecturaux
 
 - **Adapter Pattern** pour le géocodage (3 providers interchangeables)
-- **Services** : Logique métier isolée dans `/services/`
-- **Stores** : Gestion IndexedDB via Dexie.js dans `/stores/`
+- **Services** : Logique métier isolée dans `/project/src/services/`
+- **Stores** : Gestion IndexedDB via Dexie.js dans `/project/src/stores/`
 
 ### Internationalisation
 
@@ -175,7 +182,11 @@ Le type `Formation` (voir `docs/02-data-model.ts`) contient :
 
 ## Commandes de développement
 
+Toutes les commandes doivent être exécutées depuis le répertoire `/project` :
+
 ```bash
+cd project
+
 # Installation des dépendances
 bun install
 

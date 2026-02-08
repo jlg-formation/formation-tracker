@@ -20,15 +20,17 @@ formation-tracker/
 │       └── deploy.yml          # GitHub Actions CI/CD
 ├── docs/                       # Documentation technique
 ├── input/                      # Brief et exemples emails
-├── public/
-│   └── favicon.ico
-├── src/                        # Code source
-├── .env.example                # Template variables d'environnement
+├── project/                    # Projet technique (code source)
+│   ├── public/
+│   │   └── favicon.ico
+│   ├── src/                    # Code source React
+│   ├── .env.example            # Template variables d'environnement
+│   ├── index.html
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   └── vitest.config.ts
 ├── .gitignore
-├── index.html
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
 └── README.md
 ```
 
@@ -36,7 +38,7 @@ formation-tracker/
 
 ## Configuration Vite
 
-### vite.config.ts
+### project/vite.config.ts
 
 ```typescript
 import { defineConfig } from "vite";
@@ -80,7 +82,7 @@ export default defineConfig({
 
 ## Configuration Vitest
 
-### vitest.config.ts
+### project/vitest.config.ts
 
 ```typescript
 import { defineConfig } from "vitest/config";
@@ -110,7 +112,7 @@ export default defineConfig({
 });
 ```
 
-### src/test/setup.ts
+### project/src/test/setup.ts
 
 ```typescript
 import "@testing-library/jest-dom";
@@ -120,6 +122,7 @@ import "fake-indexeddb/auto";
 ### Dépendances de test
 
 ```bash
+cd project
 bun add -d vitest @vitest/coverage-v8 @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom fake-indexeddb
 ```
 
@@ -144,7 +147,7 @@ bun add -d vitest @vitest/coverage-v8 @testing-library/react @testing-library/je
 
 ## Variables d'environnement
 
-### .env.example
+### project/.env.example
 
 ```env
 # Google OAuth Client ID (obligatoire)
@@ -154,7 +157,7 @@ VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 VITE_BASE_URL=/formation-tracker/
 ```
 
-### .env.local (développement)
+### project/.env.local (développement)
 
 ```env
 VITE_GOOGLE_CLIENT_ID=123456789.apps.googleusercontent.com
@@ -208,18 +211,23 @@ jobs:
 
       - name: Install dependencies
         run: bun install
+        working-directory: project
 
       - name: Type check
         run: bun run typecheck
+        working-directory: project
 
       - name: Test
         run: bun run test:run
+        working-directory: project
 
       - name: Lint
         run: bun run lint
+        working-directory: project
 
       - name: Build
         run: bun run build
+        working-directory: project
         env:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
 
@@ -229,7 +237,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: project/dist
 
   deploy:
     environment:
@@ -322,7 +330,11 @@ Dans Google Cloud Console :
 
 ## Commandes de développement
 
+Toutes les commandes sont à exécuter depuis le répertoire `project/` :
+
 ```bash
+cd project
+
 # Installation des dépendances
 bun install
 
@@ -349,7 +361,7 @@ bun run lint:fix
 
 GitHub Pages ne supporte pas le routing SPA par défaut. Solution : **404.html redirect trick**
 
-### public/404.html
+### project/public/404.html
 
 ```html
 <!DOCTYPE html>
@@ -372,7 +384,7 @@ GitHub Pages ne supporte pas le routing SPA par défaut. Solution : **404.html r
 </html>
 ```
 
-### Dans main.tsx
+### Dans project/src/main.tsx
 
 ```typescript
 // Récupérer la route stockée
@@ -422,7 +434,7 @@ export default defineConfig({
 ### Erreurs JavaScript
 
 ```typescript
-// src/main.tsx
+// project/src/main.tsx
 window.onerror = (message, source, lineno, colno, error) => {
   console.error("Global error:", { message, source, lineno, colno, error });
   // Optionnel : envoyer à un service de monitoring
