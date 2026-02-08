@@ -6,10 +6,11 @@ Tu es un développeur expert React/TypeScript. Ce prompt est **itératif et idem
 
 ### Principe de fonctionnement
 
-1. **Analyse l'état actuel** du projet en vérifiant quels fichiers/dossiers existent
-2. **Détermine l'étape courante** selon la checklist ci-dessous
+1. **Lis le fichier d'état** `project/.build-state.json` s'il existe
+2. **Détermine l'étape courante** selon le fichier d'état (ou vérifie les fichiers si absent)
 3. **Exécute UNIQUEMENT l'étape suivante** (pas plus)
-4. **Termine** en indiquant clairement ce qui a été fait et quelle est la prochaine étape
+4. **Met à jour le fichier d'état** avec le résultat de l'étape
+5. **Termine** en indiquant clairement ce qui a été fait et quelle est la prochaine étape
 
 ### Règles impératives
 
@@ -19,6 +20,65 @@ Tu es un développeur expert React/TypeScript. Ce prompt est **itératif et idem
 - **Tests unitaires obligatoires** - Chaque service/utilitaire doit avoir son fichier `.test.ts`
 - **Commit mental** - Chaque étape doit laisser le projet dans un état fonctionnel
 - **Français** - Tous les textes UI en français
+- **Fichier d'état** - Toujours mettre à jour `project/.build-state.json` après chaque étape
+
+---
+
+## Fichier d'état : `project/.build-state.json`
+
+Ce fichier JSON persiste l'état du projet entre les exécutions.
+
+### Structure
+
+```json
+{
+  "version": "1.0",
+  "currentStep": 3,
+  "lastUpdated": "2026-02-08T10:30:00.000Z",
+  "steps": {
+    "0": { "status": "completed", "completedAt": "2026-02-08T09:00:00.000Z" },
+    "1": { "status": "completed", "completedAt": "2026-02-08T09:15:00.000Z" },
+    "2": { "status": "completed", "completedAt": "2026-02-08T09:45:00.000Z" },
+    "3": { "status": "in-progress", "startedAt": "2026-02-08T10:00:00.000Z" },
+    "4": { "status": "not-started" }
+  },
+  "errors": [
+    {
+      "step": 2,
+      "timestamp": "2026-02-08T09:40:00.000Z",
+      "message": "Test failed: formationsStore.test.ts",
+      "resolved": true
+    }
+  ],
+  "filesCreated": ["project/src/types/index.ts", "project/src/stores/db.ts"]
+}
+```
+
+### Champs
+
+| Champ             | Description                                               |
+| ----------------- | --------------------------------------------------------- |
+| `version`         | Version du schéma (pour migrations futures)               |
+| `currentStep`     | Numéro de l'étape en cours ou à exécuter                  |
+| `lastUpdated`     | Timestamp ISO de la dernière mise à jour                  |
+| `steps`           | État de chaque étape (0-17)                               |
+| `steps[n].status` | `not-started` \| `in-progress` \| `completed` \| `failed` |
+| `errors`          | Historique des erreurs rencontrées                        |
+| `filesCreated`    | Liste des fichiers créés (pour rollback éventuel)         |
+
+### Workflow du fichier d'état
+
+1. **Au début** : Lire `project/.build-state.json`
+   - Si absent → Créer avec `currentStep: 0`
+   - Si présent → Reprendre à `currentStep`
+
+2. **Avant l'étape** : Marquer l'étape comme `in-progress`
+
+3. **Après l'étape** :
+   - Si succès → Marquer `completed`, incrémenter `currentStep`
+   - Si échec → Marquer `failed`, ajouter l'erreur dans `errors`
+
+4. **Toujours** : Mettre à jour `lastUpdated` et `filesCreated`
 
 ---
 
@@ -397,14 +457,42 @@ Finaliser l'application et préparer le déploiement.
 
 ## Commande d'analyse
 
-Pour déterminer l'étape courante, vérifie dans cet ordre :
+### 1. Vérifier le fichier d'état (prioritaire)
 
-1. `project/package.json` existe ? → Sinon étape 0
-2. `project/vitest.config.ts` existe ? → Sinon étape 1
-3. `project/src/types/index.ts` existe ? → Sinon étape 2
-4. `project/src/stores/db.ts` existe ? → Sinon étape 3
-5. `project/src/components/layout/Header.tsx` existe ? → Sinon étape 4
-6. Continue ainsi jusqu'à trouver la première étape incomplète
+```bash
+cat project/.build-state.json
+```
+
+Si le fichier existe, lire `currentStep` et reprendre à cette étape.
+
+### 2. Fallback : Analyse du système de fichiers
+
+Si le fichier d'état n'existe pas, déterminer l'étape par inspection :
+
+| Étape | Fichier à vérifier                                      |
+| ----- | ------------------------------------------------------- |
+| 0     | `project/package.json`                                  |
+| 1     | `project/vitest.config.ts`                              |
+| 2     | `project/src/types/index.ts`                            |
+| 3     | `project/src/stores/db.ts`                              |
+| 4     | `project/src/components/layout/Header.tsx`              |
+| 5     | `project/src/components/settings/SettingsPage.tsx`      |
+| 6     | `project/src/services/gmail/auth.ts`                    |
+| 7     | `project/src/components/extraction/ExtractionPanel.tsx` |
+| 8     | `project/src/services/llm/parser.ts`                    |
+| 9     | `project/src/services/llm/prompts.ts` (extraction)      |
+| 10    | `project/src/services/geocoding/nominatim.ts`           |
+| 11    | `project/src/utils/fusion.ts`                           |
+| 12    | `project/src/components/dashboard/Dashboard.tsx`        |
+| 13    | `project/src/components/dashboard/YearlyChart.tsx`      |
+| 14    | `project/src/components/map/MapView.tsx`                |
+| 15    | `project/src/components/formations/FormationList.tsx`   |
+| 16    | `project/src/services/export/pdf.ts`                    |
+| 17    | Tous les critères de finition                           |
+
+Après détermination, **créer le fichier d'état** avec l'étape trouvée.
+
+### 3. Vérifier les tests
 
 Vérifie aussi que les **tests correspondants existent** pour chaque module.
 
@@ -412,10 +500,36 @@ Vérifie aussi que les **tests correspondants existent** pour chaque module.
 
 ## Rapport de fin d'exécution
 
-À la fin de chaque exécution, affiche :
+À la fin de chaque exécution :
+
+### 1. Mettre à jour le fichier d'état
+
+```bash
+# Exemple après complétion de l'étape 3
+cat > project/.build-state.json << 'EOF'
+{
+  "version": "1.0",
+  "currentStep": 4,
+  "lastUpdated": "TIMESTAMP_ISO",
+  "steps": {
+    "0": { "status": "completed", "completedAt": "..." },
+    "1": { "status": "completed", "completedAt": "..." },
+    "2": { "status": "completed", "completedAt": "..." },
+    "3": { "status": "completed", "completedAt": "TIMESTAMP_ISO" },
+    "4": { "status": "not-started" }
+  },
+  "filesCreated": [...]
+}
+EOF
+```
+
+### 2. Afficher le rapport
 
 ```
 ## ✅ Étape [N] terminée : [Nom de l'étape]
+
+### Fichier d'état mis à jour :
+`project/.build-state.json` → currentStep: [N+1]
 
 ### Ce qui a été fait :
 - [Liste des fichiers créés/modifiés]
@@ -425,6 +539,54 @@ Vérifie aussi que les **tests correspondants existent** pour chaque module.
 
 ### Pour continuer :
 Relance ce prompt pour exécuter l'étape suivante.
+```
+
+### 3. En cas d'échec
+
+```
+## ❌ Étape [N] échouée : [Nom de l'étape]
+
+### Erreur :
+[Description de l'erreur]
+
+### Fichier d'état :
+`project/.build-state.json` → status: "failed"
+
+### Pour reprendre :
+Corrige l'erreur puis relance ce prompt.
+```
+
+---
+
+## Gestion du fichier d'état
+
+### Réinitialiser le projet (recommencer à zéro)
+
+```bash
+rm project/.build-state.json
+```
+
+### Forcer une étape spécifique
+
+Modifier manuellement `currentStep` dans le fichier JSON :
+
+```bash
+# Exemple : reprendre à l'étape 5
+jq '.currentStep = 5' project/.build-state.json > tmp.json && mv tmp.json project/.build-state.json
+```
+
+### Ignorer le fichier d'état dans Git (optionnel)
+
+Si tu veux que chaque développeur ait son propre état :
+
+```bash
+echo ".build-state.json" >> project/.gitignore
+```
+
+### Vérifier l'état actuel
+
+```bash
+cat project/.build-state.json | jq '.currentStep, .steps[.currentStep | tostring].status'
 ```
 
 ---
