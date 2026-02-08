@@ -154,6 +154,7 @@ Chaque formation extraite contiendra les informations suivantes :
 | Auth Gmail   | OAuth 2.0 interactif (popup Google)                     |
 | Cache        | IndexedDB (économie d'appels API Gmail)                 |
 | **Parsing**  | **LLM API (extraction structurée des emails)**          |
+| **Tests**    | **Vitest + Testing Library**                            |
 | Déploiement  | GitHub Pages (statique)                                 |
 | Langue UI    | Français uniquement                                     |
 
@@ -202,6 +203,21 @@ Selon le type détecté, le LLM extrait les données pertinentes en JSON conform
 ### Gestion des doublons
 
 - **Fusion intelligente** : En cas de plusieurs emails pour la même session, fusion des informations (priorité aux données les plus récentes/complètes)
+
+### Tests unitaires
+
+- **Framework** : Vitest
+- **Tests composants** : @testing-library/react + @testing-library/jest-dom
+- **Couverture cible** : > 70%
+- **Fichiers de test** : Co-localisés avec le code source (`*.test.ts` / `*.test.tsx`)
+
+| Module           | Tests obligatoires                             |
+| ---------------- | ---------------------------------------------- |
+| Services LLM     | Classification et extraction avec mocks OpenAI |
+| Stores IndexedDB | CRUD formations (avec fake-indexeddb)          |
+| Utils fusion     | Fusion emails, gestion annulations             |
+| Utils stats      | Calculs statistiques                           |
+| Services export  | Génération JSON/CSV                            |
 
 ### Export des données
 

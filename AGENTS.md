@@ -24,6 +24,7 @@ Extraire automatiquement les données de formation depuis les emails Gmail (doma
 | LLM            | OpenAI GPT-4o                             |
 | Géocodage      | Adapter pattern (Nominatim/Google/Mapbox) |
 | Export         | JSON, CSV, PDF (jsPDF)                    |
+| **Tests**      | **Vitest + Testing Library**              |
 | Déploiement    | GitHub Pages                              |
 | Langue UI      | Français uniquement                       |
 
@@ -140,6 +141,14 @@ Le type `Formation` (voir `docs/02-data-model.ts`) contient :
 - **ESLint** : Prévu (voir `docs/08-deployment.md`) mais **pas encore configuré**
 - **Prettier** : Non utilisé actuellement
 
+### Tests unitaires
+
+- **Vitest** : Framework de test compatible Vite
+- **Testing Library** : Tests composants React
+- **fake-indexeddb** : Mock IndexedDB pour tests stores
+- **Couverture** : Objectif > 70%
+- **Fichiers** : Co-localisés `*.test.ts` / `*.test.tsx`
+
 ---
 
 ## Points d'attention
@@ -172,6 +181,15 @@ bun install
 
 # Développement local
 bun run dev
+
+# Tests unitaires (watch mode)
+bun run test
+
+# Tests unitaires (une seule exécution)
+bun run test:run
+
+# Couverture de tests
+bun run test:coverage
 
 # Build production
 bun run build

@@ -78,6 +78,70 @@ export default defineConfig({
 
 ---
 
+## Configuration Vitest
+
+### vitest.config.ts
+
+```typescript
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: "./src/test/setup.ts",
+    include: ["src/**/*.test.{ts,tsx}"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html", "lcov"],
+      exclude: ["node_modules/", "src/test/", "**/*.d.ts", "src/main.tsx"],
+      thresholds: {
+        global: {
+          branches: 70,
+          functions: 70,
+          lines: 70,
+          statements: 70
+        }
+      }
+    }
+  }
+});
+```
+
+### src/test/setup.ts
+
+```typescript
+import "@testing-library/jest-dom";
+import "fake-indexeddb/auto";
+```
+
+### Dépendances de test
+
+```bash
+bun add -d vitest @vitest/coverage-v8 @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom fake-indexeddb
+```
+
+### Scripts package.json
+
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext ts,tsx"
+  }
+}
+```
+
+---
+
 ## Variables d'environnement
 
 ### .env.example
@@ -147,6 +211,9 @@ jobs:
 
       - name: Type check
         run: bun run typecheck
+
+      - name: Test
+        run: bun run test:run
 
       - name: Lint
         run: bun run lint

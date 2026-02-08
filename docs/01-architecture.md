@@ -157,18 +157,19 @@ src/
 
 ## Technologies
 
-| Couche      | Technologie             | Rôle             |
-| ----------- | ----------------------- | ---------------- |
-| Runtime     | Bun                     | Exécution, build |
-| Build       | Vite                    | Bundler, HMR     |
-| UI          | React 18                | Composants       |
-| Routing     | React Router            | Navigation SPA   |
-| State       | Zustand ou Context      | État global      |
-| Persistence | IndexedDB (Dexie.js)    | Stockage local   |
-| Charts      | D3.js                   | Graphiques       |
-| Maps        | Leaflet + React-Leaflet | Cartographie     |
-| PDF         | jsPDF                   | Export PDF       |
-| HTTP        | fetch                   | Appels API       |
+| Couche      | Technologie              | Rôle             |
+| ----------- | ------------------------ | ---------------- |
+| Runtime     | Bun                      | Exécution, build |
+| Build       | Vite                     | Bundler, HMR     |
+| UI          | React 18                 | Composants       |
+| Routing     | React Router             | Navigation SPA   |
+| State       | Zustand ou Context       | État global      |
+| Persistence | IndexedDB (Dexie.js)     | Stockage local   |
+| Charts      | D3.js                    | Graphiques       |
+| Maps        | Leaflet + React-Leaflet  | Cartographie     |
+| PDF         | jsPDF                    | Export PDF       |
+| HTTP        | fetch                    | Appels API       |
+| Tests       | Vitest + Testing Library | Tests unitaires  |
 
 ---
 
