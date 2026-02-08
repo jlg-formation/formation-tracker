@@ -4,17 +4,17 @@
 
 L'application est déployée sur **GitHub Pages** en tant que site statique.
 
-| Environnement | URL                                         | Branch     |
-| ------------- | ------------------------------------------- | ---------- |
-| Production    | `https://<username>.github.io/orsys-gmail/` | `gh-pages` |
-| Développement | `http://localhost:5173`                     | `main`     |
+| Environnement | URL                                                  | Branch     |
+| ------------- | ---------------------------------------------------- | ---------- |
+| Production    | `https://jlg-formation.github.io/formation-tracker/` | `gh-pages` |
+| Développement | `http://localhost:5173`                              | `master`   |
 
 ---
 
 ## Structure du projet
 
 ```
-orsys-gmail/
+formation-tracker/
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml          # GitHub Actions CI/CD
@@ -46,7 +46,7 @@ export default defineConfig({
   plugins: [react()],
 
   // Base URL pour GitHub Pages
-  base: "/orsys-gmail/",
+  base: "/formation-tracker/",
 
   build: {
     outDir: "dist",
@@ -87,7 +87,7 @@ export default defineConfig({
 VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 
 # URL de base (optionnel, pour développement)
-VITE_BASE_URL=/orsys-gmail/
+VITE_BASE_URL=/formation-tracker/
 ```
 
 ### .env.local (développement)
@@ -117,7 +117,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 permissions:
@@ -199,11 +199,11 @@ Dans Google Cloud Console :
 1. APIs & Services → Credentials → Votre OAuth Client
 2. Ajouter aux origines JavaScript autorisées :
    ```
-   https://<username>.github.io
+   https://jlg-formation.github.io
    ```
 3. Ajouter aux URIs de redirection :
    ```
-   https://<username>.github.io/orsys-gmail/
+   https://jlg-formation.github.io/formation-tracker/
    ```
 
 ---
@@ -212,7 +212,7 @@ Dans Google Cloud Console :
 
 ```json
 {
-  "name": "orsys-gmail",
+  "name": "formation-tracker",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -289,11 +289,11 @@ GitHub Pages ne supporte pas le routing SPA par défaut. Solution : **404.html r
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>ORSYS Training Tracker</title>
+    <title>Formation Tracker</title>
     <script>
       // Redirect vers index.html avec le path en query param
       const path = window.location.pathname;
-      const base = "/orsys-gmail";
+      const base = "/formation-tracker";
       if (path.startsWith(base)) {
         const route = path.slice(base.length) || "/";
         sessionStorage.setItem("redirect", route);

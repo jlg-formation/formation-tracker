@@ -262,6 +262,8 @@ export interface GeocacheEntry {
 export interface AppSettings {
   /** Clé API OpenAI */
   openaiApiKey?: string;
+  /** Client ID Google OAuth (optionnel, valeur par défaut fournie) */
+  googleClientId?: string;
   /** Provider de géocodage actif */
   geocodingProvider: "nominatim" | "google" | "mapbox";
   /** Clé API Google (si provider = google) */

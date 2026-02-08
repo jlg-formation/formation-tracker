@@ -18,13 +18,13 @@ L'application utilise l'API Gmail pour récupérer les emails d'ORSYS. L'authent
 
 1. APIs & Services → Credentials → Create Credentials → OAuth client ID
 2. Type d'application : **Web application**
-3. Nom : `ORSYS Training Tracker`
+3. Nom : `Formation Tracker`
 4. Origines JavaScript autorisées :
    - `http://localhost:5173` (dev)
-   - `https://<username>.github.io` (prod)
+   - `https://jlg-formation.github.io` (prod)
 5. URIs de redirection autorisées :
    - `http://localhost:5173` (dev)
-   - `https://<username>.github.io/orsys-gmail` (prod)
+   - `https://jlg-formation.github.io/formation-tracker/` (prod)
 
 ### 3. Écran de consentement OAuth
 
@@ -52,11 +52,22 @@ L'application utilise l'API Gmail pour récupérer les emails d'ORSYS. L'authent
 ```typescript
 // src/services/gmail/config.ts
 
-export const GMAIL_CONFIG = {
-  clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-  scopes: ["https://www.googleapis.com/auth/gmail.readonly"],
-  discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest"]
-};
+// Client ID par défaut (jlg-formation), peut être remplacé par l'utilisateur
+export const DEFAULT_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+export function getGmailConfig() {
+  // Priorité : localStorage > variable d'env > défaut
+  const clientId =
+    localStorage.getItem("google_client_id") || DEFAULT_GOOGLE_CLIENT_ID;
+
+  return {
+    clientId,
+    scopes: ["https://www.googleapis.com/auth/gmail.readonly"],
+    discoveryDocs: [
+      "https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest"
+    ]
+  };
+}
 ```
 
 ### Initialisation de l'API Google
