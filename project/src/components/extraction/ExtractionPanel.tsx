@@ -16,7 +16,8 @@ import {
 import {
   analyzeEmailBatchWithCache,
   isLLMError,
-  type AnalysisAbortSignal
+  type AnalysisAbortSignal,
+  type ExtractionResult
 } from "../../services/llm";
 import { fusionnerEmails, type FusionInput } from "../../utils/fusion";
 import { db } from "../../stores/db";
@@ -105,6 +106,14 @@ export function ExtractionPanel() {
     setUnprocessedCount(unprocessed);
     setFormationsCount(formations);
     setCacheCount(cache);
+  }, []);
+
+  // Rafraîchir uniquement le compteur des non-analysés (pour mise à jour temps réel)
+  const refreshUnprocessedCount = useCallback(async () => {
+    const unprocessed = await db.emails
+      .filter((e) => e.processed === false)
+      .count();
+    setUnprocessedCount(unprocessed);
   }, []);
 
   useEffect(() => {
@@ -357,6 +366,16 @@ export function ExtractionPanel() {
           body: email.body
         }));
 
+        // Map pour stocker les résultats d'extraction pour le batch de fusion
+        const extractionResults = new Map<
+          string,
+          {
+            email: EmailRaw;
+            classification: { type: TypeEmail; confidence: number };
+            extraction: ExtractionResult;
+          }
+        >();
+
         // Analyser les emails avec cache et support d'interruption
         const { results, stats } = await analyzeEmailBatchWithCache(
           emailInputs,
@@ -364,7 +383,7 @@ export function ExtractionPanel() {
           {
             useCache: true,
             abortSignal: abortSignalRef.current,
-            delayBetweenCalls: 500,
+            delayBetweenCalls: settings.llmDelayMs ?? 3000,
             onProgress: (current, total, progressStats) => {
               fromCacheCount =
                 (resumeFromPause ? previousState.fromCache : 0) +
@@ -382,6 +401,54 @@ export function ExtractionPanel() {
                 emailsEnErreur: progressStats.errors,
                 message: `Analyse ${current}/${total}... (${progressStats.fromCache} en cache, ${progressStats.fromLLM} LLM)`
               }));
+            },
+            // Callback appelé immédiatement après chaque email analysé
+            onEmailProcessed: async (emailId, analyzeResult) => {
+              const email = emailsToAnalyze.find((e) => e.id === emailId);
+              if (!email) return;
+
+              // NE PAS marquer comme traité si erreur (ex: 429, timeout, etc.)
+              // L'email sera réanalysé lors de la prochaine tentative
+              if (analyzeResult.error) {
+                console.warn(
+                  `Email ${emailId} en erreur, ne sera pas marqué comme traité:`,
+                  analyzeResult.error
+                );
+                return;
+              }
+
+              const classification = analyzeResult.classification;
+              const extraction = analyzeResult.extraction;
+
+              // Marquer comme traité uniquement si l'analyse a réussi
+              const emailToMark = await db.emails.get(emailId);
+              if (emailToMark) {
+                await db.emails.put({ ...emailToMark, processed: true });
+                // Rafraîchir le compteur des emails non analysés en temps réel
+                await refreshUnprocessedCount();
+              }
+
+              // Ignorer les emails non pertinents
+              if (
+                classification.type === TypeEmail.AUTRE ||
+                classification.type === TypeEmail.RAPPEL ||
+                classification.confidence < 0.7
+              ) {
+                ignoredCount++;
+                return;
+              }
+
+              // Stocker pour le batch de fusion
+              if (extraction) {
+                extractionResults.set(emailId, {
+                  email,
+                  classification: {
+                    type: classification.type,
+                    confidence: classification.confidence
+                  },
+                  extraction
+                });
+              }
             }
           }
         );
@@ -392,61 +459,30 @@ export function ExtractionPanel() {
         fromLLMCount =
           (resumeFromPause ? previousState.fromLLM : 0) + stats.fromLLM;
 
-        // Traiter les résultats
-        let batchCount = 0;
-        for (const [emailId, analyzeResult] of results) {
-          const email = emailsToAnalyze.find((e) => e.id === emailId);
-          if (!email) continue;
-
-          // Si l'analyse a été interrompue
-          if (stats.aborted) {
-            // Garder les emails restants pour reprise
-            const processedIds = new Set(results.keys());
-            pendingEmailsRef.current = emailsToAnalyze.filter(
-              (e) =>
-                !processedIds.has(e.id) || !results.get(e.id)?.classification
-            );
-            break;
-          }
-
-          const classification = analyzeResult.classification;
-          const extraction = analyzeResult.extraction;
-
-          // Ignorer les emails non pertinents
-          if (
-            classification.type === TypeEmail.AUTRE ||
-            classification.type === TypeEmail.RAPPEL ||
-            classification.confidence < 0.7
-          ) {
-            ignoredCount++;
-            await db.emails.update(emailId, { processed: true });
-            continue;
-          }
-
-          // Ajouter au batch de fusion si extraction disponible
-          if (extraction) {
-            fusionInputs.push({
-              email,
-              extraction,
-              classification: {
-                type: classification.type,
-                confidence: classification.confidence
-              }
-            });
-          }
-
-          // Marquer comme traité
-          await db.emails.update(emailId, { processed: true });
-          batchCount++;
+        // Traiter les résultats de fusion en batch
+        for (const [, data] of extractionResults) {
+          fusionInputs.push({
+            email: data.email,
+            extraction: data.extraction,
+            classification: data.classification
+          });
 
           // Sauvegarder par batch
-          if (batchCount % BATCH_SIZE === 0 && fusionInputs.length > 0) {
+          if (fusionInputs.length >= BATCH_SIZE) {
             setAnalysisState((prev) => ({
               ...prev,
               message: `Sauvegarde des formations...`
             }));
             await saveFormationsBatch();
           }
+        }
+
+        // Si l'analyse a été interrompue, garder les emails restants pour reprise
+        if (stats.aborted) {
+          const processedIds = new Set(results.keys());
+          pendingEmailsRef.current = emailsToAnalyze.filter(
+            (e) => !processedIds.has(e.id)
+          );
         }
 
         // Sauvegarder le dernier batch
@@ -528,7 +564,7 @@ export function ExtractionPanel() {
         }));
       }
     },
-    [analysisState, refreshCounts]
+    [analysisState, refreshCounts, refreshUnprocessedCount]
   );
 
   /**
@@ -611,9 +647,16 @@ export function ExtractionPanel() {
           {unprocessedCount !== null && unprocessedCount > 0 && (
             <p className="text-yellow-400 text-sm">
               ⚠️ <span className="font-medium">{unprocessedCount}</span> emails
-              non analysés
+              en attente d'analyse
             </p>
           )}
+          {unprocessedCount === 0 &&
+            existingCount !== null &&
+            existingCount > 0 && (
+              <p className="text-green-400 text-sm">
+                ✅ Tous les emails ont été analysés
+              </p>
+            )}
           {formationsCount !== null && formationsCount > 0 && (
             <p className="text-green-400 text-sm">
               ✅ <span className="font-medium">{formationsCount}</span>{" "}
@@ -799,11 +842,14 @@ export function ExtractionPanel() {
           )}
         </button>
 
-        {/* Bouton Analyser */}
-        {unprocessedCount !== null && unprocessedCount > 0 && (
+        {/* Bouton Analyser - visible pendant l'analyse ou s'il reste des emails */}
+        {(isAnalyzing ||
+          (unprocessedCount !== null && unprocessedCount > 0)) && (
           <button
             onClick={() => startAnalysis(false)}
-            disabled={isExtracting || isAnalyzing || isPaused}
+            disabled={
+              isExtracting || isAnalyzing || isPaused || unprocessedCount === 0
+            }
             className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center gap-2"
           >
             {isAnalyzing ? (

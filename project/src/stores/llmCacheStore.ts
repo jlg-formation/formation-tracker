@@ -26,7 +26,7 @@ export interface LLMCacheEntry {
 }
 
 /** Version actuelle du modèle (pour invalidation du cache si besoin) */
-export const CURRENT_MODEL_VERSION = "gpt-4o-mini-v1";
+export const CURRENT_MODEL_VERSION = "gpt-5-nano-v1";
 
 /**
  * Récupère une entrée du cache par ID d'email

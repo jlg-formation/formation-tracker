@@ -22,7 +22,8 @@ import {
 import {
   DEFAULT_OPENAI_CONFIG,
   OPENAI_API_BASE_URL,
-  MIN_CONFIDENCE_THRESHOLD
+  MIN_CONFIDENCE_THRESHOLD,
+  RATE_LIMIT_RETRY_CONFIG
 } from "./config";
 import {
   CLASSIFICATION_SYSTEM_PROMPT,
@@ -176,7 +177,14 @@ function parseOpenAIError(
 }
 
 /**
- * Appelle l'API OpenAI Chat Completions
+ * Attend un certain temps (pour le rate limiting)
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Appelle l'API OpenAI Chat Completions avec retry automatique sur erreur 429
  * @param systemPrompt Prompt système
  * @param userPrompt Prompt utilisateur
  * @param config Configuration OpenAI
@@ -187,49 +195,102 @@ async function callOpenAI(
   userPrompt: string,
   config: OpenAIConfig
 ): Promise<string> {
-  const response = await fetch(`${OPENAI_API_BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`
-    },
-    body: JSON.stringify({
-      model: config.model,
-      temperature: config.temperature,
-      max_tokens: config.maxTokens,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ]
-    })
-  });
+  let lastError: Error | null = null;
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    const errorInfo = parseOpenAIError(response.status, errorBody);
+  for (
+    let attempt = 0;
+    attempt <= RATE_LIMIT_RETRY_CONFIG.maxRetries;
+    attempt++
+  ) {
+    try {
+      const response = await fetch(`${OPENAI_API_BASE_URL}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.apiKey}`
+        },
+        body: JSON.stringify({
+          model: config.model,
+          temperature: config.temperature,
+          max_tokens: config.maxTokens,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ]
+        })
+      });
 
-    throw createLLMError(
-      `Erreur API OpenAI (${response.status}): ${errorBody}`,
-      errorInfo.code,
-      {
-        userMessage: errorInfo.userMessage,
-        details: {
-          httpStatus: response.status,
-          retryAfter: errorInfo.retryAfter,
-          openAIError: errorInfo.openAIError
+      if (!response.ok) {
+        const errorBody = await response.text();
+        const errorInfo = parseOpenAIError(response.status, errorBody);
+
+        // Si c'est une erreur rate limit et qu'on peut retry
+        if (
+          errorInfo.code === "RATE_LIMIT" &&
+          attempt < RATE_LIMIT_RETRY_CONFIG.maxRetries
+        ) {
+          // Calculer le délai avec backoff exponentiel
+          const baseDelay = errorInfo.retryAfter
+            ? errorInfo.retryAfter * 1000
+            : RATE_LIMIT_RETRY_CONFIG.baseDelayMs * Math.pow(2, attempt);
+          const delayMs = Math.min(
+            baseDelay,
+            RATE_LIMIT_RETRY_CONFIG.maxDelayMs
+          );
+
+          console.warn(
+            `Rate limit atteint (tentative ${attempt + 1}/${RATE_LIMIT_RETRY_CONFIG.maxRetries + 1}). ` +
+              `Attente de ${Math.round(delayMs / 1000)}s avant retry...`
+          );
+
+          await sleep(delayMs);
+          continue; // Retry
         }
+
+        throw createLLMError(
+          `Erreur API OpenAI (${response.status}): ${errorBody}`,
+          errorInfo.code,
+          {
+            userMessage: errorInfo.userMessage,
+            details: {
+              httpStatus: response.status,
+              retryAfter: errorInfo.retryAfter,
+              openAIError: errorInfo.openAIError
+            }
+          }
+        );
       }
-    );
+
+      const data: OpenAIChatResponse = await response.json();
+
+      if (!data.choices || data.choices.length === 0) {
+        throw createLLMError("Réponse OpenAI vide", "API_ERROR");
+      }
+
+      return data.choices[0].message.content;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Si l'erreur n'est pas une LLMError rate limit, on ne retry pas
+      if (
+        !(
+          error &&
+          typeof error === "object" &&
+          "code" in error &&
+          error.code === "RATE_LIMIT"
+        )
+      ) {
+        throw error;
+      }
+    }
   }
 
-  const data: OpenAIChatResponse = await response.json();
-
-  if (!data.choices || data.choices.length === 0) {
-    throw createLLMError("Réponse OpenAI vide", "API_ERROR");
-  }
-
-  return data.choices[0].message.content;
+  // Si on arrive ici, tous les retries ont échoué
+  throw (
+    lastError ||
+    createLLMError("Échec après plusieurs tentatives", "RATE_LIMIT")
+  );
 }
 
 /**
@@ -1186,6 +1247,8 @@ export interface AnalyzeEmailResult {
     classification: boolean;
     extraction: boolean;
   };
+  /** Message d'erreur si l'analyse a échoué (email ne doit pas être marqué comme traité) */
+  error?: string;
 }
 
 /**
@@ -1193,18 +1256,21 @@ export interface AnalyzeEmailResult {
  * @param email Email à analyser
  * @param apiKey Clé API OpenAI (optionnel)
  * @param useCache Utiliser le cache (true par défaut)
+ * @param delayBetweenCalls Délai en ms entre les appels LLM (pour respecter rate limits)
  * @returns Résultat complet de l'analyse
  */
 export async function analyzeEmailWithCache(
   email: EmailInput,
   apiKey?: string,
-  useCache: boolean = true
+  useCache: boolean = true,
+  delayBetweenCalls: number = 0
 ): Promise<AnalyzeEmailResult> {
   // Vérifier le cache
   let classificationFromCache = false;
   let extractionFromCache = false;
   let classification: ClassificationResult;
   let extraction: ExtractionResult | null = null;
+  let didClassificationLLMCall = false;
 
   if (useCache) {
     const cached = await getLLMCacheEntry(email.id);
@@ -1219,9 +1285,11 @@ export async function analyzeEmailWithCache(
     } else {
       // Classification non en cache, la faire
       classification = await classifyEmail(email, apiKey);
+      didClassificationLLMCall = true;
     }
   } else {
     classification = await classifyEmail(email, apiKey);
+    didClassificationLLMCall = true;
   }
 
   // Si extraction pas encore faite et type extractible
@@ -1232,6 +1300,10 @@ export async function analyzeEmailWithCache(
       classification.confidence >= MIN_CONFIDENCE_THRESHOLD;
 
     if (isExtractible) {
+      // Appliquer le délai entre classification et extraction si on a fait un appel LLM
+      if (didClassificationLLMCall && delayBetweenCalls > 0) {
+        await sleep(delayBetweenCalls);
+      }
       extraction = await extractFormation(email, classification.type, apiKey);
     }
   }
@@ -1274,6 +1346,14 @@ export interface AnalysisProgressCallback {
 }
 
 /**
+ * Callback appelé immédiatement après le traitement de chaque email
+ * Permet de marquer l'email comme traité dans la base de données
+ */
+export interface OnEmailProcessedCallback {
+  (emailId: string, result: AnalyzeEmailResult): Promise<void>;
+}
+
+/**
  * Analyse plusieurs emails en batch avec support cache et interruption
  * @param emails Liste d'emails à analyser
  * @param apiKey Clé API OpenAI (optionnel)
@@ -1287,6 +1367,7 @@ export async function analyzeEmailBatchWithCache(
     useCache?: boolean;
     abortSignal?: AnalysisAbortSignal;
     onProgress?: AnalysisProgressCallback;
+    onEmailProcessed?: OnEmailProcessedCallback;
     delayBetweenCalls?: number;
   }
 ): Promise<{
@@ -1302,7 +1383,7 @@ export async function analyzeEmailBatchWithCache(
 }> {
   const results = new Map<string, AnalyzeEmailResult>();
   const useCache = options?.useCache ?? true;
-  const delayMs = options?.delayBetweenCalls ?? 500;
+  const delayMs = options?.delayBetweenCalls ?? 3000;
 
   let fromCache = 0;
   let fromLLM = 0;
@@ -1327,14 +1408,24 @@ export async function analyzeEmailBatchWithCache(
     const email = emails[i];
 
     try {
-      const result = await analyzeEmailWithCache(email, apiKey, useCache);
+      const result = await analyzeEmailWithCache(
+        email,
+        apiKey,
+        useCache,
+        delayMs
+      );
       results.set(email.id, result);
+
+      // Appeler le callback immédiatement après le traitement
+      if (options?.onEmailProcessed) {
+        await options.onEmailProcessed(email.id, result);
+      }
 
       if (result.fromCache.classification && result.fromCache.extraction) {
         fromCache++;
       } else {
         fromLLM++;
-        // Délai seulement si on a fait un appel LLM
+        // Délai après le dernier appel LLM de cet email avant de passer au suivant
         if (i < emails.length - 1 && delayMs > 0) {
           await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
@@ -1343,16 +1434,31 @@ export async function analyzeEmailBatchWithCache(
       console.error(`Erreur analyse email ${email.id}:`, error);
       errors++;
 
-      // Résultat par défaut en cas d'erreur
-      results.set(email.id, {
+      const errorMessage =
+        error instanceof Error ? error.message : "Erreur inconnue";
+
+      // Résultat par défaut en cas d'erreur - NE PAS marquer comme traité
+      const errorResult: AnalyzeEmailResult = {
         classification: {
           type: TypeEmail.AUTRE,
           confidence: 0,
-          reason: error instanceof Error ? error.message : "Erreur inconnue"
+          reason: errorMessage
         },
         extraction: null,
-        fromCache: { classification: false, extraction: false }
-      });
+        fromCache: { classification: false, extraction: false },
+        error: errorMessage
+      };
+      results.set(email.id, errorResult);
+
+      // Notifier mais l'email ne sera pas marqué comme traité
+      if (options?.onEmailProcessed) {
+        await options.onEmailProcessed(email.id, errorResult);
+      }
+
+      // Appliquer un délai après une erreur pour éviter d'aggraver le rate limit
+      if (i < emails.length - 1 && delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
     }
 
     options?.onProgress?.(i + 1, emails.length, { fromCache, fromLLM, errors });

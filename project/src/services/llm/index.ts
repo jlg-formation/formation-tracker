@@ -23,7 +23,8 @@ export { createLLMError, isLLMError } from "./types";
 export type {
   AnalyzeEmailResult,
   AnalysisAbortSignal,
-  AnalysisProgressCallback
+  AnalysisProgressCallback,
+  OnEmailProcessedCallback
 } from "./parser";
 
 // Fonctions de classification

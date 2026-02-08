@@ -494,7 +494,7 @@ export function SettingsPage() {
               Modèle OpenAI
             </label>
             <select
-              value={settings.openaiModel || "gpt-4o-mini"}
+              value={settings.openaiModel || "gpt-5-nano"}
               onChange={async (e) => {
                 await updateSettings({
                   openaiModel: e.target.value as OpenAIModelId
@@ -512,6 +512,32 @@ export function SettingsPage() {
             <p className="mt-2 text-xs text-gray-500">
               GPT-4o Mini est recommandé pour un bon rapport qualité/prix. Les
               modèles plus puissants sont plus précis mais plus coûteux.
+            </p>
+          </div>
+
+          {/* Délai entre les appels LLM */}
+          <div className="mt-6 pt-6 border-t border-gray-700">
+            <label className="block text-sm text-gray-400 mb-2">
+              Délai entre les appels (ms)
+            </label>
+            <select
+              value={settings.llmDelayMs ?? 3000}
+              onChange={async (e) => {
+                await updateSettings({ llmDelayMs: parseInt(e.target.value) });
+                showSaveSuccess();
+              }}
+              className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-md text-white focus:outline-none focus:border-indigo-500"
+            >
+              <option value={200}>200 ms - Rapide (risque de 429)</option>
+              <option value={500}>500 ms - Normal (recommandé)</option>
+              <option value={1000}>1000 ms - Prudent</option>
+              <option value={2000}>2000 ms - Très prudent</option>
+              <option value={3000}>3000 ms - Lent (plans de base)</option>
+            </select>
+            <p className="mt-2 text-xs text-gray-500">
+              Augmentez ce délai si vous rencontrez des erreurs 429 (rate
+              limit). Le système réessaie automatiquement avec un délai
+              croissant en cas d'erreur.
             </p>
           </div>
         </div>

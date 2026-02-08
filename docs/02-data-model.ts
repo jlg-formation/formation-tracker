@@ -300,6 +300,8 @@ export interface AppSettings {
   openaiApiKey?: string;
   /** Modèle OpenAI à utiliser (défaut: gpt-4o-mini) */
   openaiModel?: OpenAIModelId;
+  /** Délai entre les appels LLM en ms (défaut: 500, pour éviter les rate limits 429) */
+  llmDelayMs?: number;
   /** Client ID Google OAuth (optionnel, valeur par défaut fournie) */
   googleClientId?: string;
   /** Provider de géocodage actif */
