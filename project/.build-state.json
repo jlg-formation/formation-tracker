@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "currentStep": 13,
-  "lastUpdated": "2026-02-08T16:36:00.000Z",
+  "currentStep": 14,
+  "lastUpdated": "2026-02-08T16:42:00.000Z",
   "steps": {
     "0": { "status": "completed", "completedAt": "2026-02-08T12:00:00.000Z" },
     "1": { "status": "completed", "completedAt": "2026-02-08T12:30:00.000Z" },
@@ -40,7 +40,11 @@
       "completedAt": "2026-02-08T16:36:00.000Z",
       "note": "Dashboard Stats Cards: 4 KPI, hook useFormations, utils stats avec 26 tests"
     },
-    "13": { "status": "not-started" },
+    "13": {
+      "status": "completed",
+      "completedAt": "2026-02-08T16:42:00.000Z",
+      "note": "Graphiques D3.js: YearlyChart (barres par année), TopCoursesChart (top 10), TypePieChart (camembert inter/intra)"
+    },
     "14": { "status": "not-started" },
     "15": { "status": "not-started" },
     "16": { "status": "not-started" },
@@ -97,6 +101,9 @@
     "project/src/hooks/useFormations.ts",
     "project/src/components/dashboard/StatsCards.tsx",
     "project/src/components/dashboard/Dashboard.tsx",
-    "project/src/components/dashboard/index.ts"
+    "project/src/components/dashboard/index.ts",
+    "project/src/components/dashboard/YearlyChart.tsx",
+    "project/src/components/dashboard/TopCoursesChart.tsx",
+    "project/src/components/dashboard/TypePieChart.tsx"
   ]
 }

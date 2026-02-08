@@ -6,6 +6,9 @@ import { useMemo } from "react";
 import { useFormations } from "../../hooks/useFormations";
 import { calculateStats, getEmptyStats } from "../../utils/stats";
 import { StatsCards } from "./StatsCards";
+import { YearlyChart } from "./YearlyChart";
+import { TopCoursesChart } from "./TopCoursesChart";
+import { TypePieChart } from "./TypePieChart";
 
 /**
  * Dashboard principal avec statistiques et graphiques
@@ -45,114 +48,42 @@ export function Dashboard() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Placeholder Timeline par année */}
-          <div className="p-6 bg-gray-800/50 border border-dashed border-indigo-600/50 rounded-lg">
-            <h3 className="text-lg font-medium text-gray-300 mb-4">
-              📈 Timeline par année
-            </h3>
-            <p className="text-sm text-gray-500">
-              Graphique D3.js à venir (Étape 13)
-            </p>
-            {stats.total > 0 && (
-              <div className="mt-4 space-y-2">
-                {Object.entries(stats.parAnnee)
-                  .sort(([a], [b]) => Number(a) - Number(b))
-                  .map(([year, count]) => (
-                    <div key={year} className="flex items-center gap-2">
-                      <span className="text-gray-400 w-12">{year}</span>
-                      <div
-                        className="h-4 bg-indigo-600 rounded"
-                        style={{
-                          width: `${(count / Math.max(...Object.values(stats.parAnnee))) * 100}%`,
-                          minWidth: "8px"
-                        }}
-                      ></div>
-                      <span className="text-gray-500 text-sm">{count}</span>
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
-
-          {/* Placeholder Top 10 formations */}
-          <div className="p-6 bg-gray-800/50 border border-dashed border-indigo-600/50 rounded-lg">
-            <h3 className="text-lg font-medium text-gray-300 mb-4">
-              🏆 Top 10 formations
-            </h3>
-            <p className="text-sm text-gray-500">
-              Graphique D3.js à venir (Étape 13)
-            </p>
-            {stats.parCode.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {stats.parCode.slice(0, 5).map((item, index) => (
-                  <div key={item.code} className="flex items-center gap-2">
-                    <span className="text-gray-500 w-6">{index + 1}.</span>
-                    <span className="text-gray-300 font-mono text-sm w-20">
-                      {item.code}
-                    </span>
-                    <div
-                      className="h-4 bg-green-600 rounded flex-1"
-                      style={{
-                        width: `${(item.count / stats.parCode[0].count) * 100}%`,
-                        minWidth: "8px"
-                      }}
-                    ></div>
-                    <span className="text-gray-500 text-sm w-6 text-right">
-                      {item.count}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Placeholder répartition Inter/Intra */}
-      {stats.total > 0 && (
-        <div className="p-6 bg-gray-800/50 border border-dashed border-indigo-600/50 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-300 mb-4">
-            🥧 Répartition Inter / Intra
-          </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Pie chart D3.js à venir (Étape 13)
-          </p>
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <div className="flex h-6 rounded-lg overflow-hidden">
-                <div
-                  className="bg-blue-600 flex items-center justify-center text-xs text-white font-medium"
-                  style={{
-                    width: `${stats.total > 0 ? (stats.inter / stats.total) * 100 : 50}%`
-                  }}
-                >
-                  {stats.inter > 0 &&
-                    `${Math.round((stats.inter / stats.total) * 100)}%`}
-                </div>
-                <div
-                  className="bg-purple-600 flex items-center justify-center text-xs text-white font-medium"
-                  style={{
-                    width: `${stats.total > 0 ? (stats.intra / stats.total) * 100 : 50}%`
-                  }}
-                >
-                  {stats.intra > 0 &&
-                    `${Math.round((stats.intra / stats.total) * 100)}%`}
-                </div>
-              </div>
+        <>
+          {/* Graphiques principaux */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Timeline par année */}
+            <div className="p-6 bg-gray-800/50 border border-gray-700 rounded-lg">
+              <h3 className="text-lg font-medium text-gray-300 mb-4">
+                📈 Formations par année
+              </h3>
+              <YearlyChart data={stats.parAnnee} height={280} />
             </div>
-            <div className="flex gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-600 rounded"></div>
-                <span className="text-gray-400">Inter ({stats.inter})</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-purple-600 rounded"></div>
-                <span className="text-gray-400">Intra ({stats.intra})</span>
-              </div>
+
+            {/* Top 10 formations */}
+            <div className="p-6 bg-gray-800/50 border border-gray-700 rounded-lg">
+              <h3 className="text-lg font-medium text-gray-300 mb-4">
+                🏆 Top 10 formations
+              </h3>
+              <TopCoursesChart data={stats.parCode} height={280} />
             </div>
           </div>
-        </div>
+
+          {/* Répartition Inter/Intra */}
+          {(stats.inter > 0 || stats.intra > 0) && (
+            <div className="p-6 bg-gray-800/50 border border-gray-700 rounded-lg">
+              <h3 className="text-lg font-medium text-gray-300 mb-4 text-center">
+                🥧 Répartition Inter / Intra
+              </h3>
+              <div className="flex justify-center">
+                <TypePieChart
+                  inter={stats.inter}
+                  intra={stats.intra}
+                  size={280}
+                />
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

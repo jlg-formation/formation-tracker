@@ -8,7 +8,7 @@ import type { OpenAIConfig } from "./types";
  * Configuration par défaut pour l'API OpenAI
  */
 export const DEFAULT_OPENAI_CONFIG: Omit<OpenAIConfig, "apiKey"> = {
-  model: "gpt-4o",
+  model: "gpt-4o-mini",
   temperature: 0.1, // Faible pour extraction précise
   maxTokens: 2000
 };

@@ -1,9 +1,10 @@
 /**
  * Panneau d'extraction des emails Gmail ORSYS
  * Permet d'extraire et stocker les emails Gmail dans IndexedDB
+ * puis de les analyser via LLM pour créer des formations
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useGmailAuth } from "../../hooks/useGmailAuth";
 import {
@@ -12,8 +13,17 @@ import {
   extractEmailHeaders,
   extractEmailBody
 } from "../../services/gmail/api";
+import {
+  classifyEmail,
+  extractFormation,
+  type ClassificationResult,
+  type ExtractionResult
+} from "../../services/llm";
+import { fusionnerEmails, type FusionInput } from "../../utils/fusion";
 import { db } from "../../stores/db";
+import { getSettings } from "../../stores/settingsStore";
 import type { EmailRaw } from "../../types";
+import { TypeEmail } from "../../types";
 
 /** État de l'extraction */
 interface ExtractionState {
@@ -26,6 +36,18 @@ interface ExtractionState {
   errorMessage?: string;
 }
 
+/** État de l'analyse LLM */
+interface AnalysisState {
+  status: "idle" | "analyzing" | "done" | "error";
+  currentCount: number;
+  totalCount: number;
+  message: string;
+  formationsCreees: number;
+  formationsMisesAJour: number;
+  emailsIgnores: number;
+  errorMessage?: string;
+}
+
 const initialState: ExtractionState = {
   status: "idle",
   currentCount: 0,
@@ -35,19 +57,45 @@ const initialState: ExtractionState = {
   skippedEmails: 0
 };
 
+const initialAnalysisState: AnalysisState = {
+  status: "idle",
+  currentCount: 0,
+  totalCount: 0,
+  message: "",
+  formationsCreees: 0,
+  formationsMisesAJour: 0,
+  emailsIgnores: 0
+};
+
 export function ExtractionPanel() {
   const { connectionState } = useGmailAuth();
   const [state, setState] = useState<ExtractionState>(initialState);
+  const [analysisState, setAnalysisState] =
+    useState<AnalysisState>(initialAnalysisState);
   const [existingCount, setExistingCount] = useState<number | null>(null);
+  const [unprocessedCount, setUnprocessedCount] = useState<number | null>(null);
+  const [formationsCount, setFormationsCount] = useState<number | null>(null);
 
-  // Charger le nombre d'emails existants au montage
-  useState(() => {
-    db.emails.count().then(setExistingCount);
-  });
+  // Charger les compteurs au montage et après les opérations
+  const refreshCounts = useCallback(async () => {
+    const emailCount = await db.emails.count();
+    const unprocessed = await db.emails
+      .filter((e) => e.processed === false)
+      .count();
+    const formations = await db.formations.count();
+    setExistingCount(emailCount);
+    setUnprocessedCount(unprocessed);
+    setFormationsCount(formations);
+  }, []);
+
+  useEffect(() => {
+    refreshCounts();
+  }, [refreshCounts]);
 
   const isConnected = connectionState.status === "connected";
   const isExtracting =
     state.status === "fetching-ids" || state.status === "fetching-content";
+  const isAnalyzing = analysisState.status === "analyzing";
 
   /**
    * Lance l'extraction des emails ORSYS
@@ -152,8 +200,7 @@ export function ExtractionPanel() {
       }
 
       // Extraction terminée
-      const totalInDb = await db.emails.count();
-      setExistingCount(totalInDb);
+      await refreshCounts();
 
       setState({
         status: "done",
@@ -173,28 +220,181 @@ export function ExtractionPanel() {
         message: `Erreur: ${errorMessage}`
       }));
     }
-  }, [isConnected]);
+  }, [isConnected, refreshCounts]);
+
+  /**
+   * Lance l'analyse des emails non traités via LLM
+   */
+  const startAnalysis = useCallback(async () => {
+    // Vérifier la clé API OpenAI
+    const settings = await getSettings();
+    if (!settings.openaiApiKey) {
+      setAnalysisState({
+        ...initialAnalysisState,
+        status: "error",
+        errorMessage: "Clé API OpenAI non configurée. Allez dans Paramètres."
+      });
+      return;
+    }
+
+    // Récupérer les emails non traités
+    const unprocessedEmails = await db.emails
+      .filter((e) => e.processed === false)
+      .toArray();
+
+    if (unprocessedEmails.length === 0) {
+      setAnalysisState({
+        ...initialAnalysisState,
+        status: "done",
+        message: "Aucun email à analyser."
+      });
+      return;
+    }
+
+    setAnalysisState({
+      ...initialAnalysisState,
+      status: "analyzing",
+      totalCount: unprocessedEmails.length,
+      message: "Classification des emails..."
+    });
+
+    const fusionInputs: FusionInput[] = [];
+    let ignoredCount = 0;
+
+    try {
+      // Phase 1 : Classification et extraction de chaque email
+      for (let i = 0; i < unprocessedEmails.length; i++) {
+        const email = unprocessedEmails[i];
+
+        setAnalysisState((prev) => ({
+          ...prev,
+          currentCount: i + 1,
+          message: `Analyse de l'email ${i + 1}/${unprocessedEmails.length}...`
+        }));
+
+        try {
+          // Classification
+          const classification: ClassificationResult = await classifyEmail({
+            id: email.id,
+            subject: email.subject,
+            body: email.body
+          });
+
+          // Ignorer les emails "autre" ou "rappel" ou confiance faible
+          if (
+            classification.type === TypeEmail.AUTRE ||
+            classification.type === TypeEmail.RAPPEL ||
+            classification.confidence < 0.7
+          ) {
+            ignoredCount++;
+            // Marquer comme traité même si ignoré
+            await db.emails.update(email.id, { processed: true });
+            continue;
+          }
+
+          // Extraction selon le type
+          const extraction: ExtractionResult = await extractFormation(
+            {
+              id: email.id,
+              subject: email.subject,
+              body: email.body
+            },
+            classification.type as
+              | "convocation-inter"
+              | "convocation-intra"
+              | "annulation"
+              | "bon-commande"
+              | "info-facturation"
+          );
+
+          fusionInputs.push({
+            email,
+            extraction,
+            classification: {
+              type: classification.type,
+              confidence: classification.confidence
+            }
+          });
+
+          // Marquer l'email comme traité
+          await db.emails.update(email.id, { processed: true });
+        } catch (emailError) {
+          console.error(`Erreur analyse email ${email.id}:`, emailError);
+          // Continuer avec les autres emails
+        }
+
+        // Pause pour respecter les rate limits OpenAI
+        if ((i + 1) % 5 === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
+
+      // Phase 2 : Fusion des formations
+      setAnalysisState((prev) => ({
+        ...prev,
+        message: "Fusion des formations..."
+      }));
+
+      const existingFormations = await db.formations.toArray();
+      const fusionResult = fusionnerEmails(fusionInputs, existingFormations);
+
+      // Phase 3 : Sauvegarde des formations
+      for (const formation of fusionResult.created) {
+        await db.formations.add(formation);
+      }
+      for (const formation of fusionResult.updated) {
+        await db.formations.put(formation);
+      }
+
+      // Rafraîchir les compteurs
+      await refreshCounts();
+
+      setAnalysisState({
+        status: "done",
+        currentCount: unprocessedEmails.length,
+        totalCount: unprocessedEmails.length,
+        message: `Analyse terminée.`,
+        formationsCreees: fusionResult.stats.formationsCreees,
+        formationsMisesAJour: fusionResult.stats.formationsMisesAJour,
+        emailsIgnores: ignoredCount + fusionResult.stats.emailsIgnores
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Erreur inconnue";
+      setAnalysisState((prev) => ({
+        ...prev,
+        status: "error",
+        errorMessage,
+        message: `Erreur: ${errorMessage}`
+      }));
+    }
+  }, [refreshCounts]);
 
   /**
    * Réinitialiser l'état
    */
   const resetState = useCallback(() => {
     setState(initialState);
+    setAnalysisState(initialAnalysisState);
   }, []);
 
   /**
-   * Supprimer tous les emails stockés
+   * Supprimer tous les emails et formations stockés
    */
   const clearEmails = useCallback(async () => {
     if (
-      !confirm("Êtes-vous sûr de vouloir supprimer tous les emails stockés ?")
+      !confirm(
+        "Êtes-vous sûr de vouloir supprimer tous les emails ET formations stockés ?"
+      )
     ) {
       return;
     }
     await db.emails.clear();
-    setExistingCount(0);
+    await db.formations.clear();
+    await refreshCounts();
     setState(initialState);
-  }, []);
+    setAnalysisState(initialAnalysisState);
+  }, [refreshCounts]);
 
   // Calcul du pourcentage de progression
   const progressPercent =
@@ -224,11 +424,23 @@ export function ExtractionPanel() {
 
       {/* Statistiques actuelles */}
       {existingCount !== null && (
-        <div className="mb-4 p-3 bg-gray-900/50 rounded-lg">
+        <div className="mb-4 p-3 bg-gray-900/50 rounded-lg space-y-1">
           <p className="text-gray-300">
             <span className="font-medium text-white">{existingCount}</span>{" "}
             emails stockés localement
           </p>
+          {unprocessedCount !== null && unprocessedCount > 0 && (
+            <p className="text-yellow-400 text-sm">
+              ⚠️ <span className="font-medium">{unprocessedCount}</span> emails
+              non analysés
+            </p>
+          )}
+          {formationsCount !== null && formationsCount > 0 && (
+            <p className="text-green-400 text-sm">
+              ✅ <span className="font-medium">{formationsCount}</span>{" "}
+              formations extraites
+            </p>
+          )}
         </div>
       )}
 
@@ -269,7 +481,7 @@ export function ExtractionPanel() {
         </div>
       )}
 
-      {/* Message d'erreur */}
+      {/* Message d'erreur extraction */}
       {state.status === "error" && (
         <div className="mb-4 p-4 bg-red-900/30 border border-red-600 rounded-lg text-red-300">
           <p className="font-medium">Erreur lors de l'extraction</p>
@@ -277,11 +489,66 @@ export function ExtractionPanel() {
         </div>
       )}
 
+      {/* Barre de progression analyse */}
+      {isAnalyzing && (
+        <div className="mb-4 space-y-2">
+          <div className="flex justify-between text-sm text-gray-400">
+            <span>{analysisState.message}</span>
+            <span>
+              {analysisState.totalCount > 0
+                ? Math.round(
+                    (analysisState.currentCount / analysisState.totalCount) *
+                      100
+                  )
+                : 0}
+              %
+            </span>
+          </div>
+          <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-green-500 transition-all duration-300"
+              style={{
+                width: `${
+                  analysisState.totalCount > 0
+                    ? (analysisState.currentCount / analysisState.totalCount) *
+                      100
+                    : 0
+                }%`
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Message de résultat analyse */}
+      {analysisState.status === "done" && (
+        <div className="mb-4 p-4 bg-green-900/30 border border-green-600 rounded-lg text-green-300">
+          <p className="font-medium">{analysisState.message}</p>
+          <div className="text-sm mt-2 space-y-1">
+            <p>✅ {analysisState.formationsCreees} formations créées</p>
+            <p>
+              🔄 {analysisState.formationsMisesAJour} formations mises à jour
+            </p>
+            <p>
+              ⏭️ {analysisState.emailsIgnores} emails ignorés (rappels, autres)
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Message d'erreur analyse */}
+      {analysisState.status === "error" && (
+        <div className="mb-4 p-4 bg-red-900/30 border border-red-600 rounded-lg text-red-300">
+          <p className="font-medium">Erreur lors de l'analyse</p>
+          <p className="text-sm mt-1">{analysisState.errorMessage}</p>
+        </div>
+      )}
+
       {/* Boutons d'action */}
       <div className="flex flex-wrap gap-3">
         <button
           onClick={startExtraction}
-          disabled={!isConnected || isExtracting}
+          disabled={!isConnected || isExtracting || isAnalyzing}
           className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center gap-2"
         >
           {isExtracting ? (
@@ -297,7 +564,31 @@ export function ExtractionPanel() {
           )}
         </button>
 
-        {(state.status === "done" || state.status === "error") && (
+        {/* Bouton Analyser */}
+        {unprocessedCount !== null && unprocessedCount > 0 && (
+          <button
+            onClick={startAnalysis}
+            disabled={isExtracting || isAnalyzing}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center gap-2"
+          >
+            {isAnalyzing ? (
+              <>
+                <span className="animate-spin">⏳</span>
+                Analyse en cours...
+              </>
+            ) : (
+              <>
+                <span>🤖</span>
+                Analyser {unprocessedCount} emails
+              </>
+            )}
+          </button>
+        )}
+
+        {(state.status === "done" ||
+          state.status === "error" ||
+          analysisState.status === "done" ||
+          analysisState.status === "error") && (
           <button
             onClick={resetState}
             className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md transition-colors"
@@ -306,14 +597,17 @@ export function ExtractionPanel() {
           </button>
         )}
 
-        {existingCount !== null && existingCount > 0 && !isExtracting && (
-          <button
-            onClick={clearEmails}
-            className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-md transition-colors"
-          >
-            Supprimer tous les emails
-          </button>
-        )}
+        {existingCount !== null &&
+          existingCount > 0 &&
+          !isExtracting &&
+          !isAnalyzing && (
+            <button
+              onClick={clearEmails}
+              className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-md transition-colors"
+            >
+              Tout supprimer
+            </button>
+          )}
       </div>
 
       {/* Aide */}
