@@ -51,15 +51,15 @@ export const nominatimAdapter: GeocodingAdapter = {
       q: address,
       format: "json",
       limit: "1",
-      addressdetails: "1",
+      addressdetails: "1"
     });
 
     try {
       const response = await fetch(`${NOMINATIM_BASE_URL}?${params}`, {
         headers: {
           "User-Agent": USER_AGENT,
-          Accept: "application/json",
-        },
+          Accept: "application/json"
+        }
       });
 
       if (!response.ok) {
@@ -78,14 +78,14 @@ export const nominatimAdapter: GeocodingAdapter = {
       return {
         gps: {
           lat: parseFloat(result.lat),
-          lng: parseFloat(result.lon),
+          lng: parseFloat(result.lon)
         },
         formattedAddress: result.display_name,
-        confidence: parseFloat(result.importance) || 0.5,
+        confidence: parseFloat(result.importance) || 0.5
       };
     } catch (error) {
       console.error("Nominatim geocoding error:", error);
       return { gps: null };
     }
-  },
+  }
 };

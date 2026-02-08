@@ -17,7 +17,7 @@ import {
   geocodeBatch,
   clearGeocache,
   getGeocacheStats,
-  preloadKnownLocations,
+  preloadKnownLocations
 } from "./index";
 import { db } from "../../stores/db";
 
@@ -91,9 +91,9 @@ describe("Geocoding Service", () => {
             lat: "48.8925",
             lon: "2.2356",
             display_name: "La Défense, Paris, France",
-            importance: 0.85,
-          },
-        ],
+            importance: 0.85
+          }
+        ]
       });
 
       const result = await nominatimAdapter.geocode("La Défense Paris");
@@ -109,7 +109,7 @@ describe("Geocoding Service", () => {
     it("retourne null si aucun résultat", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => []
       });
 
       const result = await nominatimAdapter.geocode("adresse inexistante xyz");
@@ -120,7 +120,7 @@ describe("Geocoding Service", () => {
     it("retourne null si erreur HTTP", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
-        status: 500,
+        status: 500
       });
 
       const result = await nominatimAdapter.geocode("Paris");
@@ -139,7 +139,7 @@ describe("Geocoding Service", () => {
     it("gère les résultats invalides", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => "not an array",
+        json: async () => "not an array"
       });
 
       const result = await nominatimAdapter.geocode("Paris");
@@ -163,8 +163,13 @@ describe("Geocoding Service", () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => [
-          { lat: "48.8566", lon: "2.3522", display_name: "Paris", importance: 0.9 },
-        ],
+          {
+            lat: "48.8566",
+            lon: "2.3522",
+            display_name: "Paris",
+            importance: 0.9
+          }
+        ]
       });
 
       const result = await geocodeAddress("Paris");
@@ -184,7 +189,7 @@ describe("Geocoding Service", () => {
         adresse: "lyon",
         gps: { lat: 45.764, lng: 4.8357 },
         provider: "nominatim",
-        cachedAt: new Date().toISOString(),
+        cachedAt: new Date().toISOString()
       });
 
       const result = await geocodeAddress("Lyon");
@@ -198,7 +203,7 @@ describe("Geocoding Service", () => {
     it("cache les résultats null", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => []
       });
 
       const result = await geocodeAddress("adresse inconnue");
@@ -223,15 +228,20 @@ describe("Geocoding Service", () => {
         adresse: "paris",
         gps: { lat: 48.8566, lng: 2.3522 },
         provider: "nominatim",
-        cachedAt: new Date().toISOString(),
+        cachedAt: new Date().toISOString()
       });
 
       // Mock pour Lyon
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => [
-          { lat: "45.764", lon: "4.8357", display_name: "Lyon", importance: 0.8 },
-        ],
+          {
+            lat: "45.764",
+            lon: "4.8357",
+            display_name: "Lyon",
+            importance: 0.8
+          }
+        ]
       });
 
       const addresses = ["Paris", "Lyon"];
@@ -246,7 +256,7 @@ describe("Geocoding Service", () => {
       expect(results.get("Lyon")?.lat).toBeCloseTo(45.764, 4);
       expect(progressCalls).toEqual([
         [1, 2],
-        [2, 2],
+        [2, 2]
       ]);
     });
   });
@@ -261,7 +271,7 @@ describe("Geocoding Service", () => {
         adresse: "test",
         gps: { lat: 0, lng: 0 },
         provider: "nominatim",
-        cachedAt: new Date().toISOString(),
+        cachedAt: new Date().toISOString()
       });
 
       await clearGeocache();
@@ -276,14 +286,14 @@ describe("Geocoding Service", () => {
           adresse: "paris",
           gps: { lat: 48.8566, lng: 2.3522 },
           provider: "nominatim",
-          cachedAt: new Date().toISOString(),
+          cachedAt: new Date().toISOString()
         },
         {
           adresse: "inconnue",
           gps: null,
           provider: "nominatim",
-          cachedAt: new Date().toISOString(),
-        },
+          cachedAt: new Date().toISOString()
+        }
       ]);
 
       const stats = await getGeocacheStats();

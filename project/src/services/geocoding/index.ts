@@ -16,7 +16,7 @@ export { nominatimAdapter } from "./nominatim";
  * Map des adapters disponibles
  */
 const adapters: Record<string, GeocodingAdapter> = {
-  nominatim: nominatimAdapter,
+  nominatim: nominatimAdapter
   // google et mapbox peuvent être ajoutés plus tard
 };
 
@@ -37,7 +37,8 @@ export function normalizeAddress(address: string): string {
 export async function getGeocodingProvider(): Promise<GeocodingAdapter> {
   try {
     const settingsEntry = await db.settings.get("config");
-    const providerName = settingsEntry?.settings?.geocodingProvider || "nominatim";
+    const providerName =
+      settingsEntry?.settings?.geocodingProvider || "nominatim";
     return adapters[providerName] || nominatimAdapter;
   } catch {
     return nominatimAdapter;
@@ -80,7 +81,7 @@ export async function geocodeAddress(
       adresse: normalizedAddress,
       gps: result.gps,
       provider: adapter.name,
-      cachedAt: new Date().toISOString(),
+      cachedAt: new Date().toISOString()
     };
     await db.geocache.put(cacheEntry);
   } catch (error) {
@@ -139,11 +140,11 @@ export async function getGeocacheStats(): Promise<{
 }> {
   const all = await db.geocache.toArray();
   const withCoords = all.filter((e) => e.gps !== null).length;
-  
+
   return {
     total: all.length,
     withCoords,
-    withoutCoords: all.length - withCoords,
+    withoutCoords: all.length - withCoords
   };
 }
 
@@ -166,7 +167,7 @@ const KNOWN_LOCATIONS: Record<string, { lat: number; lng: number }> = {
   "orsys toulouse": { lat: 43.6047, lng: 1.4442 },
   "orsys nantes": { lat: 47.2184, lng: -1.5536 },
   "orsys lille": { lat: 50.6292, lng: 3.0573 },
-  "orsys bordeaux": { lat: 44.8378, lng: -0.5792 },
+  "orsys bordeaux": { lat: 44.8378, lng: -0.5792 }
 };
 
 /**
@@ -183,7 +184,7 @@ export async function preloadKnownLocations(): Promise<number> {
           adresse: address,
           gps,
           provider: "nominatim", // Fictif (données pré-définies)
-          cachedAt: new Date().toISOString(),
+          cachedAt: new Date().toISOString()
         });
         count++;
       }
