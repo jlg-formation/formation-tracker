@@ -1,14 +1,18 @@
 {
   "version": "1.0",
   "currentStep": 9,
-  "lastUpdated": "2026-02-08T15:32:00.000Z",
+  "lastUpdated": "2026-02-08T15:46:00.000Z",
   "steps": {
     "0": { "status": "completed", "completedAt": "2026-02-08T12:00:00.000Z" },
     "1": { "status": "completed", "completedAt": "2026-02-08T12:30:00.000Z" },
     "2": { "status": "completed", "completedAt": "2026-02-08T13:00:00.000Z" },
     "3": { "status": "completed", "completedAt": "2026-02-08T13:48:00.000Z" },
     "4": { "status": "completed", "completedAt": "2026-02-08T15:05:00.000Z" },
-    "5": { "status": "completed", "completedAt": "2026-02-08T13:18:00.000Z" },
+    "5": {
+      "status": "completed",
+      "completedAt": "2026-02-08T15:46:00.000Z",
+      "note": "Ajout bouton Tester la connexion OpenAI"
+    },
     "6": { "status": "completed", "completedAt": "2026-02-08T13:25:00.000Z" },
     "7": { "status": "completed", "completedAt": "2026-02-08T14:33:00.000Z" },
     "8": { "status": "completed", "completedAt": "2026-02-08T15:32:00.000Z" },

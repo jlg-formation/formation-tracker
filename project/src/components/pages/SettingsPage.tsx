@@ -4,6 +4,9 @@ import { useGmailAuth } from "../../hooks/useGmailAuth";
 
 type GeocodingProvider = "nominatim" | "google" | "mapbox";
 
+/** Status du test de connexion OpenAI */
+type OpenAITestStatus = "idle" | "testing" | "success" | "error";
+
 export function SettingsPage() {
   const { settings, loading, saving, error, updateSettings } = useSettings();
   const {
@@ -22,6 +25,11 @@ export function SettingsPage() {
   const [localMapboxKey, setLocalMapboxKey] = useState("");
   const [localGoogleClientId, setLocalGoogleClientId] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // État pour le test de connexion OpenAI
+  const [openAITestStatus, setOpenAITestStatus] =
+    useState<OpenAITestStatus>("idle");
+  const [openAITestError, setOpenAITestError] = useState<string | null>(null);
 
   // Synchroniser les valeurs locales au chargement
   useEffect(() => {
@@ -66,6 +74,49 @@ export function SettingsPage() {
     if (localGoogleClientId.trim()) {
       setClientId(localGoogleClientId.trim());
       showSaveSuccess();
+    }
+  };
+
+  /**
+   * Teste la connexion à l'API OpenAI en appelant le endpoint /v1/models
+   * Utilise la clé sauvegardée dans les settings
+   */
+  const handleTestOpenAIConnection = async () => {
+    const apiKey = settings.openaiApiKey;
+
+    if (!apiKey) {
+      setOpenAITestStatus("error");
+      setOpenAITestError("Veuillez d'abord sauvegarder une clé API.");
+      return;
+    }
+
+    setOpenAITestStatus("testing");
+    setOpenAITestError(null);
+
+    try {
+      const response = await fetch("https://api.openai.com/v1/models", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (response.ok) {
+        setOpenAITestStatus("success");
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.error?.message ||
+          `Erreur ${response.status}: ${response.statusText}`;
+        setOpenAITestStatus("error");
+        setOpenAITestError(errorMessage);
+      }
+    } catch (err) {
+      setOpenAITestStatus("error");
+      setOpenAITestError(
+        err instanceof Error ? err.message : "Erreur de connexion réseau"
+      );
     }
   };
 
@@ -148,14 +199,45 @@ export function SettingsPage() {
               </a>
             </p>
           </div>
-          <div className="text-sm">
-            Statut :{" "}
-            {settings.openaiApiKey ? (
-              <span className="text-green-400">✓ Configurée</span>
-            ) : (
-              <span className="text-yellow-400">⚠ Non configurée</span>
-            )}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="text-sm">
+              Statut :{" "}
+              {settings.openaiApiKey ? (
+                <span className="text-green-400">✓ Configurée</span>
+              ) : (
+                <span className="text-yellow-400">⚠ Non configurée</span>
+              )}
+            </div>
+
+            {/* Bouton Tester la connexion */}
+            <button
+              onClick={handleTestOpenAIConnection}
+              disabled={
+                openAITestStatus === "testing" || !settings.openaiApiKey
+              }
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-md transition-colors text-sm"
+            >
+              {openAITestStatus === "testing" ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin">⏳</span> Test en cours...
+                </span>
+              ) : (
+                "Tester la connexion"
+              )}
+            </button>
           </div>
+
+          {/* Résultat du test */}
+          {openAITestStatus === "success" && (
+            <div className="mt-3 p-3 bg-green-900/30 border border-green-600 rounded text-green-300 text-sm flex items-center gap-2">
+              <span>✅</span> Connexion réussie ! La clé API est valide.
+            </div>
+          )}
+          {openAITestStatus === "error" && (
+            <div className="mt-3 p-3 bg-red-900/30 border border-red-600 rounded text-red-300 text-sm flex items-center gap-2">
+              <span>❌</span> {openAITestError || "Erreur de connexion"}
+            </div>
+          )}
         </div>
       </section>
 
