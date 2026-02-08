@@ -1,13 +1,13 @@
 {
   "version": "1.0",
-  "currentStep": 3,
-  "lastUpdated": "2026-02-08T13:00:00.000Z",
+  "currentStep": 5,
+  "lastUpdated": "2026-02-08T14:00:00.000Z",
   "steps": {
     "0": { "status": "completed", "completedAt": "2026-02-08T12:00:00.000Z" },
     "1": { "status": "completed", "completedAt": "2026-02-08T12:30:00.000Z" },
     "2": { "status": "completed", "completedAt": "2026-02-08T13:00:00.000Z" },
-    "3": { "status": "not-started" },
-    "4": { "status": "not-started" },
+    "3": { "status": "completed", "completedAt": "2026-02-08T13:48:00.000Z" },
+    "4": { "status": "completed", "completedAt": "2026-02-08T14:00:00.000Z" },
     "5": { "status": "not-started" },
     "6": { "status": "not-started" },
     "7": { "status": "not-started" },
@@ -31,7 +31,18 @@
     "project/src/types/index.test.ts",
     "project/src/utils/constants.ts",
     "project/src/services/.gitkeep",
-    "project/src/stores/.gitkeep",
-    "project/src/hooks/.gitkeep"
+    "project/src/hooks/.gitkeep",
+    "project/src/stores/db.ts",
+    "project/src/stores/formationsStore.ts",
+    "project/src/stores/formationsStore.test.ts",
+    "project/src/components/layout/Header.tsx",
+    "project/src/components/layout/Footer.tsx",
+    "project/src/components/layout/Layout.tsx",
+    "project/src/components/layout/index.ts",
+    "project/src/components/pages/DashboardPage.tsx",
+    "project/src/components/pages/MapPage.tsx",
+    "project/src/components/pages/FormationsPage.tsx",
+    "project/src/components/pages/SettingsPage.tsx",
+    "project/src/components/pages/index.ts"
   ]
 }
