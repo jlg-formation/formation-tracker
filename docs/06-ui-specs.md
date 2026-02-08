@@ -310,22 +310,22 @@ L'application est **mobile-first** et utilise les classes responsives de Tailwin
 
 ### Breakpoints Tailwind
 
-| Breakpoint  | Préfixe | Largeur min | Adaptations                                              |
-| ----------- | ------- | ----------- | -------------------------------------------------------- |
-| **Mobile**  | (défaut)| < 768px     | Menu hamburger, cartes empilées, padding réduit          |
-| **Tablette**| `md:`   | ≥ 768px     | Navigation horizontale, 2 colonnes stats                 |
-| **Desktop** | `lg:`   | ≥ 1024px    | Layout complet, 4 colonnes stats, padding standard       |
+| Breakpoint   | Préfixe  | Largeur min | Adaptations                                        |
+| ------------ | -------- | ----------- | -------------------------------------------------- |
+| **Mobile**   | (défaut) | < 768px     | Menu hamburger, cartes empilées, padding réduit    |
+| **Tablette** | `md:`    | ≥ 768px     | Navigation horizontale, 2 colonnes stats           |
+| **Desktop**  | `lg:`    | ≥ 1024px    | Layout complet, 4 colonnes stats, padding standard |
 
 ### Composants responsive implémentés
 
-| Composant    | Mobile (< 768px)               | Desktop (≥ 768px)              |
-| ------------ | ------------------------------ | ------------------------------ |
-| **Header**   | Menu hamburger déroulant       | Navigation horizontale         |
-| **Layout**   | `p-4` (padding réduit)         | `md:p-6 lg:p-8`                |
-| **Footer**   | Texte `text-xs`, flex-wrap     | Texte `md:text-sm`             |
-| **StatsCards** | 1 colonne empilée            | Grid `md:grid-cols-2 lg:grid-cols-4` |
-| **Tableau**  | Scroll horizontal              | Affichage complet              |
-| **Modal**    | Plein écran                    | Centré avec overlay            |
+| Composant      | Mobile (< 768px)           | Desktop (≥ 768px)                    |
+| -------------- | -------------------------- | ------------------------------------ |
+| **Header**     | Menu hamburger déroulant   | Navigation horizontale               |
+| **Layout**     | `p-4` (padding réduit)     | `md:p-6 lg:p-8`                      |
+| **Footer**     | Texte `text-xs`, flex-wrap | Texte `md:text-sm`                   |
+| **StatsCards** | 1 colonne empilée          | Grid `md:grid-cols-2 lg:grid-cols-4` |
+| **Tableau**    | Scroll horizontal          | Affichage complet                    |
+| **Modal**      | Plein écran                | Centré avec overlay                  |
 
 ### Navigation mobile
 

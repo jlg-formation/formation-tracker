@@ -1,14 +1,14 @@
 {
   "version": "1.0",
-  "currentStep": 5,
-  "lastUpdated": "2026-02-08T15:05:00.000Z",
+  "currentStep": 6,
+  "lastUpdated": "2026-02-08T13:18:00.000Z",
   "steps": {
     "0": { "status": "completed", "completedAt": "2026-02-08T12:00:00.000Z" },
     "1": { "status": "completed", "completedAt": "2026-02-08T12:30:00.000Z" },
     "2": { "status": "completed", "completedAt": "2026-02-08T13:00:00.000Z" },
     "3": { "status": "completed", "completedAt": "2026-02-08T13:48:00.000Z" },
     "4": { "status": "completed", "completedAt": "2026-02-08T15:05:00.000Z" },
-    "5": { "status": "not-started" },
+    "5": { "status": "completed", "completedAt": "2026-02-08T13:18:00.000Z" },
     "6": { "status": "not-started" },
     "7": { "status": "not-started" },
     "8": { "status": "not-started" },
@@ -43,6 +43,10 @@
     "project/src/components/pages/MapPage.tsx",
     "project/src/components/pages/FormationsPage.tsx",
     "project/src/components/pages/SettingsPage.tsx",
-    "project/src/components/pages/index.ts"
+    "project/src/components/pages/index.ts",
+    "project/src/stores/settingsStore.ts",
+    "project/src/stores/settingsStore.test.ts",
+    "project/src/hooks/useSettings.ts",
+    "project/src/hooks/useSettings.test.ts"
   ]
 }

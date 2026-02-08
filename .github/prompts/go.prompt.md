@@ -34,7 +34,7 @@ Ce tableau permet de voir rapidement ce qui est démontrable à chaque étape po
 | 1     | Vitest + Tests     | Tests qui passent, rapport de couverture           |
 | 2     | Types + Structure  | Types TypeScript, tests des enums                  |
 | 3     | IndexedDB          | Tables dans DevTools, tests CRUD                   |
-| 4     | Tailwind + Layout  | Tailwind CSS v4 installé, navigation entre 4 pages |
+| 4     | Tailwind + Layout  | Tailwind v4, navigation responsive, menu hamburger |
 | 5     | Page Paramètres    | Formulaire de config, sauvegarde persistante       |
 | 6     | Gmail OAuth        | Connexion Google fonctionnelle                     |
 | 7     | Extraction emails  | Barre de progression, emails stockés               |
@@ -264,7 +264,7 @@ import "fake-indexeddb/auto";
 
 ---
 
-### Étape 4 : Tailwind CSS v4 + Layout + Routing
+### Étape 4 : Tailwind CSS v4 + Layout + Routing + Responsive
 
 **Critères de complétion :**
 
@@ -272,11 +272,13 @@ import "fake-indexeddb/auto";
 - [ ] `project/vite.config.ts` configuré avec le plugin `@tailwindcss/vite`
 - [ ] `project/src/index.css` contient `@import "tailwindcss"`
 - [ ] `react-router-dom` dans les dépendances
-- [ ] `project/src/components/layout/Header.tsx` existe avec classes Tailwind
-- [ ] `project/src/components/layout/Footer.tsx` existe avec classes Tailwind
+- [ ] `project/src/components/layout/Header.tsx` avec menu hamburger mobile (`hidden md:flex`)
+- [ ] `project/src/components/layout/Footer.tsx` avec classes responsives
+- [ ] `project/src/components/layout/Layout.tsx` avec padding adaptatif (`p-4 md:p-6 lg:p-8`)
 - [ ] `project/src/App.tsx` avec routes : `/`, `/carte`, `/formations`, `/parametres`
 - [ ] `project/src/App.css` supprimé ou vidé (CSS personnalisé minimal)
 - [ ] Tous les composants utilisent des classes Tailwind (pas de CSS personnalisé)
+- [ ] **Responsive mobile-first** : breakpoints `md:` (≥768px) et `lg:` (≥1024px)
 - [ ] Navigation fonctionnelle entre les pages
 
 **Actions si incomplet :**
@@ -312,28 +314,45 @@ Remplacer le contenu de `project/src/index.css` :
 }
 ```
 
-Supprimer ou vider `project/src/App.css` et refactorer tous les composants pour utiliser des classes Tailwind :
+Supprimer ou vider `project/src/App.css` et refactorer tous les composants pour utiliser des classes Tailwind **responsive mobile-first** :
 
 ```tsx
-// ✅ BON : Classes Tailwind
-<header className="flex justify-between items-center p-4 bg-gray-900 border-b border-gray-800">
-  <span className="text-xl font-semibold text-white">
-    ORSYS Training Tracker
-  </span>
+// ✅ BON : Header responsive avec menu hamburger mobile
+<header className="bg-[#1a1a2e] border-b border-[#16213e]">
+  <div className="flex justify-between items-center px-4 md:px-8 py-4">
+    <span className="text-lg md:text-xl font-semibold text-white">
+      ORSYS Training Tracker
+    </span>
+    {/* Navigation desktop */}
+    <nav className="hidden md:flex gap-2">...</nav>
+    {/* Bouton hamburger mobile */}
+    <button className="md:hidden p-2">...</button>
+  </div>
+  {/* Navigation mobile (affichée au clic) */}
+  <nav className="md:hidden flex flex-col gap-1 px-4 pb-4">...</nav>
 </header>
 
-// ❌ MAUVAIS : CSS personnalisé
-// .header { display: flex; justify-content: space-between; }
+// ✅ BON : Layout avec padding adaptatif
+<main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+
+// ❌ MAUVAIS : CSS personnalisé ou pas de breakpoints
+// .header { padding: 32px; } // Trop large sur mobile
 ```
+
+**Breakpoints Tailwind v4 :**
+
+- Mobile (défaut) : < 768px
+- Tablette (`md:`) : ≥ 768px
+- Desktop (`lg:`) : ≥ 1024px
 
 **🎯 Démo possible :**
 
-> _"Tailwind CSS v4 est installé et la navigation fonctionne."_
+> _"Tailwind CSS v4 est installé et l'application est responsive."_
 >
-> - Montrer que Tailwind est configuré (pas de fichier CSS personnalisé)
 > - Lancer `bun run dev` et naviguer entre les 4 pages
-> - Inspecter le DOM → montrer les classes Tailwind sur les éléments
-> - Expliquer : "On utilise Tailwind CSS v4 pour le styling. Pas de CSS à maintenir, tout est dans les classes utilitaires."
+> - Réduire la fenêtre (<768px) → menu hamburger apparaît
+> - Ouvrir DevTools mobile (iPhone/Android) → navigation mobile
+> - Expliquer : "L'application est mobile-first. Menu hamburger sur mobile, navigation horizontale sur desktop."
 
 ---
 
@@ -670,7 +689,7 @@ Créer les services d'export selon `docs/07-export.md`.
 
 - [ ] Gestion des erreurs avec messages en français
 - [ ] Loading states sur toutes les actions async
-- [ ] Responsive design basique
+- [ ] Vérifier le responsive sur tous les composants (déjà implémenté étape 4)
 - [ ] `README.md` avec instructions d'utilisation
 - [ ] Build production fonctionne (`bun run build`)
 - [ ] **Coverage tests > 70%** (`bun run test:coverage`)
@@ -685,7 +704,7 @@ Finaliser l'application et préparer le déploiement.
 >
 > - Parcours complet : connexion Gmail → extraction → dashboard → carte → liste → export
 > - Montrer la gestion d'erreurs (déconnexion réseau simulée)
-> - Montrer le responsive sur mobile (DevTools)
+> - Vérifier le responsive sur tous les nouveaux composants (grids, modals, etc.)
 > - Afficher le rapport de couverture de tests (>70%)
 > - Lancer `bun run build` → montrer le build prêt pour GitHub Pages
 > - Expliquer : "L'application est terminée, testée, et prête à être déployée. Toutes les fonctionnalités sont opérationnelles."
@@ -706,26 +725,26 @@ Si le fichier existe, lire `currentStep` et reprendre à cette étape.
 
 Si le fichier d'état n'existe pas, déterminer l'étape par inspection :
 
-| Étape | Fichier à vérifier                                                       |
-| ----- | ------------------------------------------------------------------------ |
-| 0     | `project/package.json`                                                   |
-| 1     | `project/vitest.config.ts`                                               |
-| 2     | `project/src/types/index.ts`                                             |
-| 3     | `project/src/stores/db.ts`                                               |
-| 4     | `tailwindcss` dans package.json + `@import "tailwindcss"` dans index.css |
-| 5     | `project/src/components/settings/SettingsPage.tsx`                       |
-| 6     | `project/src/services/gmail/auth.ts`                                     |
-| 7     | `project/src/components/extraction/ExtractionPanel.tsx`                  |
-| 8     | `project/src/services/llm/parser.ts`                                     |
-| 9     | `project/src/services/llm/prompts.ts` (extraction)                       |
-| 10    | `project/src/services/geocoding/nominatim.ts`                            |
-| 11    | `project/src/utils/fusion.ts`                                            |
-| 12    | `project/src/components/dashboard/Dashboard.tsx`                         |
-| 13    | `project/src/components/dashboard/YearlyChart.tsx`                       |
-| 14    | `project/src/components/map/MapView.tsx`                                 |
-| 15    | `project/src/components/formations/FormationList.tsx`                    |
-| 16    | `project/src/services/export/pdf.ts`                                     |
-| 17    | Tous les critères de finition                                            |
+| Étape | Fichier à vérifier                                            |
+| ----- | ------------------------------------------------------------- |
+| 0     | `project/package.json`                                        |
+| 1     | `project/vitest.config.ts`                                    |
+| 2     | `project/src/types/index.ts`                                  |
+| 3     | `project/src/stores/db.ts`                                    |
+| 4     | `tailwindcss` + `hidden md:flex` dans Header.tsx (responsive) |
+| 5     | `project/src/components/settings/SettingsPage.tsx`            |
+| 6     | `project/src/services/gmail/auth.ts`                          |
+| 7     | `project/src/components/extraction/ExtractionPanel.tsx`       |
+| 8     | `project/src/services/llm/parser.ts`                          |
+| 9     | `project/src/services/llm/prompts.ts` (extraction)            |
+| 10    | `project/src/services/geocoding/nominatim.ts`                 |
+| 11    | `project/src/utils/fusion.ts`                                 |
+| 12    | `project/src/components/dashboard/Dashboard.tsx`              |
+| 13    | `project/src/components/dashboard/YearlyChart.tsx`            |
+| 14    | `project/src/components/map/MapView.tsx`                      |
+| 15    | `project/src/components/formations/FormationList.tsx`         |
+| 16    | `project/src/services/export/pdf.ts`                          |
+| 17    | Tous les critères de finition                                 |
 
 Après détermination, **créer le fichier d'état** avec l'étape trouvée.
 

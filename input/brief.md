@@ -91,11 +91,11 @@ Chaque formation extraite contiendra les informations suivantes :
 
 L'application doit être **entièrement responsive** et utilisable sur tous les appareils :
 
-| Breakpoint  | Largeur    | Adaptations                                              |
-| ----------- | ---------- | -------------------------------------------------------- |
-| **Mobile**  | < 768px    | Menu hamburger, cartes empilées, carte plein écran       |
-| **Tablette**| 768-1024px | 2 colonnes stats, layout adapté                          |
-| **Desktop** | > 1024px   | Layout complet, 4 colonnes stats, navigation horizontale |
+| Breakpoint   | Largeur    | Adaptations                                              |
+| ------------ | ---------- | -------------------------------------------------------- |
+| **Mobile**   | < 768px    | Menu hamburger, cartes empilées, carte plein écran       |
+| **Tablette** | 768-1024px | 2 colonnes stats, layout adapté                          |
+| **Desktop**  | > 1024px   | Layout complet, 4 colonnes stats, navigation horizontale |
 
 ### Cartographie interactive
 
