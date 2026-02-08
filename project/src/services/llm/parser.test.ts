@@ -160,7 +160,7 @@ describe("LLM Parser", () => {
           id: "chatcmpl-test",
           object: "chat.completion",
           created: Date.now(),
-          model: "gpt-4o",
+          model: "gpt-4o-mini",
           choices: [
             {
               index: 0,
@@ -462,7 +462,7 @@ describe("LLM Extraction", () => {
           id: "chatcmpl-test",
           object: "chat.completion",
           created: Date.now(),
-          model: "gpt-4o",
+          model: "gpt-4o-mini",
           choices: [
             {
               index: 0,

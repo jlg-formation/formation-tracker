@@ -19,17 +19,26 @@ import type {
 /**
  * Liste les messages Gmail correspondant à la query ORSYS
  * @param pageToken Token de pagination (optionnel)
+ * @param afterDate Date minimale pour filtrer (format YYYY/MM/DD)
  */
 export async function listMessages(
-  pageToken?: string
+  pageToken?: string,
+  afterDate?: string
 ): Promise<GmailListResponse> {
   const token = getAccessToken();
   if (!token) {
     throw new Error("Non authentifié. Veuillez vous connecter à Gmail.");
   }
 
+  // Construire la query avec la date "after:" si fournie
+  let query = GMAIL_CONFIG.query;
+  if (afterDate) {
+    // Remplacer la date par défaut par la nouvelle date
+    query = `from:orsys.fr after:${afterDate}`;
+  }
+
   const params = new URLSearchParams({
-    q: GMAIL_CONFIG.query,
+    q: query,
     maxResults: String(GMAIL_CONFIG.maxResults)
   });
 
@@ -204,16 +213,18 @@ export type ProgressCallback = (
 /**
  * Récupère tous les IDs de messages ORSYS
  * @param onProgress Callback de progression optionnel
+ * @param afterDate Date minimale pour filtrer (YYYY/MM/DD). Si non fournie, utilise 2014/01/01
  */
 export async function fetchAllMessageIds(
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  afterDate?: string
 ): Promise<string[]> {
   const allIds: string[] = [];
   let pageToken: string | undefined;
   let totalEstimate = 0;
 
   do {
-    const response = await listMessages(pageToken);
+    const response = await listMessages(pageToken, afterDate);
 
     if (response.messages) {
       for (const msg of response.messages) {
@@ -225,7 +236,9 @@ export async function fetchAllMessageIds(
     onProgress?.(
       allIds.length,
       totalEstimate,
-      "Récupération des identifiants..."
+      afterDate
+        ? `Récupération des nouveaux emails (après ${afterDate})...`
+        : "Récupération des identifiants..."
     );
 
     pageToken = response.nextPageToken;

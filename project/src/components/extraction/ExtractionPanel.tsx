@@ -45,6 +45,7 @@ interface AnalysisState {
   formationsCreees: number;
   formationsMisesAJour: number;
   emailsIgnores: number;
+  emailsEnErreur: number;
   errorMessage?: string;
 }
 
@@ -64,7 +65,8 @@ const initialAnalysisState: AnalysisState = {
   message: "",
   formationsCreees: 0,
   formationsMisesAJour: 0,
-  emailsIgnores: 0
+  emailsIgnores: 0,
+  emailsEnErreur: 0
 };
 
 export function ExtractionPanel() {
@@ -99,6 +101,7 @@ export function ExtractionPanel() {
 
   /**
    * Lance l'extraction des emails ORSYS
+   * Optimisation : ne charge que les emails depuis le dernier email stocké (-1 jour)
    */
   const startExtraction = useCallback(async () => {
     if (!isConnected) return;
@@ -106,11 +109,27 @@ export function ExtractionPanel() {
     setState({
       ...initialState,
       status: "fetching-ids",
-      message: "Récupération des identifiants des emails..."
+      message: "Recherche du dernier email stocké..."
     });
 
     try {
-      // Phase 1 : Récupérer tous les IDs de messages
+      // Trouver le dernier email stocké pour optimiser la requête
+      let afterDate: string | undefined;
+      const lastEmail = await db.emails.orderBy("date").reverse().first();
+
+      if (lastEmail?.date) {
+        // Soustraire 1 jour pour être sûr de ne rien manquer
+        const lastDate = new Date(lastEmail.date);
+        lastDate.setDate(lastDate.getDate() - 1);
+        // Format YYYY/MM/DD pour Gmail API
+        afterDate = `${lastDate.getFullYear()}/${String(lastDate.getMonth() + 1).padStart(2, "0")}/${String(lastDate.getDate()).padStart(2, "0")}`;
+        setState((prev) => ({
+          ...prev,
+          message: `Recherche des emails depuis ${afterDate}...`
+        }));
+      }
+
+      // Phase 1 : Récupérer les IDs de messages (filtrés par date si possible)
       const messageIds = await fetchAllMessageIds((current, total, message) => {
         setState((prev) => ({
           ...prev,
@@ -118,13 +137,15 @@ export function ExtractionPanel() {
           totalCount: total,
           message: message || prev.message
         }));
-      });
+      }, afterDate);
 
       if (messageIds.length === 0) {
         setState({
           ...initialState,
           status: "done",
-          message: "Aucun email ORSYS trouvé."
+          message: afterDate
+            ? "Aucun nouvel email ORSYS trouvé."
+            : "Aucun email ORSYS trouvé."
         });
         return;
       }
@@ -224,6 +245,8 @@ export function ExtractionPanel() {
 
   /**
    * Lance l'analyse des emails non traités via LLM
+   * Sauvegarde incrémentale : les formations sont fusionnées et sauvegardées par batch
+   * pour permettre de reprendre en cas d'interruption
    */
   const startAnalysis = useCallback(async () => {
     // Vérifier la clé API OpenAI
@@ -258,8 +281,35 @@ export function ExtractionPanel() {
       message: "Classification des emails..."
     });
 
-    const fusionInputs: FusionInput[] = [];
+    let fusionInputs: FusionInput[] = [];
     let ignoredCount = 0;
+    let errorCount = 0;
+    let totalCreated = 0;
+    let totalUpdated = 0;
+    const BATCH_SIZE = 5; // Sauvegarder toutes les 5 analyses
+
+    /**
+     * Sauvegarde incrémentale des formations
+     */
+    const saveFormationsBatch = async () => {
+      if (fusionInputs.length === 0) return;
+
+      const existingFormations = await db.formations.toArray();
+      const fusionResult = fusionnerEmails(fusionInputs, existingFormations);
+
+      for (const formation of fusionResult.created) {
+        await db.formations.add(formation);
+      }
+      for (const formation of fusionResult.updated) {
+        await db.formations.put(formation);
+      }
+
+      totalCreated += fusionResult.stats.formationsCreees;
+      totalUpdated += fusionResult.stats.formationsMisesAJour;
+
+      // Vider le batch
+      fusionInputs = [];
+    };
 
     try {
       // Phase 1 : Classification et extraction de chaque email
@@ -269,6 +319,10 @@ export function ExtractionPanel() {
         setAnalysisState((prev) => ({
           ...prev,
           currentCount: i + 1,
+          formationsCreees: totalCreated,
+          formationsMisesAJour: totalUpdated,
+          emailsIgnores: ignoredCount,
+          emailsEnErreur: errorCount,
           message: `Analyse de l'email ${i + 1}/${unprocessedEmails.length}...`
         }));
 
@@ -316,55 +370,75 @@ export function ExtractionPanel() {
             }
           });
 
-          // Marquer l'email comme traité
+          // Marquer l'email comme traité SEULEMENT si analyse réussie
           await db.emails.update(email.id, { processed: true });
         } catch (emailError) {
           console.error(`Erreur analyse email ${email.id}:`, emailError);
-          // Continuer avec les autres emails
+          // NE PAS marquer comme traité pour permettre de réessayer
+          // L'email sera réanalysé au prochain lancement
+          errorCount++;
         }
 
-        // Pause pour respecter les rate limits OpenAI
-        if ((i + 1) % 5 === 0) {
+        // Sauvegarde incrémentale par batch
+        if ((i + 1) % BATCH_SIZE === 0) {
+          setAnalysisState((prev) => ({
+            ...prev,
+            message: `Sauvegarde des formations (batch ${Math.floor((i + 1) / BATCH_SIZE)})...`
+          }));
+          await saveFormationsBatch();
+          // Pause pour respecter les rate limits OpenAI
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
 
-      // Phase 2 : Fusion des formations
-      setAnalysisState((prev) => ({
-        ...prev,
-        message: "Fusion des formations..."
-      }));
-
-      const existingFormations = await db.formations.toArray();
-      const fusionResult = fusionnerEmails(fusionInputs, existingFormations);
-
-      // Phase 3 : Sauvegarde des formations
-      for (const formation of fusionResult.created) {
-        await db.formations.add(formation);
-      }
-      for (const formation of fusionResult.updated) {
-        await db.formations.put(formation);
+      // Sauvegarder le dernier batch
+      if (fusionInputs.length > 0) {
+        setAnalysisState((prev) => ({
+          ...prev,
+          message: "Sauvegarde des dernières formations..."
+        }));
+        await saveFormationsBatch();
       }
 
       // Rafraîchir les compteurs
       await refreshCounts();
 
+      const doneMessage =
+        errorCount > 0
+          ? `Analyse terminée. ${errorCount} email(s) en erreur à réessayer.`
+          : "Analyse terminée.";
+
       setAnalysisState({
         status: "done",
         currentCount: unprocessedEmails.length,
         totalCount: unprocessedEmails.length,
-        message: `Analyse terminée.`,
-        formationsCreees: fusionResult.stats.formationsCreees,
-        formationsMisesAJour: fusionResult.stats.formationsMisesAJour,
-        emailsIgnores: ignoredCount + fusionResult.stats.emailsIgnores
+        message: doneMessage,
+        formationsCreees: totalCreated,
+        formationsMisesAJour: totalUpdated,
+        emailsIgnores: ignoredCount,
+        emailsEnErreur: errorCount
       });
     } catch (error) {
+      // En cas d'erreur, sauvegarder le batch en cours si possible
+      if (fusionInputs.length > 0) {
+        try {
+          await saveFormationsBatch();
+        } catch {
+          // Ignorer l'erreur de sauvegarde
+        }
+      }
+      await refreshCounts();
+
       const errorMessage =
         error instanceof Error ? error.message : "Erreur inconnue";
       setAnalysisState((prev) => ({
         ...prev,
         status: "error",
-        errorMessage,
+        formationsCreees: totalCreated,
+        formationsMisesAJour: totalUpdated,
+        emailsIgnores: ignoredCount,
+        emailsEnErreur: errorCount,
+        errorMessage: `${errorMessage}. ${totalCreated + totalUpdated} formations sauvegardées. Relancez l'analyse pour réessayer.`,
         message: `Erreur: ${errorMessage}`
       }));
     }
@@ -532,6 +606,12 @@ export function ExtractionPanel() {
             <p>
               ⏭️ {analysisState.emailsIgnores} emails ignorés (rappels, autres)
             </p>
+            {analysisState.emailsEnErreur > 0 && (
+              <p className="text-yellow-300">
+                ⚠️ {analysisState.emailsEnErreur} emails en erreur (relancez
+                l'analyse pour réessayer)
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -541,6 +621,13 @@ export function ExtractionPanel() {
         <div className="mb-4 p-4 bg-red-900/30 border border-red-600 rounded-lg text-red-300">
           <p className="font-medium">Erreur lors de l'analyse</p>
           <p className="text-sm mt-1">{analysisState.errorMessage}</p>
+          <div className="text-sm mt-2 space-y-1 text-red-200">
+            <p>✅ {analysisState.formationsCreees} formations créées</p>
+            <p>
+              🔄 {analysisState.formationsMisesAJour} formations mises à jour
+            </p>
+            <p>⏭️ {analysisState.emailsIgnores} emails ignorés</p>
+          </div>
         </div>
       )}
 
