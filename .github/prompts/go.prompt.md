@@ -35,10 +35,10 @@ Ce tableau permet de voir rapidement ce qui est démontrable à chaque étape po
 | 2     | Types + Structure  | Types TypeScript, tests des enums                  |
 | 3     | IndexedDB          | Tables dans DevTools, tests CRUD                   |
 | 4     | Tailwind + Layout  | Tailwind v4, navigation responsive, menu hamburger |
-| 5     | Page Paramètres    | Formulaire de config, sauvegarde persistante       |
+| 5     | Page Paramètres    | Config + test connexion OpenAI                     |
 | 6     | Gmail OAuth        | Connexion Google fonctionnelle                     |
 | 7     | Extraction emails  | Barre de progression, emails stockés               |
-| 8     | LLM Classification | Email → type détecté avec confiance                |
+| 8     | LLM Classification | Bouton test classification, type + confiance       |
 | 9     | LLM Extraction     | Email brut → Formation structurée                  |
 | 10    | Géocodage          | Adresse → coordonnées GPS, cache                   |
 | 11    | Fusion             | Plusieurs emails → 1 formation fusionnée           |
@@ -362,6 +362,9 @@ Supprimer ou vider `project/src/App.css` et refactorer tous les composants pour 
 
 - [ ] `project/src/components/settings/SettingsPage.tsx` existe
 - [ ] Formulaire pour saisir la clé API OpenAI
+- [ ] **Bouton "Tester la connexion"** après le champ clé API OpenAI
+  - [ ] Appel API OpenAI pour vérifier la validité de la clé
+  - [ ] Affichage du statut : ✅ réussi / ❌ erreur / ⏳ en cours
 - [ ] Formulaire pour choisir le provider de géocodage
 - [ ] Stockage dans IndexedDB via `settingsStore`
 - [ ] Hook `useSettings()` pour récupérer les paramètres
@@ -375,10 +378,11 @@ Créer la page paramètres selon `docs/06-ui-specs.md`.
 > _"La configuration de l'application est fonctionnelle."_
 >
 > - Aller sur /parametres
-> - Saisir une clé API OpenAI (ou factice pour la démo)
+> - Saisir une clé API OpenAI
+> - Cliquer sur "Tester la connexion" → voir le statut ✅ ou ❌
 > - Choisir un provider de géocodage (Nominatim par défaut)
 > - Montrer que les paramètres sont sauvegardés (recharger la page)
-> - Expliquer : "L'utilisateur peut configurer ses clés API. Elles restent stockées localement de façon sécurisée."
+> - Expliquer : "L'utilisateur peut configurer ses clés API et vérifier immédiatement qu'elles fonctionnent."
 
 ---
 
@@ -441,6 +445,11 @@ Créer le panneau d'extraction avec appels Gmail API selon `docs/04-gmail-api.md
 - [ ] Fonction `classifyEmail(email)` → `TypeEmail`
 - [ ] `project/src/services/llm/parser.test.ts` avec mocks OpenAI
 - [ ] Tests avec exemples de `input/emails-samples/`
+- [ ] **Bouton de test dans la page Paramètres** : Section "Test de classification LLM"
+  - [ ] Sélecteur d'email exemple (inter, intra, annulation, bon de commande)
+  - [ ] Zone de texte pour coller un email personnalisé
+  - [ ] Bouton "Tester la classification"
+  - [ ] Affichage du résultat : type détecté, confiance (%), raison
 
 **Actions si incomplet :**
 Créer le service LLM selon `docs/03-llm-prompts.md`.
@@ -451,14 +460,18 @@ Pour les tests, mocker l'API OpenAI :
 vi.mock('openai', () => ({ ... }))
 ```
 
+Ajouter la section de test dans `SettingsPage.tsx` selon `docs/06-ui-specs.md` (section "Test de classification LLM").
+
 **🎯 Démo possible :**
 
 > _"L'IA classifie automatiquement les emails."_
 >
-> - Montrer un email brut dans la console
-> - Lancer la classification → afficher le type détecté (convocation, annulation...)
-> - Montrer le niveau de confiance (ex: 95%)
-> - Expliquer : "L'IA analyse chaque email et détermine son type : convocation inter/intra, annulation, bon de commande... C'est la première étape avant l'extraction."
+> - Aller sur /parametres → section "Test de classification LLM"
+> - Sélectionner un email exemple (ex: "Convocation Inter")
+> - Cliquer sur "Tester la classification"
+> - Montrer le résultat : type détecté (convocation-inter), confiance (95%), raison
+> - Coller un email personnalisé et relancer le test
+> - Expliquer : "L'IA analyse chaque email et détermine son type. Cette démo permet de valider que la clé API OpenAI fonctionne et de voir le LLM en action."
 
 ---
 

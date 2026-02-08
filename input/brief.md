@@ -220,6 +220,32 @@ Selon le type détecté, le LLM extrait les données pertinentes en JSON conform
 - **API LLM** : OpenAI (GPT-4o)
 - **Avantages** : Robuste aux variations de format, pas de regex à maintenir, évolutif
 
+#### Test de connexion OpenAI
+
+La page Paramètres inclut un **bouton "Tester la connexion"** juste après la saisie de la clé API :
+
+- **Appel API** : Requête légère vers l'API OpenAI pour vérifier la validité de la clé
+- **Feedback visuel** :
+  - ✅ Connexion réussie (modèle gpt-4o disponible)
+  - ❌ Erreur : clé invalide / quota dépassé / problème réseau
+  - ⏳ Test en cours...
+
+Cela permet de valider immédiatement la configuration avant de lancer une extraction complète.
+
+#### Test de classification (démo)
+
+La page Paramètres inclut un **outil de test de classification** pour démontrer le fonctionnement du LLM :
+
+- **Sélection d'emails exemples** : Choisir parmi les types prédéfinis (inter, intra, annulation, bon de commande)
+- **Email personnalisé** : Zone de texte pour coller un email quelconque
+- **Affichage du résultat** : Type détecté, niveau de confiance (%), explication
+
+Cet outil permet de :
+
+- Valider que la clé API OpenAI fonctionne
+- Démontrer la classification automatique lors de présentations
+- Débugger des cas particuliers d'emails
+
 ### Gestion des doublons
 
 - **Fusion intelligente** : En cas de plusieurs emails pour la même session, fusion des informations (priorité aux données les plus récentes/complètes)
