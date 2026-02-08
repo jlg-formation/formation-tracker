@@ -40,7 +40,7 @@ Ce tableau permet de voir rapidement ce qui est démontrable à chaque étape po
 | 7     | Extraction emails  | Barre de progression, emails stockés               |
 | 8     | LLM Classification | Bouton test classification, type + confiance       |
 | 9     | LLM Extraction     | Email brut → Formation structurée                  |
-| 10    | Géocodage          | Adresse → coordonnées GPS, cache                   |
+| 10    | Géocodage          | Test géocodage dans Paramètres, cache, lat/lng     |
 | 11    | Fusion             | Plusieurs emails → 1 formation fusionnée           |
 | 12    | Dashboard Stats    | 4 cartes KPI avec chiffres réels                   |
 | 13    | Graphiques D3      | Barres par année, camembert, top 10                |
@@ -509,6 +509,13 @@ Compléter le service LLM avec l'extraction selon `docs/03-llm-prompts.md`.
 - [ ] `project/src/services/geocoding/geocoding.test.ts` avec tests (mocker fetch)
 - [ ] Cache des résultats dans IndexedDB (table `geocache`)
 - [ ] Rate limiting (1 req/s pour Nominatim)
+- [ ] **Section "Test de géocodage" dans la page Paramètres** avec :
+  - [ ] Champ de saisie d'adresse
+  - [ ] Bouton "Tester le géocodage"
+  - [ ] Affichage résultat : lat/lng, source (Cache/API), durée
+  - [ ] Statistiques du cache (entrées, avec/sans GPS)
+  - [ ] Bouton "Précharger adresses ORSYS"
+  - [ ] Bouton "Vider le cache"
 
 **Actions si incomplet :**
 Créer le service géocodage selon `docs/05-geocoding.md`.
@@ -517,10 +524,13 @@ Créer le service géocodage selon `docs/05-geocoding.md`.
 
 > _"Les adresses sont converties en coordonnées GPS."_
 >
-> - Prendre une adresse de formation (ex: "ORSYS La Défense, Tour Opus")
-> - Lancer le géocodage → afficher lat/lng
-> - Montrer le cache IndexedDB (les adresses déjà géocodées)
-> - Expliquer : "Chaque lieu de formation est géolocalisé automatiquement. Le cache évite de refaire les mêmes requêtes."
+> - Aller sur /parametres → section "Test de géocodage"
+> - Saisir une adresse (ex: "ORSYS La Défense, 1 Parvis de la Défense")
+> - Cliquer sur "Tester le géocodage" → voir lat/lng, source API, durée
+> - Relancer le test → voir "Source: Cache" (instantané)
+> - Cliquer sur "Précharger adresses ORSYS" → voir le cache se remplir
+> - Montrer les statistiques du cache en temps réel
+> - Expliquer : "Chaque lieu de formation est géolocalisé automatiquement. Le cache évite de refaire les mêmes requêtes API."
 
 ---
 

@@ -353,3 +353,11 @@ export function getFormationKey(f: PartialFormation): FormationKey {
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
+
+/** Génère un ID de formation basé sur le code et la date */
+export function generateFormationId(
+  codeEtendu: string,
+  dateDebut: string
+): string {
+  return `${codeEtendu}-${dateDebut}`;
+}

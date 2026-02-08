@@ -1,11 +1,106 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "../../hooks/useSettings";
 import { useGmailAuth } from "../../hooks/useGmailAuth";
+import {
+  classifyEmail,
+  type ClassificationResult,
+  type EmailInput
+} from "../../services/llm";
+import {
+  geocodeAddress,
+  getGeocacheStats,
+  preloadKnownLocations,
+  clearGeocache
+} from "../../services/geocoding";
+import type { CoordonneesGPS } from "../../types";
 
 type GeocodingProvider = "nominatim" | "google" | "mapbox";
 
 /** Status du test de connexion OpenAI */
 type OpenAITestStatus = "idle" | "testing" | "success" | "error";
+
+/** Status du test de classification LLM */
+type ClassificationTestStatus = "idle" | "testing" | "success" | "error";
+
+/** Status du test de géocodage */
+type GeocodingTestStatus = "idle" | "testing" | "success" | "error";
+
+/** Résultat du test de géocodage */
+interface GeocodingTestResult {
+  gps: CoordonneesGPS | null;
+  fromCache: boolean;
+  duration: number;
+}
+
+/** Exemples d'emails pour le test de classification */
+const EMAIL_SAMPLES: Record<
+  string,
+  { subject: string; body: string; label: string }
+> = {
+  inter: {
+    label: "Convocation Inter-entreprise",
+    subject: "Confirmation animation inter",
+    body: `Bonjour
+
+Veuillez trouver ci-dessous les informations relatives à votre prochaine animation inter.
+
+Nom du formateur	Jean-Louis GUENEGO
+Titre	L'intelligence artificielle au service des développeurs - réf : GIAPA1
+Date	du 04/02/2026 au 06/02/2026
+Durée	3.0 j
+Lieu	Centre de formation ORSYS - Paroi Nord Grande Arche - 16ème étage - 1 parvis de la Défense - 92044 - PARIS LA DEFENSE.
+Nombre de participants	5 (à ce jour)
+
+Votre accès : https://docadmin.orsys.fr/formateur
+Votre mot de passe de connexion pour cette session : 6d3nSFCYT`
+  },
+  intra: {
+    label: "Convocation Intra-entreprise",
+    subject: "Confirmation formation intra N° 79757",
+    body: `Cybersécurité et intelligence artificielle : un enjeu clé pour la DSI du conseil régional des Hauts-de-France – N° 79757 / Option 1 - XXXZZ3) (Français)
+
+Date Formation	
+1ère partie :Du mercredi 21 au jeudi 22 janvier 2026
+2ème partie : Le jeudi 29 janvier 2026
+
+Lieu de formation	
+REGION HAUTS DE FRANCE 15 Mail Albert 1er
+Salle 101 Germain Bleuet (1er étage) 80 - Amiens France
+
+Nombre de participant(s)	9`
+  },
+  annulation: {
+    label: "Annulation de session",
+    subject: "SESSION ANNULEE",
+    body: `SESSION ANNULEE
+
+Bonjour,
+
+Nous vous informons que nous avons dû annuler, faute de participants en nombre suffisant, la session :
+
+IHMPA1 : UX design et ergonomie des sites Web à PARIS LA DEFENSE
+du 25/02/2026 au 27/02/2026
+
+Nous espérons pouvoir vous proposer très prochainement une nouvelle session.`
+  },
+  bonCommande: {
+    label: "Bon de commande",
+    subject: "CONFIRMATION DE SESSION - Référence Intra 81982/1",
+    body: `CONFIRMATION DE SESSION - Référence Intra 81982/1
+Référence de commande : GIAZZ1-2026-05-04
+
+Bonjour,
+
+Nous avons le plaisir de confirmer votre intervention concernant l'intra avec Monsieur GUENEGO Jean-Louis :
+
+Sur un cours STANDARD : GIAZZ1 : L'intelligence artificielle au service des développeurs
+Dates : du 04/05/2026 au 06/05/2026
+Pour la société : CONDUENT BUSINESS SOLUTIONS FRANCE SAS
+Durée : 3.0 jours, soit 21.0 heures de formation
+
+L'entité du Groupe ORSYS à facturer pour cette session sera ORSYS.`
+  }
+};
 
 export function SettingsPage() {
   const { settings, loading, saving, error, updateSettings } = useSettings();
@@ -30,6 +125,37 @@ export function SettingsPage() {
   const [openAITestStatus, setOpenAITestStatus] =
     useState<OpenAITestStatus>("idle");
   const [openAITestError, setOpenAITestError] = useState<string | null>(null);
+
+  // État pour le test de classification LLM
+  const [selectedEmailSample, setSelectedEmailSample] =
+    useState<string>("inter");
+  const [customEmailSubject, setCustomEmailSubject] = useState("");
+  const [customEmailBody, setCustomEmailBody] = useState("");
+  const [useCustomEmail, setUseCustomEmail] = useState(false);
+  const [classificationTestStatus, setClassificationTestStatus] =
+    useState<ClassificationTestStatus>("idle");
+  const [classificationResult, setClassificationResult] =
+    useState<ClassificationResult | null>(null);
+  const [classificationError, setClassificationError] = useState<string | null>(
+    null
+  );
+
+  // État pour le test de géocodage
+  const [geocodingTestAddress, setGeocodingTestAddress] = useState(
+    "ORSYS La Défense, 1 Parvis de la Défense, 92044 Paris"
+  );
+  const [geocodingTestStatus, setGeocodingTestStatus] =
+    useState<GeocodingTestStatus>("idle");
+  const [geocodingTestResult, setGeocodingTestResult] =
+    useState<GeocodingTestResult | null>(null);
+  const [geocodingTestError, setGeocodingTestError] = useState<string | null>(
+    null
+  );
+  const [geocacheStats, setGeocacheStats] = useState<{
+    total: number;
+    withCoords: number;
+    withoutCoords: number;
+  } | null>(null);
 
   // Synchroniser les valeurs locales au chargement
   useEffect(() => {
@@ -119,6 +245,128 @@ export function SettingsPage() {
       );
     }
   };
+
+  /**
+   * Teste la classification LLM avec un email exemple ou personnalisé
+   */
+  const handleTestClassification = async () => {
+    if (!settings.openaiApiKey) {
+      setClassificationTestStatus("error");
+      setClassificationError(
+        "Veuillez d'abord configurer et sauvegarder une clé API OpenAI."
+      );
+      return;
+    }
+
+    setClassificationTestStatus("testing");
+    setClassificationResult(null);
+    setClassificationError(null);
+
+    try {
+      const emailToTest: EmailInput = useCustomEmail
+        ? {
+            id: "test-custom",
+            subject: customEmailSubject || "(Sans sujet)",
+            body: customEmailBody
+          }
+        : {
+            id: `test-${selectedEmailSample}`,
+            subject: EMAIL_SAMPLES[selectedEmailSample].subject,
+            body: EMAIL_SAMPLES[selectedEmailSample].body
+          };
+
+      if (!emailToTest.body.trim()) {
+        setClassificationTestStatus("error");
+        setClassificationError(
+          "Veuillez saisir un contenu d'email à classifier."
+        );
+        return;
+      }
+
+      const result = await classifyEmail(emailToTest);
+      setClassificationResult(result);
+      setClassificationTestStatus("success");
+    } catch (err) {
+      setClassificationTestStatus("error");
+      setClassificationError(
+        err instanceof Error ? err.message : "Erreur lors de la classification"
+      );
+    }
+  };
+
+  /**
+   * Teste le géocodage d'une adresse
+   */
+  const handleTestGeocodage = async () => {
+    if (!geocodingTestAddress.trim()) {
+      setGeocodingTestStatus("error");
+      setGeocodingTestError("Veuillez saisir une adresse à géocoder.");
+      return;
+    }
+
+    setGeocodingTestStatus("testing");
+    setGeocodingTestResult(null);
+    setGeocodingTestError(null);
+
+    const startTime = Date.now();
+
+    try {
+      // Vérifier si l'adresse est déjà dans le cache
+      const statsBefore = await getGeocacheStats();
+
+      const gps = await geocodeAddress(geocodingTestAddress);
+
+      const statsAfter = await getGeocacheStats();
+      const duration = Date.now() - startTime;
+
+      // Si le cache a grandi, c'était un appel API, sinon c'était un cache hit
+      const fromCache = statsAfter.total === statsBefore.total;
+
+      setGeocodingTestResult({ gps, fromCache, duration });
+      setGeocodingTestStatus("success");
+
+      // Mettre à jour les stats du cache
+      setGeocacheStats(statsAfter);
+    } catch (err) {
+      setGeocodingTestStatus("error");
+      setGeocodingTestError(
+        err instanceof Error ? err.message : "Erreur lors du géocodage"
+      );
+    }
+  };
+
+  /**
+   * Charge les statistiques du cache de géocodage
+   */
+  const loadGeocacheStats = async () => {
+    const stats = await getGeocacheStats();
+    setGeocacheStats(stats);
+  };
+
+  /**
+   * Précharge les adresses ORSYS connues dans le cache
+   */
+  const handlePreloadKnownLocations = async () => {
+    const count = await preloadKnownLocations();
+    await loadGeocacheStats();
+    if (count > 0) {
+      setGeocodingTestError(null);
+    }
+  };
+
+  /**
+   * Vide le cache de géocodage
+   */
+  const handleClearGeocache = async () => {
+    await clearGeocache();
+    await loadGeocacheStats();
+    setGeocodingTestResult(null);
+  };
+
+  // Charger les stats du cache au montage
+  useEffect(() => {
+    loadGeocacheStats();
+  }, []);
 
   if (loading) {
     return (
@@ -241,6 +489,189 @@ export function SettingsPage() {
         </div>
       </section>
 
+      {/* Section Test de classification LLM */}
+      <section className="mb-8 p-6 bg-gray-800/50 rounded-lg border border-gray-700">
+        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <span>🧪</span> Test de classification LLM
+        </h2>
+        <p className="text-sm text-gray-400 mb-4">
+          Testez la classification des emails en utilisant un exemple prédéfini
+          ou en collant votre propre email.
+        </p>
+
+        <div className="space-y-4">
+          {/* Sélection : exemple ou personnalisé */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <label
+              className={`flex items-center gap-2 px-4 py-3 rounded-md border cursor-pointer transition-colors ${
+                !useCustomEmail
+                  ? "bg-indigo-600/20 border-indigo-500 text-white"
+                  : "bg-gray-900 border-gray-600 text-gray-400 hover:border-gray-500"
+              }`}
+            >
+              <input
+                type="radio"
+                name="email-source"
+                checked={!useCustomEmail}
+                onChange={() => setUseCustomEmail(false)}
+                className="sr-only"
+              />
+              <span>📋 Email exemple</span>
+            </label>
+            <label
+              className={`flex items-center gap-2 px-4 py-3 rounded-md border cursor-pointer transition-colors ${
+                useCustomEmail
+                  ? "bg-indigo-600/20 border-indigo-500 text-white"
+                  : "bg-gray-900 border-gray-600 text-gray-400 hover:border-gray-500"
+              }`}
+            >
+              <input
+                type="radio"
+                name="email-source"
+                checked={useCustomEmail}
+                onChange={() => setUseCustomEmail(true)}
+                className="sr-only"
+              />
+              <span>✏️ Email personnalisé</span>
+            </label>
+          </div>
+
+          {/* Sélecteur d'email exemple */}
+          {!useCustomEmail && (
+            <div>
+              <label
+                htmlFor="email-sample-select"
+                className="block text-sm text-gray-400 mb-2"
+              >
+                Choisir un type d'email
+              </label>
+              <select
+                id="email-sample-select"
+                value={selectedEmailSample}
+                onChange={(e) => setSelectedEmailSample(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-md text-white focus:outline-none focus:border-indigo-500"
+              >
+                {Object.entries(EMAIL_SAMPLES).map(([key, sample]) => (
+                  <option key={key} value={key}>
+                    {sample.label}
+                  </option>
+                ))}
+              </select>
+              <div className="mt-3 p-3 bg-gray-900 border border-gray-700 rounded-md">
+                <p className="text-xs text-gray-500 mb-1">Sujet :</p>
+                <p className="text-sm text-white mb-2">
+                  {EMAIL_SAMPLES[selectedEmailSample].subject}
+                </p>
+                <p className="text-xs text-gray-500 mb-1">
+                  Contenu (extrait) :
+                </p>
+                <p className="text-xs text-gray-400 whitespace-pre-wrap line-clamp-4">
+                  {EMAIL_SAMPLES[selectedEmailSample].body.slice(0, 200)}...
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Zone de texte pour email personnalisé */}
+          {useCustomEmail && (
+            <div className="space-y-3">
+              <div>
+                <label
+                  htmlFor="custom-email-subject"
+                  className="block text-sm text-gray-400 mb-2"
+                >
+                  Sujet de l'email
+                </label>
+                <input
+                  id="custom-email-subject"
+                  type="text"
+                  value={customEmailSubject}
+                  onChange={(e) => setCustomEmailSubject(e.target.value)}
+                  placeholder="Ex: Confirmation animation inter"
+                  className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="custom-email-body"
+                  className="block text-sm text-gray-400 mb-2"
+                >
+                  Corps de l'email
+                </label>
+                <textarea
+                  id="custom-email-body"
+                  value={customEmailBody}
+                  onChange={(e) => setCustomEmailBody(e.target.value)}
+                  placeholder="Collez ici le contenu de l'email à classifier..."
+                  rows={8}
+                  className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Bouton de test */}
+          <div>
+            <button
+              onClick={handleTestClassification}
+              disabled={
+                classificationTestStatus === "testing" || !settings.openaiApiKey
+              }
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-md transition-colors"
+            >
+              {classificationTestStatus === "testing" ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin">⏳</span> Classification en
+                  cours...
+                </span>
+              ) : (
+                "🔍 Tester la classification"
+              )}
+            </button>
+            {!settings.openaiApiKey && (
+              <p className="mt-2 text-xs text-yellow-400">
+                ⚠ Configurez d'abord votre clé API OpenAI ci-dessus.
+              </p>
+            )}
+          </div>
+
+          {/* Résultat de la classification */}
+          {classificationTestStatus === "success" && classificationResult && (
+            <div className="mt-4 p-4 bg-green-900/20 border border-green-600 rounded-lg">
+              <h3 className="text-sm font-semibold text-green-400 mb-3">
+                ✅ Classification réussie
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-gray-900/50 p-3 rounded">
+                  <p className="text-xs text-gray-500 mb-1">Type détecté</p>
+                  <p className="text-white font-mono text-sm">
+                    {classificationResult.type}
+                  </p>
+                </div>
+                <div className="bg-gray-900/50 p-3 rounded">
+                  <p className="text-xs text-gray-500 mb-1">Confiance</p>
+                  <p className="text-white font-mono text-sm">
+                    {Math.round(classificationResult.confidence * 100)}%
+                  </p>
+                </div>
+                <div className="bg-gray-900/50 p-3 rounded sm:col-span-1">
+                  <p className="text-xs text-gray-500 mb-1">Raison</p>
+                  <p className="text-gray-300 text-sm">
+                    {classificationResult.reason}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {classificationTestStatus === "error" && (
+            <div className="mt-4 p-4 bg-red-900/30 border border-red-600 rounded-lg text-red-300 text-sm">
+              <span>❌</span>{" "}
+              {classificationError || "Erreur lors de la classification"}
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Section Géocodage */}
       <section className="mb-8 p-6 bg-gray-800/50 rounded-lg border border-gray-700">
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -341,6 +772,146 @@ export function SettingsPage() {
             requête/seconde. Google et Mapbox offrent de meilleures
             performances.
           </p>
+        </div>
+      </section>
+
+      {/* Section Test de géocodage */}
+      <section className="mb-8 p-6 bg-gray-800/50 rounded-lg border border-gray-700">
+        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <span>📍</span> Test de géocodage
+        </h2>
+        <p className="text-sm text-gray-400 mb-4">
+          Testez la conversion d'adresse en coordonnées GPS. Les résultats sont
+          mis en cache pour éviter les appels répétés.
+        </p>
+
+        <div className="space-y-4">
+          {/* Statistiques du cache */}
+          {geocacheStats && (
+            <div className="flex flex-wrap gap-4 p-3 bg-gray-900/50 rounded-lg">
+              <div className="text-sm">
+                <span className="text-gray-500">Cache :</span>{" "}
+                <span className="text-white font-mono">
+                  {geocacheStats.total}
+                </span>{" "}
+                <span className="text-gray-500">entrées</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-500">Avec GPS :</span>{" "}
+                <span className="text-green-400 font-mono">
+                  {geocacheStats.withCoords}
+                </span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-500">Sans GPS :</span>{" "}
+                <span className="text-yellow-400 font-mono">
+                  {geocacheStats.withoutCoords}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Champ adresse */}
+          <div>
+            <label
+              htmlFor="geocoding-test-address"
+              className="block text-sm text-gray-400 mb-2"
+            >
+              Adresse à géocoder
+            </label>
+            <input
+              id="geocoding-test-address"
+              type="text"
+              value={geocodingTestAddress}
+              onChange={(e) => setGeocodingTestAddress(e.target.value)}
+              placeholder="Ex: ORSYS La Défense, Paris"
+              className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          {/* Boutons */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleTestGeocodage}
+              disabled={
+                geocodingTestStatus === "testing" ||
+                !geocodingTestAddress.trim()
+              }
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-md transition-colors"
+            >
+              {geocodingTestStatus === "testing" ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin">⏳</span> Géocodage...
+                </span>
+              ) : (
+                "🔍 Tester le géocodage"
+              )}
+            </button>
+            <button
+              onClick={handlePreloadKnownLocations}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors text-sm"
+            >
+              📥 Précharger adresses ORSYS
+            </button>
+            <button
+              onClick={handleClearGeocache}
+              disabled={!geocacheStats || geocacheStats.total === 0}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-md transition-colors text-sm"
+            >
+              🗑️ Vider le cache
+            </button>
+          </div>
+
+          {/* Résultat du test */}
+          {geocodingTestStatus === "success" && geocodingTestResult && (
+            <div className="mt-4 p-4 bg-green-900/20 border border-green-600 rounded-lg">
+              <h3 className="text-sm font-semibold text-green-400 mb-3">
+                ✅ Géocodage réussi
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-gray-900/50 p-3 rounded">
+                  <p className="text-xs text-gray-500 mb-1">Latitude</p>
+                  <p className="text-white font-mono text-sm">
+                    {geocodingTestResult.gps
+                      ? geocodingTestResult.gps.lat.toFixed(6)
+                      : "—"}
+                  </p>
+                </div>
+                <div className="bg-gray-900/50 p-3 rounded">
+                  <p className="text-xs text-gray-500 mb-1">Longitude</p>
+                  <p className="text-white font-mono text-sm">
+                    {geocodingTestResult.gps
+                      ? geocodingTestResult.gps.lng.toFixed(6)
+                      : "—"}
+                  </p>
+                </div>
+                <div className="bg-gray-900/50 p-3 rounded">
+                  <p className="text-xs text-gray-500 mb-1">Source</p>
+                  <p
+                    className={`font-mono text-sm ${geocodingTestResult.fromCache ? "text-cyan-400" : "text-orange-400"}`}
+                  >
+                    {geocodingTestResult.fromCache ? "Cache" : "API"}
+                  </p>
+                </div>
+                <div className="bg-gray-900/50 p-3 rounded">
+                  <p className="text-xs text-gray-500 mb-1">Durée</p>
+                  <p className="text-white font-mono text-sm">
+                    {geocodingTestResult.duration} ms
+                  </p>
+                </div>
+              </div>
+              {!geocodingTestResult.gps && (
+                <p className="mt-3 text-sm text-yellow-400">
+                  ⚠ Aucune coordonnée trouvée pour cette adresse.
+                </p>
+              )}
+            </div>
+          )}
+          {geocodingTestStatus === "error" && (
+            <div className="mt-4 p-4 bg-red-900/30 border border-red-600 rounded-lg text-red-300 text-sm">
+              <span>❌</span> {geocodingTestError || "Erreur lors du géocodage"}
+            </div>
+          )}
         </div>
       </section>
 

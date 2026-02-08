@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "currentStep": 9,
-  "lastUpdated": "2026-02-08T15:46:00.000Z",
+  "currentStep": 11,
+  "lastUpdated": "2026-02-08T16:15:00.000Z",
   "steps": {
     "0": { "status": "completed", "completedAt": "2026-02-08T12:00:00.000Z" },
     "1": { "status": "completed", "completedAt": "2026-02-08T12:30:00.000Z" },
@@ -15,9 +15,21 @@
     },
     "6": { "status": "completed", "completedAt": "2026-02-08T13:25:00.000Z" },
     "7": { "status": "completed", "completedAt": "2026-02-08T14:33:00.000Z" },
-    "8": { "status": "completed", "completedAt": "2026-02-08T15:32:00.000Z" },
-    "9": { "status": "not-started" },
-    "10": { "status": "not-started" },
+    "8": {
+      "status": "completed",
+      "completedAt": "2026-02-08T16:10:00.000Z",
+      "note": "Refait: Ajout section Test de classification LLM dans SettingsPage avec sélecteur d'exemples, champ personnalisé, et affichage résultat (type, confiance, raison)"
+    },
+    "9": {
+      "status": "completed",
+      "completedAt": "2026-02-08T15:56:00.000Z",
+      "note": "Ajout extraction LLM avec prompts et tests pour tous les types d'emails"
+    },
+    "10": {
+      "status": "completed",
+      "completedAt": "2026-02-08T16:15:00.000Z",
+      "note": "Service géocodage Nominatim avec adapter pattern, cache IndexedDB, rate limiting, et 22 tests"
+    },
     "11": { "status": "not-started" },
     "12": { "status": "not-started" },
     "13": { "status": "not-started" },
@@ -65,6 +77,10 @@
     "project/src/services/llm/config.ts",
     "project/src/services/llm/parser.ts",
     "project/src/services/llm/index.ts",
-    "project/src/services/llm/parser.test.ts"
+    "project/src/services/llm/parser.test.ts",
+    "project/src/services/geocoding/adapter.ts",
+    "project/src/services/geocoding/nominatim.ts",
+    "project/src/services/geocoding/index.ts",
+    "project/src/services/geocoding/geocoding.test.ts"
   ]
 }

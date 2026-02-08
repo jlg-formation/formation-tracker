@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { useGmailAuth } from "../../hooks/useGmailAuth";
 import {
   fetchAllMessageIds,
@@ -213,9 +214,9 @@ export function ExtractionPanel() {
           <p>
             Vous devez être connecté à Gmail pour extraire les emails. Allez
             dans{" "}
-            <a href="/parametres" className="underline hover:text-yellow-100">
+            <Link to="/parametres" className="underline hover:text-yellow-100">
               Paramètres
-            </a>{" "}
+            </Link>{" "}
             pour vous connecter.
           </p>
         </div>

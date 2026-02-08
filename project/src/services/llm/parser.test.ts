@@ -1,13 +1,30 @@
 /**
- * Tests pour le service LLM - Classification
+ * Tests pour le service LLM - Classification et Extraction
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import "fake-indexeddb/auto";
 
-import { classifyEmail, classifyEmailBatch, isLLMError } from "./index";
+import {
+  classifyEmail,
+  classifyEmailBatch,
+  isLLMError,
+  extractFormation,
+  extractFormationBatch,
+  buildExtractionPromptInter,
+  buildExtractionPromptIntra,
+  buildExtractionPromptAnnulation,
+  buildExtractionPromptBonCommande,
+  buildExtractionPromptFacturation,
+  EXTRACTION_SYSTEM_PROMPT
+} from "./index";
 import { isValidEmailType, buildClassificationUserPrompt } from "./prompts";
-import { TypeEmail } from "../../types";
+import {
+  TypeEmail,
+  TypeSession,
+  StatutFormation,
+  NiveauPersonnalisation
+} from "../../types";
 import type { EmailInput } from "./types";
 
 // Mock du settingsStore pour fournir une clé API
@@ -358,6 +375,481 @@ describe("LLM Parser", () => {
       expect(results.get("email-1")?.type).toBe(TypeEmail.AUTRE); // Erreur → autre
       expect(results.get("email-1")?.confidence).toBe(0);
       expect(results.get("email-3")?.type).toBe(TypeEmail.ANNULATION);
+    });
+  });
+});
+
+// =============================================================================
+// TESTS EXTRACTION
+// =============================================================================
+
+describe("LLM Extraction Prompts", () => {
+  describe("buildExtractionPromptInter", () => {
+    it("génère un prompt pour extraction inter", () => {
+      const prompt = buildExtractionPromptInter("Corps email inter");
+      expect(prompt).toContain("Corps email inter");
+      expect(prompt).toContain("inter-entreprise");
+      expect(prompt).toContain("Format de réponse");
+    });
+  });
+
+  describe("buildExtractionPromptIntra", () => {
+    it("génère un prompt pour extraction intra", () => {
+      const prompt = buildExtractionPromptIntra("Corps email intra");
+      expect(prompt).toContain("Corps email intra");
+      expect(prompt).toContain("intra-entreprise");
+      expect(prompt).toContain("Format de réponse");
+    });
+  });
+
+  describe("buildExtractionPromptAnnulation", () => {
+    it("génère un prompt pour extraction annulation", () => {
+      const prompt = buildExtractionPromptAnnulation("Corps annulation");
+      expect(prompt).toContain("Corps annulation");
+      expect(prompt).toContain("annulation");
+      expect(prompt).toContain("Format de réponse");
+    });
+  });
+
+  describe("buildExtractionPromptBonCommande", () => {
+    it("génère un prompt pour extraction bon commande", () => {
+      const prompt = buildExtractionPromptBonCommande("Corps bon commande");
+      expect(prompt).toContain("Corps bon commande");
+      expect(prompt).toContain("bon de commande");
+      expect(prompt).toContain("Format de réponse");
+    });
+  });
+
+  describe("buildExtractionPromptFacturation", () => {
+    it("génère un prompt pour extraction facturation", () => {
+      const prompt = buildExtractionPromptFacturation("Corps facturation");
+      expect(prompt).toContain("Corps facturation");
+      expect(prompt).toContain("facturation");
+      expect(prompt).toContain("Format de réponse");
+    });
+  });
+
+  describe("EXTRACTION_SYSTEM_PROMPT", () => {
+    it("contient les instructions d'extraction", () => {
+      expect(EXTRACTION_SYSTEM_PROMPT).toContain("ORSYS");
+      expect(EXTRACTION_SYSTEM_PROMPT).toContain("JSON");
+      expect(EXTRACTION_SYSTEM_PROMPT).toContain("ISO 8601");
+    });
+  });
+});
+
+describe("LLM Extraction", () => {
+  const mockFetch = vi.fn();
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    globalThis.fetch = mockFetch;
+    mockFetch.mockReset();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  /**
+   * Helper pour créer une réponse d'extraction mockée
+   */
+  function mockExtractionResponse(data: object) {
+    return {
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          id: "chatcmpl-test",
+          object: "chat.completion",
+          created: Date.now(),
+          model: "gpt-4o",
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: "assistant",
+                content: JSON.stringify(data)
+              },
+              finish_reason: "stop"
+            }
+          ],
+          usage: {
+            prompt_tokens: 500,
+            completion_tokens: 200,
+            total_tokens: 700
+          }
+        })
+    };
+  }
+
+  describe("extractFormation - Convocation Inter", () => {
+    it("extrait correctement une formation inter", async () => {
+      const extractedData = {
+        titre: "L'intelligence artificielle au service des développeurs",
+        codeEtendu: "GIAPA1",
+        dateDebut: "2026-02-04",
+        dateFin: "2026-02-06",
+        dates: ["2026-02-04", "2026-02-05", "2026-02-06"],
+        nombreJours: 3,
+        lieu: {
+          nom: "ORSYS La Défense",
+          adresse:
+            "Paroi Nord Grande Arche - 16ème étage - 1 parvis de la Défense - 92044 PARIS LA DEFENSE"
+        },
+        nombreParticipants: 5,
+        participants: [
+          { nom: "DUPONT Jean", email: "jean.dupont@example.com" }
+        ],
+        motDePasseDocadmin: "6d3nSFCYT"
+      };
+
+      mockFetch.mockResolvedValueOnce(mockExtractionResponse(extractedData));
+
+      const result = await extractFormation(
+        SAMPLE_EMAILS.inter,
+        TypeEmail.CONVOCATION_INTER,
+        "test-key"
+      );
+
+      expect(result.formation.titre).toBe(
+        "L'intelligence artificielle au service des développeurs"
+      );
+      expect(result.formation.codeEtendu).toBe("GIAPA1");
+      expect(result.formation.typeSession).toBe(TypeSession.INTER);
+      expect(result.formation.statut).toBe(StatutFormation.CONFIRMEE);
+      expect(result.formation.dateDebut).toBe("2026-02-04");
+      expect(result.formation.dateFin).toBe("2026-02-06");
+      expect(result.formation.nombreJours).toBe(3);
+      expect(result.formation.lieu?.nom).toBe("ORSYS La Défense");
+      expect(result.formation.nombreParticipants).toBe(5);
+      expect(result.formation.motDePasseDocadmin).toBe("6d3nSFCYT");
+      expect(result.formation.id).toBe("GIAPA1-2026-02-04");
+      expect(result.fieldsExtracted).toContain("titre");
+      expect(result.fieldsExtracted).toContain("codeEtendu");
+    });
+
+    it("gère les champs manquants", async () => {
+      const extractedData = {
+        titre: "Formation test",
+        codeEtendu: null,
+        dateDebut: "2026-02-04",
+        dateFin: null,
+        dates: null,
+        nombreJours: null,
+        lieu: null,
+        nombreParticipants: null,
+        participants: null,
+        motDePasseDocadmin: null
+      };
+
+      mockFetch.mockResolvedValueOnce(mockExtractionResponse(extractedData));
+
+      const result = await extractFormation(
+        SAMPLE_EMAILS.inter,
+        TypeEmail.CONVOCATION_INTER,
+        "test-key"
+      );
+
+      expect(result.fieldsMissing).toContain("codeEtendu");
+      expect(result.fieldsMissing).toContain("dateFin");
+      expect(result.fieldsMissing).toContain("lieu");
+      expect(result.fieldsExtracted).toContain("titre");
+    });
+  });
+
+  describe("extractFormation - Convocation Intra", () => {
+    it("extrait correctement une formation intra", async () => {
+      const extractedData = {
+        titre: "Cybersécurité et intelligence artificielle",
+        codeEtendu: "XXXZZ3",
+        referenceIntra: "79757",
+        client: "REGION HAUTS DE FRANCE",
+        dateDebut: "2026-01-21",
+        dateFin: "2026-01-29",
+        dates: ["2026-01-21", "2026-01-22", "2026-01-29"],
+        nombreJours: 3,
+        lieu: {
+          nom: "REGION HAUTS DE FRANCE",
+          adresse: "15 Mail Albert 1er, 80 - Amiens France",
+          salle: "Salle 101 Germain Bleuet"
+        },
+        nombreParticipants: 9,
+        niveauPersonnalisation: "standard",
+        contactEntreprise: {
+          nom: "Contact Test",
+          telephone: "0123456789"
+        }
+      };
+
+      mockFetch.mockResolvedValueOnce(mockExtractionResponse(extractedData));
+
+      const result = await extractFormation(
+        SAMPLE_EMAILS.intra,
+        TypeEmail.CONVOCATION_INTRA,
+        "test-key"
+      );
+
+      expect(result.formation.titre).toBe(
+        "Cybersécurité et intelligence artificielle"
+      );
+      expect(result.formation.typeSession).toBe(TypeSession.INTRA);
+      expect(result.formation.client).toBe("REGION HAUTS DE FRANCE");
+      expect(result.formation.lieu?.salle).toBe("Salle 101 Germain Bleuet");
+      expect(result.formation.facturation?.referenceIntra).toBe("79757");
+      expect(result.formation.niveauPersonnalisation).toBe(
+        NiveauPersonnalisation.STANDARD
+      );
+      expect(result.formation.contactEntreprise?.nom).toBe("Contact Test");
+    });
+
+    it("reconnaît les niveaux de personnalisation", async () => {
+      const testCases = [
+        { input: "spécifique", expected: NiveauPersonnalisation.SPECIFIQUE },
+        {
+          input: "ultra-spécifique",
+          expected: NiveauPersonnalisation.ULTRA_SPECIFIQUE
+        },
+        { input: "standard", expected: NiveauPersonnalisation.STANDARD }
+      ];
+
+      for (const { input, expected } of testCases) {
+        mockFetch.mockResolvedValueOnce(
+          mockExtractionResponse({
+            titre: "Test",
+            codeEtendu: "TEST01",
+            dateDebut: "2026-01-01",
+            dateFin: "2026-01-02",
+            niveauPersonnalisation: input
+          })
+        );
+
+        const result = await extractFormation(
+          SAMPLE_EMAILS.intra,
+          TypeEmail.CONVOCATION_INTRA,
+          "test-key"
+        );
+
+        expect(result.formation.niveauPersonnalisation).toBe(expected);
+      }
+    });
+  });
+
+  describe("extractFormation - Annulation", () => {
+    it("extrait correctement une annulation", async () => {
+      const extractedData = {
+        titre: "UX design et ergonomie des sites Web",
+        codeEtendu: "IHMPA1",
+        dateDebut: "2026-02-25",
+        dateFin: "2026-02-27",
+        lieu: "PARIS LA DEFENSE",
+        raisonAnnulation: "faute de participants en nombre suffisant"
+      };
+
+      mockFetch.mockResolvedValueOnce(mockExtractionResponse(extractedData));
+
+      const result = await extractFormation(
+        SAMPLE_EMAILS.annulation,
+        TypeEmail.ANNULATION,
+        "test-key"
+      );
+
+      expect(result.formation.statut).toBe(StatutFormation.ANNULEE);
+      expect(result.formation.codeEtendu).toBe("IHMPA1");
+      expect(result.formation.lieu?.nom).toBe("PARIS LA DEFENSE");
+      expect(result.warnings).toContainEqual(
+        expect.stringContaining("faute de participants")
+      );
+    });
+  });
+
+  describe("extractFormation - Bon de commande", () => {
+    it("extrait correctement un bon de commande", async () => {
+      const extractedData = {
+        titre: "L'intelligence artificielle au service des développeurs",
+        codeEtendu: "GIAZZ1",
+        referenceIntra: "81982/1",
+        referenceCommande: "GIAZZ1-2026-05-04",
+        client: "CONDUENT BUSINESS SOLUTIONS FRANCE SAS",
+        dateDebut: "2026-05-04",
+        dateFin: "2026-05-06",
+        nombreJours: 3,
+        nombreHeures: 21,
+        entiteFacturation: "ORSYS"
+      };
+
+      mockFetch.mockResolvedValueOnce(mockExtractionResponse(extractedData));
+
+      const result = await extractFormation(
+        SAMPLE_EMAILS.bonCommande,
+        TypeEmail.BON_COMMANDE,
+        "test-key"
+      );
+
+      expect(result.formation.typeSession).toBe(TypeSession.INTRA);
+      expect(result.formation.client).toBe(
+        "CONDUENT BUSINESS SOLUTIONS FRANCE SAS"
+      );
+      expect(result.formation.facturation?.referenceIntra).toBe("81982/1");
+      expect(result.formation.facturation?.referenceCommande).toBe(
+        "GIAZZ1-2026-05-04"
+      );
+      expect(result.formation.facturation?.entite).toBe("ORSYS");
+      expect(result.formation.nombreHeures).toBe(21);
+    });
+  });
+
+  describe("extractFormation - Types non extractibles", () => {
+    it("retourne un warning pour les types rappel et autre", async () => {
+      const resultRappel = await extractFormation(
+        SAMPLE_EMAILS.inter,
+        TypeEmail.RAPPEL,
+        "test-key"
+      );
+      expect(resultRappel.warnings).toContainEqual(
+        expect.stringContaining("non extractible")
+      );
+      expect(resultRappel.fieldsExtracted).toHaveLength(0);
+
+      const resultAutre = await extractFormation(
+        SAMPLE_EMAILS.inter,
+        TypeEmail.AUTRE,
+        "test-key"
+      );
+      expect(resultAutre.warnings).toContainEqual(
+        expect.stringContaining("non extractible")
+      );
+    });
+  });
+
+  describe("extractFormation - Erreurs", () => {
+    it("lance une erreur si pas de clé API", async () => {
+      vi.mocked(
+        await import("../../stores/settingsStore")
+      ).getSettings.mockResolvedValueOnce({
+        openaiApiKey: undefined,
+        geocodingProvider: "nominatim"
+      });
+
+      await expect(
+        extractFormation(SAMPLE_EMAILS.inter, TypeEmail.CONVOCATION_INTER)
+      ).rejects.toSatisfy(isLLMError);
+    });
+
+    it("lance une erreur si JSON invalide", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            choices: [
+              {
+                message: {
+                  content: "Not valid JSON"
+                }
+              }
+            ]
+          })
+      });
+
+      await expect(
+        extractFormation(
+          SAMPLE_EMAILS.inter,
+          TypeEmail.CONVOCATION_INTER,
+          "test-key"
+        )
+      ).rejects.toSatisfy(isLLMError);
+    });
+  });
+
+  describe("extractFormationBatch", () => {
+    it("extrait plusieurs formations", async () => {
+      mockFetch
+        .mockResolvedValueOnce(
+          mockExtractionResponse({
+            titre: "Formation Inter",
+            codeEtendu: "INTER1",
+            dateDebut: "2026-02-04",
+            dateFin: "2026-02-06",
+            nombreJours: 3
+          })
+        )
+        .mockResolvedValueOnce(
+          mockExtractionResponse({
+            titre: "Formation annulée",
+            codeEtendu: "ANN01",
+            dateDebut: "2026-02-25",
+            dateFin: "2026-02-27"
+          })
+        );
+
+      const emails = [
+        { email: SAMPLE_EMAILS.inter, type: TypeEmail.CONVOCATION_INTER },
+        { email: SAMPLE_EMAILS.annulation, type: TypeEmail.ANNULATION }
+      ];
+
+      const results = await extractFormationBatch(emails, "test-key");
+
+      expect(results.size).toBe(2);
+      expect(results.get("email-1")?.formation.titre).toBe("Formation Inter");
+      expect(results.get("email-3")?.formation.statut).toBe(
+        StatutFormation.ANNULEE
+      );
+    });
+
+    it("appelle le callback de progression", async () => {
+      mockFetch
+        .mockResolvedValueOnce(
+          mockExtractionResponse({
+            titre: "Test 1",
+            codeEtendu: "T1",
+            dateDebut: "2026-01-01"
+          })
+        )
+        .mockResolvedValueOnce(
+          mockExtractionResponse({
+            titre: "Test 2",
+            codeEtendu: "T2",
+            dateDebut: "2026-01-02"
+          })
+        );
+
+      const onProgress = vi.fn();
+      const emails = [
+        { email: SAMPLE_EMAILS.inter, type: TypeEmail.CONVOCATION_INTER },
+        { email: SAMPLE_EMAILS.intra, type: TypeEmail.CONVOCATION_INTRA }
+      ];
+
+      await extractFormationBatch(emails, "test-key", onProgress);
+
+      expect(onProgress).toHaveBeenCalledTimes(2);
+      expect(onProgress).toHaveBeenCalledWith(1, 2);
+      expect(onProgress).toHaveBeenCalledWith(2, 2);
+    });
+
+    it("continue même si une extraction échoue", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          text: () => Promise.resolve("Server Error")
+        })
+        .mockResolvedValueOnce(
+          mockExtractionResponse({
+            titre: "Formation OK",
+            codeEtendu: "OK01",
+            dateDebut: "2026-01-01"
+          })
+        );
+
+      const emails = [
+        { email: SAMPLE_EMAILS.inter, type: TypeEmail.CONVOCATION_INTER },
+        { email: SAMPLE_EMAILS.annulation, type: TypeEmail.ANNULATION }
+      ];
+
+      const results = await extractFormationBatch(emails, "test-key");
+
+      expect(results.size).toBe(2);
+      expect(results.get("email-1")?.warnings).toHaveLength(1);
+      expect(results.get("email-3")?.formation.titre).toBe("Formation OK");
     });
   });
 });
