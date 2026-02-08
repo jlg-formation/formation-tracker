@@ -5,6 +5,7 @@
 
 import Dexie, { type Table } from "dexie";
 import type { EmailRaw, Formation, GeocacheEntry, AppSettings } from "../types";
+import type { LLMCacheEntry } from "./llmCacheStore";
 
 /**
  * Entrée des paramètres dans IndexedDB
@@ -24,10 +25,12 @@ export class OrsysDatabase extends Dexie {
   formations!: Table<Formation, string>;
   geocache!: Table<GeocacheEntry, string>;
   settings!: Table<SettingsEntry, string>;
+  llmCache!: Table<LLMCacheEntry, string>;
 
   constructor() {
     super("OrsysTrainingTracker");
 
+    // Version 1 : schéma initial
     this.version(1).stores({
       // Index sur id, threadId, date, processed, type
       emails: "id, threadId, date, processed, type",
@@ -37,6 +40,16 @@ export class OrsysDatabase extends Dexie {
       geocache: "adresse, provider, cachedAt",
       // Settings avec id fixe "config"
       settings: "id"
+    });
+
+    // Version 2 : ajout du cache LLM
+    this.version(2).stores({
+      emails: "id, threadId, date, processed, type",
+      formations: "id, codeEtendu, dateDebut, statut, typeSession, updatedAt",
+      geocache: "adresse, provider, cachedAt",
+      settings: "id",
+      // Cache LLM: clé = emailId, index sur cachedAt et modelVersion
+      llmCache: "emailId, cachedAt, modelVersion"
     });
   }
 }
@@ -52,6 +65,7 @@ export async function resetDatabase(): Promise<void> {
   await db.formations.clear();
   await db.geocache.clear();
   await db.settings.clear();
+  await db.llmCache.clear();
 }
 
 /**

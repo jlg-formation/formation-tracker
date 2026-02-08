@@ -13,6 +13,7 @@ import {
   clearGeocache
 } from "../../services/geocoding";
 import type { CoordonneesGPS } from "../../types";
+import { OPENAI_MODELS, type OpenAIModelId } from "../../types";
 
 type GeocodingProvider = "nominatim" | "google" | "mapbox";
 
@@ -486,6 +487,33 @@ export function SettingsPage() {
               <span>❌</span> {openAITestError || "Erreur de connexion"}
             </div>
           )}
+
+          {/* Sélection du modèle OpenAI */}
+          <div className="mt-6 pt-6 border-t border-gray-700">
+            <label className="block text-sm text-gray-400 mb-2">
+              Modèle OpenAI
+            </label>
+            <select
+              value={settings.openaiModel || "gpt-4o-mini"}
+              onChange={async (e) => {
+                await updateSettings({
+                  openaiModel: e.target.value as OpenAIModelId
+                });
+                showSaveSuccess();
+              }}
+              className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-md text-white focus:outline-none focus:border-indigo-500"
+            >
+              {OPENAI_MODELS.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name} - {model.description} ({model.pricing})
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-xs text-gray-500">
+              GPT-4o Mini est recommandé pour un bon rapport qualité/prix. Les
+              modèles plus puissants sont plus précis mais plus coûteux.
+            </p>
+          </div>
         </div>
       </section>
 

@@ -6,28 +6,28 @@
 
 ### Objectif principal
 
-Extraire automatiquement les données de formation depuis les emails Gmail (domaine `@orsys.fr`) en utilisant un LLM (GPT-4o) pour classifier et parser les emails, puis afficher ces données sur une carte interactive avec des statistiques.
+Extraire automatiquement les données de formation depuis les emails Gmail (domaine `@orsys.fr`) en utilisant un LLM (OpenAI, modèle configurable) pour classifier et parser les emails, puis afficher ces données sur une carte interactive avec des statistiques.
 
 ---
 
 ## Stack technique
 
-| Composant      | Technologie                               |
-| -------------- | ----------------------------------------- |
-| Runtime        | Bun                                       |
-| Framework      | React + TypeScript                        |
-| Build          | Vite                                      |
-| **Styling**    | **Tailwind CSS v4** (CSS minimal)         |
-| Graphiques     | D3.js                                     |
-| Cartographie   | Leaflet.js + react-leaflet                |
-| Stockage local | IndexedDB (via Dexie.js)                  |
-| Auth Gmail     | OAuth 2.0 (Google Identity Services)      |
-| LLM            | OpenAI GPT-4o                             |
-| Géocodage      | Adapter pattern (Nominatim/Google/Mapbox) |
-| Export         | JSON, CSV, PDF (jsPDF)                    |
-| **Tests**      | **Vitest + Testing Library**              |
-| Déploiement    | GitHub Pages                              |
-| Langue UI      | Français uniquement                       |
+| Composant      | Technologie                                          |
+| -------------- | ---------------------------------------------------- |
+| Runtime        | Bun                                                  |
+| Framework      | React + TypeScript                                   |
+| Build          | Vite                                                 |
+| **Styling**    | **Tailwind CSS v4** (CSS minimal)                    |
+| Graphiques     | D3.js                                                |
+| Cartographie   | Leaflet.js + react-leaflet                           |
+| Stockage local | IndexedDB (via Dexie.js)                             |
+| Auth Gmail     | OAuth 2.0 (Google Identity Services)                 |
+| LLM            | OpenAI (GPT-4o-mini par défaut, modèle configurable) |
+| Géocodage      | Adapter pattern (Nominatim/Google/Mapbox)            |
+| Export         | JSON, CSV, PDF (jsPDF)                               |
+| **Tests**      | **Vitest + Testing Library**                         |
+| Déploiement    | GitHub Pages                                         |
+| Langue UI      | Français uniquement                                  |
 
 ---
 

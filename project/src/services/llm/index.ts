@@ -19,11 +19,26 @@ export type {
 } from "./types";
 export { createLLMError, isLLMError } from "./types";
 
+// Types de cache et analyse
+export type {
+  AnalyzeEmailResult,
+  AnalysisAbortSignal,
+  AnalysisProgressCallback
+} from "./parser";
+
 // Fonctions de classification
 export { classifyEmail, classifyEmailBatch } from "./parser";
 
 // Fonctions d'extraction
 export { extractFormation, extractFormationBatch } from "./parser";
+
+// Fonctions avec cache
+export {
+  classifyEmailWithCache,
+  extractFormationWithCache,
+  analyzeEmailWithCache,
+  analyzeEmailBatchWithCache
+} from "./parser";
 
 // Prompts (pour les tests)
 export {

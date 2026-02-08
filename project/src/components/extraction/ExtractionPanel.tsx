@@ -4,7 +4,7 @@
  * puis de les analyser via LLM pour créer des formations
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useGmailAuth } from "../../hooks/useGmailAuth";
 import {
@@ -14,14 +14,17 @@ import {
   extractEmailBody
 } from "../../services/gmail/api";
 import {
-  classifyEmail,
-  extractFormation,
-  type ClassificationResult,
-  type ExtractionResult
+  analyzeEmailBatchWithCache,
+  isLLMError,
+  type AnalysisAbortSignal
 } from "../../services/llm";
 import { fusionnerEmails, type FusionInput } from "../../utils/fusion";
 import { db } from "../../stores/db";
 import { getSettings } from "../../stores/settingsStore";
+import {
+  countLLMCacheEntries,
+  clearLLMCache
+} from "../../stores/llmCacheStore";
 import type { EmailRaw } from "../../types";
 import { TypeEmail } from "../../types";
 
@@ -38,7 +41,7 @@ interface ExtractionState {
 
 /** État de l'analyse LLM */
 interface AnalysisState {
-  status: "idle" | "analyzing" | "done" | "error";
+  status: "idle" | "analyzing" | "paused" | "done" | "error";
   currentCount: number;
   totalCount: number;
   message: string;
@@ -46,6 +49,10 @@ interface AnalysisState {
   formationsMisesAJour: number;
   emailsIgnores: number;
   emailsEnErreur: number;
+  /** Emails analysés depuis le cache (économie LLM) */
+  fromCache: number;
+  /** Emails analysés via appel LLM */
+  fromLLM: number;
   errorMessage?: string;
 }
 
@@ -66,7 +73,9 @@ const initialAnalysisState: AnalysisState = {
   formationsCreees: 0,
   formationsMisesAJour: 0,
   emailsIgnores: 0,
-  emailsEnErreur: 0
+  emailsEnErreur: 0,
+  fromCache: 0,
+  fromLLM: 0
 };
 
 export function ExtractionPanel() {
@@ -77,6 +86,12 @@ export function ExtractionPanel() {
   const [existingCount, setExistingCount] = useState<number | null>(null);
   const [unprocessedCount, setUnprocessedCount] = useState<number | null>(null);
   const [formationsCount, setFormationsCount] = useState<number | null>(null);
+  const [cacheCount, setCacheCount] = useState<number | null>(null);
+
+  // Signal pour interrompre l'analyse
+  const abortSignalRef = useRef<AnalysisAbortSignal>({ aborted: false });
+  // Emails en attente pour reprise après pause
+  const pendingEmailsRef = useRef<EmailRaw[]>([]);
 
   // Charger les compteurs au montage et après les opérations
   const refreshCounts = useCallback(async () => {
@@ -85,9 +100,11 @@ export function ExtractionPanel() {
       .filter((e) => e.processed === false)
       .count();
     const formations = await db.formations.count();
+    const cache = await countLLMCacheEntries();
     setExistingCount(emailCount);
     setUnprocessedCount(unprocessed);
     setFormationsCount(formations);
+    setCacheCount(cache);
   }, []);
 
   useEffect(() => {
@@ -98,6 +115,7 @@ export function ExtractionPanel() {
   const isExtracting =
     state.status === "fetching-ids" || state.status === "fetching-content";
   const isAnalyzing = analysisState.status === "analyzing";
+  const isPaused = analysisState.status === "paused";
 
   /**
    * Lance l'extraction des emails ORSYS
@@ -245,204 +263,287 @@ export function ExtractionPanel() {
 
   /**
    * Lance l'analyse des emails non traités via LLM
-   * Sauvegarde incrémentale : les formations sont fusionnées et sauvegardées par batch
-   * pour permettre de reprendre en cas d'interruption
+   * Utilise le cache pour éviter les appels LLM redondants
+   * Supporte la pause/reprise
    */
-  const startAnalysis = useCallback(async () => {
-    // Vérifier la clé API OpenAI
-    const settings = await getSettings();
-    if (!settings.openaiApiKey) {
-      setAnalysisState({
-        ...initialAnalysisState,
-        status: "error",
-        errorMessage: "Clé API OpenAI non configurée. Allez dans Paramètres."
-      });
-      return;
-    }
-
-    // Récupérer les emails non traités
-    const unprocessedEmails = await db.emails
-      .filter((e) => e.processed === false)
-      .toArray();
-
-    if (unprocessedEmails.length === 0) {
-      setAnalysisState({
-        ...initialAnalysisState,
-        status: "done",
-        message: "Aucun email à analyser."
-      });
-      return;
-    }
-
-    setAnalysisState({
-      ...initialAnalysisState,
-      status: "analyzing",
-      totalCount: unprocessedEmails.length,
-      message: "Classification des emails..."
-    });
-
-    let fusionInputs: FusionInput[] = [];
-    let ignoredCount = 0;
-    let errorCount = 0;
-    let totalCreated = 0;
-    let totalUpdated = 0;
-    const BATCH_SIZE = 5; // Sauvegarder toutes les 5 analyses
-
-    /**
-     * Sauvegarde incrémentale des formations
-     */
-    const saveFormationsBatch = async () => {
-      if (fusionInputs.length === 0) return;
-
-      const existingFormations = await db.formations.toArray();
-      const fusionResult = fusionnerEmails(fusionInputs, existingFormations);
-
-      for (const formation of fusionResult.created) {
-        await db.formations.add(formation);
-      }
-      for (const formation of fusionResult.updated) {
-        await db.formations.put(formation);
+  const startAnalysis = useCallback(
+    async (resumeFromPause = false) => {
+      // Vérifier la clé API OpenAI
+      const settings = await getSettings();
+      if (!settings.openaiApiKey) {
+        setAnalysisState({
+          ...initialAnalysisState,
+          status: "error",
+          errorMessage: "Clé API OpenAI non configurée. Allez dans Paramètres."
+        });
+        return;
       }
 
-      totalCreated += fusionResult.stats.formationsCreees;
-      totalUpdated += fusionResult.stats.formationsMisesAJour;
+      // Récupérer les emails à analyser (reprise ou nouveaux)
+      let emailsToAnalyze: EmailRaw[];
+      if (resumeFromPause && pendingEmailsRef.current.length > 0) {
+        emailsToAnalyze = pendingEmailsRef.current;
+      } else {
+        emailsToAnalyze = await db.emails
+          .filter((e) => e.processed === false)
+          .toArray();
+        pendingEmailsRef.current = emailsToAnalyze;
+      }
 
-      // Vider le batch
-      fusionInputs = [];
-    };
+      if (emailsToAnalyze.length === 0) {
+        setAnalysisState({
+          ...initialAnalysisState,
+          status: "done",
+          message: "Aucun email à analyser."
+        });
+        pendingEmailsRef.current = [];
+        return;
+      }
 
-    try {
-      // Phase 1 : Classification et extraction de chaque email
-      for (let i = 0; i < unprocessedEmails.length; i++) {
-        const email = unprocessedEmails[i];
+      // Réinitialiser le signal d'abort
+      abortSignalRef.current = { aborted: false };
 
-        setAnalysisState((prev) => ({
-          ...prev,
-          currentCount: i + 1,
-          formationsCreees: totalCreated,
-          formationsMisesAJour: totalUpdated,
-          emailsIgnores: ignoredCount,
-          emailsEnErreur: errorCount,
-          message: `Analyse de l'email ${i + 1}/${unprocessedEmails.length}...`
+      // État initial ou reprise
+      const previousState = resumeFromPause
+        ? analysisState
+        : initialAnalysisState;
+      setAnalysisState({
+        ...previousState,
+        status: "analyzing",
+        totalCount:
+          emailsToAnalyze.length +
+          (resumeFromPause ? previousState.currentCount : 0),
+        message: resumeFromPause
+          ? "Reprise de l'analyse..."
+          : "Analyse des emails..."
+      });
+
+      const BATCH_SIZE = 5;
+      let fusionInputs: FusionInput[] = [];
+      let totalCreated = resumeFromPause ? previousState.formationsCreees : 0;
+      let totalUpdated = resumeFromPause
+        ? previousState.formationsMisesAJour
+        : 0;
+      let ignoredCount = resumeFromPause ? previousState.emailsIgnores : 0;
+      let fromCacheCount = resumeFromPause ? previousState.fromCache : 0;
+      let fromLLMCount = resumeFromPause ? previousState.fromLLM : 0;
+
+      /**
+       * Sauvegarde incrémentale des formations
+       */
+      const saveFormationsBatch = async () => {
+        if (fusionInputs.length === 0) return;
+
+        const existingFormations = await db.formations.toArray();
+        const fusionResult = fusionnerEmails(fusionInputs, existingFormations);
+
+        for (const formation of fusionResult.created) {
+          await db.formations.add(formation);
+        }
+        for (const formation of fusionResult.updated) {
+          await db.formations.put(formation);
+        }
+
+        totalCreated += fusionResult.stats.formationsCreees;
+        totalUpdated += fusionResult.stats.formationsMisesAJour;
+        fusionInputs = [];
+      };
+
+      try {
+        // Convertir les emails en format EmailInput
+        const emailInputs = emailsToAnalyze.map((email) => ({
+          id: email.id,
+          subject: email.subject,
+          body: email.body
         }));
 
-        try {
-          // Classification
-          const classification: ClassificationResult = await classifyEmail({
-            id: email.id,
-            subject: email.subject,
-            body: email.body
-          });
+        // Analyser les emails avec cache et support d'interruption
+        const { results, stats } = await analyzeEmailBatchWithCache(
+          emailInputs,
+          settings.openaiApiKey,
+          {
+            useCache: true,
+            abortSignal: abortSignalRef.current,
+            delayBetweenCalls: 500,
+            onProgress: (current, total, progressStats) => {
+              fromCacheCount =
+                (resumeFromPause ? previousState.fromCache : 0) +
+                progressStats.fromCache;
+              fromLLMCount =
+                (resumeFromPause ? previousState.fromLLM : 0) +
+                progressStats.fromLLM;
 
-          // Ignorer les emails "autre" ou "rappel" ou confiance faible
+              setAnalysisState((prev) => ({
+                ...prev,
+                currentCount:
+                  (resumeFromPause ? previousState.currentCount : 0) + current,
+                fromCache: fromCacheCount,
+                fromLLM: fromLLMCount,
+                emailsEnErreur: progressStats.errors,
+                message: `Analyse ${current}/${total}... (${progressStats.fromCache} en cache, ${progressStats.fromLLM} LLM)`
+              }));
+            }
+          }
+        );
+
+        // Mettre à jour les statistiques de cache
+        fromCacheCount =
+          (resumeFromPause ? previousState.fromCache : 0) + stats.fromCache;
+        fromLLMCount =
+          (resumeFromPause ? previousState.fromLLM : 0) + stats.fromLLM;
+
+        // Traiter les résultats
+        let batchCount = 0;
+        for (const [emailId, analyzeResult] of results) {
+          const email = emailsToAnalyze.find((e) => e.id === emailId);
+          if (!email) continue;
+
+          // Si l'analyse a été interrompue
+          if (stats.aborted) {
+            // Garder les emails restants pour reprise
+            const processedIds = new Set(results.keys());
+            pendingEmailsRef.current = emailsToAnalyze.filter(
+              (e) =>
+                !processedIds.has(e.id) || !results.get(e.id)?.classification
+            );
+            break;
+          }
+
+          const classification = analyzeResult.classification;
+          const extraction = analyzeResult.extraction;
+
+          // Ignorer les emails non pertinents
           if (
             classification.type === TypeEmail.AUTRE ||
             classification.type === TypeEmail.RAPPEL ||
             classification.confidence < 0.7
           ) {
             ignoredCount++;
-            // Marquer comme traité même si ignoré
-            await db.emails.update(email.id, { processed: true });
+            await db.emails.update(emailId, { processed: true });
             continue;
           }
 
-          // Extraction selon le type
-          const extraction: ExtractionResult = await extractFormation(
-            {
-              id: email.id,
-              subject: email.subject,
-              body: email.body
-            },
-            classification.type as
-              | "convocation-inter"
-              | "convocation-intra"
-              | "annulation"
-              | "bon-commande"
-              | "info-facturation"
-          );
+          // Ajouter au batch de fusion si extraction disponible
+          if (extraction) {
+            fusionInputs.push({
+              email,
+              extraction,
+              classification: {
+                type: classification.type,
+                confidence: classification.confidence
+              }
+            });
+          }
 
-          fusionInputs.push({
-            email,
-            extraction,
-            classification: {
-              type: classification.type,
-              confidence: classification.confidence
-            }
-          });
+          // Marquer comme traité
+          await db.emails.update(emailId, { processed: true });
+          batchCount++;
 
-          // Marquer l'email comme traité SEULEMENT si analyse réussie
-          await db.emails.update(email.id, { processed: true });
-        } catch (emailError) {
-          console.error(`Erreur analyse email ${email.id}:`, emailError);
-          // NE PAS marquer comme traité pour permettre de réessayer
-          // L'email sera réanalysé au prochain lancement
-          errorCount++;
+          // Sauvegarder par batch
+          if (batchCount % BATCH_SIZE === 0 && fusionInputs.length > 0) {
+            setAnalysisState((prev) => ({
+              ...prev,
+              message: `Sauvegarde des formations...`
+            }));
+            await saveFormationsBatch();
+          }
         }
 
-        // Sauvegarde incrémentale par batch
-        if ((i + 1) % BATCH_SIZE === 0) {
+        // Sauvegarder le dernier batch
+        if (fusionInputs.length > 0) {
+          await saveFormationsBatch();
+        }
+
+        // Rafraîchir les compteurs
+        await refreshCounts();
+
+        // Mise à jour finale de l'état
+        if (stats.aborted) {
           setAnalysisState((prev) => ({
             ...prev,
-            message: `Sauvegarde des formations (batch ${Math.floor((i + 1) / BATCH_SIZE)})...`
+            status: "paused",
+            formationsCreees: totalCreated,
+            formationsMisesAJour: totalUpdated,
+            emailsIgnores: ignoredCount,
+            fromCache: fromCacheCount,
+            fromLLM: fromLLMCount,
+            message: `Analyse en pause. ${pendingEmailsRef.current.length} emails restants.`
           }));
-          await saveFormationsBatch();
-          // Pause pour respecter les rate limits OpenAI
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        }
-      }
+        } else {
+          pendingEmailsRef.current = [];
+          const doneMessage =
+            stats.errors > 0
+              ? `Analyse terminée. ${stats.errors} email(s) en erreur.`
+              : "Analyse terminée.";
 
-      // Sauvegarder le dernier batch
-      if (fusionInputs.length > 0) {
+          setAnalysisState({
+            status: "done",
+            currentCount: stats.processed,
+            totalCount: stats.total,
+            message: doneMessage,
+            formationsCreees: totalCreated,
+            formationsMisesAJour: totalUpdated,
+            emailsIgnores: ignoredCount,
+            emailsEnErreur: stats.errors,
+            fromCache: fromCacheCount,
+            fromLLM: fromLLMCount
+          });
+        }
+      } catch (error) {
+        // Sauvegarder le batch en cours si possible
+        if (fusionInputs.length > 0) {
+          try {
+            await saveFormationsBatch();
+          } catch {
+            // Ignorer
+          }
+        }
+        await refreshCounts();
+
+        // Extraire le message d'erreur lisible
+        let errorMessage: string;
+        let userFriendlyMessage: string;
+
+        if (isLLMError(error)) {
+          errorMessage = error.message;
+          userFriendlyMessage = error.userMessage || error.message;
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+          userFriendlyMessage = error.message;
+        } else {
+          errorMessage = "Erreur inconnue";
+          userFriendlyMessage = "Erreur inconnue";
+        }
+
         setAnalysisState((prev) => ({
           ...prev,
-          message: "Sauvegarde des dernières formations..."
+          status: "error",
+          formationsCreees: totalCreated,
+          formationsMisesAJour: totalUpdated,
+          emailsIgnores: ignoredCount,
+          fromCache: fromCacheCount,
+          fromLLM: fromLLMCount,
+          errorMessage: `${userFriendlyMessage}${totalCreated + totalUpdated > 0 ? ` (${totalCreated + totalUpdated} formations sauvegardées)` : ""}`,
+          message: `Erreur: ${errorMessage}`
         }));
-        await saveFormationsBatch();
       }
+    },
+    [analysisState, refreshCounts]
+  );
 
-      // Rafraîchir les compteurs
-      await refreshCounts();
+  /**
+   * Met en pause l'analyse en cours
+   */
+  const pauseAnalysis = useCallback(() => {
+    abortSignalRef.current.aborted = true;
+  }, []);
 
-      const doneMessage =
-        errorCount > 0
-          ? `Analyse terminée. ${errorCount} email(s) en erreur à réessayer.`
-          : "Analyse terminée.";
-
-      setAnalysisState({
-        status: "done",
-        currentCount: unprocessedEmails.length,
-        totalCount: unprocessedEmails.length,
-        message: doneMessage,
-        formationsCreees: totalCreated,
-        formationsMisesAJour: totalUpdated,
-        emailsIgnores: ignoredCount,
-        emailsEnErreur: errorCount
-      });
-    } catch (error) {
-      // En cas d'erreur, sauvegarder le batch en cours si possible
-      if (fusionInputs.length > 0) {
-        try {
-          await saveFormationsBatch();
-        } catch {
-          // Ignorer l'erreur de sauvegarde
-        }
-      }
-      await refreshCounts();
-
-      const errorMessage =
-        error instanceof Error ? error.message : "Erreur inconnue";
-      setAnalysisState((prev) => ({
-        ...prev,
-        status: "error",
-        formationsCreees: totalCreated,
-        formationsMisesAJour: totalUpdated,
-        emailsIgnores: ignoredCount,
-        emailsEnErreur: errorCount,
-        errorMessage: `${errorMessage}. ${totalCreated + totalUpdated} formations sauvegardées. Relancez l'analyse pour réessayer.`,
-        message: `Erreur: ${errorMessage}`
-      }));
-    }
-  }, [refreshCounts]);
+  /**
+   * Reprend l'analyse après une pause
+   */
+  const resumeAnalysis = useCallback(() => {
+    startAnalysis(true);
+  }, [startAnalysis]);
 
   /**
    * Réinitialiser l'état
@@ -450,6 +551,8 @@ export function ExtractionPanel() {
   const resetState = useCallback(() => {
     setState(initialState);
     setAnalysisState(initialAnalysisState);
+    pendingEmailsRef.current = [];
+    abortSignalRef.current = { aborted: false };
   }, []);
 
   /**
@@ -458,16 +561,18 @@ export function ExtractionPanel() {
   const clearEmails = useCallback(async () => {
     if (
       !confirm(
-        "Êtes-vous sûr de vouloir supprimer tous les emails ET formations stockés ?"
+        "Êtes-vous sûr de vouloir supprimer tous les emails, formations ET le cache d'analyse ?"
       )
     ) {
       return;
     }
     await db.emails.clear();
     await db.formations.clear();
+    await clearLLMCache();
     await refreshCounts();
     setState(initialState);
     setAnalysisState(initialAnalysisState);
+    pendingEmailsRef.current = [];
   }, [refreshCounts]);
 
   // Calcul du pourcentage de progression
@@ -513,6 +618,12 @@ export function ExtractionPanel() {
             <p className="text-green-400 text-sm">
               ✅ <span className="font-medium">{formationsCount}</span>{" "}
               formations extraites
+            </p>
+          )}
+          {cacheCount !== null && cacheCount > 0 && (
+            <p className="text-blue-400 text-sm">
+              💾 <span className="font-medium">{cacheCount}</span> analyses en
+              cache (économie LLM)
             </p>
           )}
         </div>
@@ -564,7 +675,7 @@ export function ExtractionPanel() {
       )}
 
       {/* Barre de progression analyse */}
-      {isAnalyzing && (
+      {(isAnalyzing || isPaused) && (
         <div className="mb-4 space-y-2">
           <div className="flex justify-between text-sm text-gray-400">
             <span>{analysisState.message}</span>
@@ -580,7 +691,7 @@ export function ExtractionPanel() {
           </div>
           <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-green-500 transition-all duration-300"
+              className={`h-full transition-all duration-300 ${isPaused ? "bg-yellow-500" : "bg-green-500"}`}
               style={{
                 width: `${
                   analysisState.totalCount > 0
@@ -591,6 +702,35 @@ export function ExtractionPanel() {
               }}
             />
           </div>
+          <div className="flex gap-4 text-xs text-gray-500">
+            <span>
+              Cache :{" "}
+              <span className="text-blue-400">{analysisState.fromCache}</span>
+            </span>
+            <span>
+              LLM :{" "}
+              <span className="text-green-400">{analysisState.fromLLM}</span>
+            </span>
+            {analysisState.emailsEnErreur > 0 && (
+              <span>
+                Erreurs :{" "}
+                <span className="text-red-400">
+                  {analysisState.emailsEnErreur}
+                </span>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Message de pause */}
+      {isPaused && (
+        <div className="mb-4 p-4 bg-yellow-900/30 border border-yellow-600 rounded-lg text-yellow-300">
+          <p className="font-medium">⏸️ Analyse en pause</p>
+          <p className="text-sm mt-1">
+            {pendingEmailsRef.current.length} emails restants à analyser.
+            Cliquez sur "Reprendre" pour continuer.
+          </p>
         </div>
       )}
 
@@ -605,6 +745,10 @@ export function ExtractionPanel() {
             </p>
             <p>
               ⏭️ {analysisState.emailsIgnores} emails ignorés (rappels, autres)
+            </p>
+            <p className="text-blue-300">
+              💾 {analysisState.fromCache} depuis le cache,{" "}
+              {analysisState.fromLLM} appels LLM
             </p>
             {analysisState.emailsEnErreur > 0 && (
               <p className="text-yellow-300">
@@ -627,6 +771,10 @@ export function ExtractionPanel() {
               🔄 {analysisState.formationsMisesAJour} formations mises à jour
             </p>
             <p>⏭️ {analysisState.emailsIgnores} emails ignorés</p>
+            <p>
+              💾 {analysisState.fromCache} depuis le cache,{" "}
+              {analysisState.fromLLM} appels LLM
+            </p>
           </div>
         </div>
       )}
@@ -654,8 +802,8 @@ export function ExtractionPanel() {
         {/* Bouton Analyser */}
         {unprocessedCount !== null && unprocessedCount > 0 && (
           <button
-            onClick={startAnalysis}
-            disabled={isExtracting || isAnalyzing}
+            onClick={() => startAnalysis(false)}
+            disabled={isExtracting || isAnalyzing || isPaused}
             className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center gap-2"
           >
             {isAnalyzing ? (
@@ -672,10 +820,33 @@ export function ExtractionPanel() {
           </button>
         )}
 
+        {/* Bouton Pause */}
+        {isAnalyzing && (
+          <button
+            onClick={pauseAnalysis}
+            className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md transition-colors flex items-center gap-2"
+          >
+            <span>⏸️</span>
+            Pause
+          </button>
+        )}
+
+        {/* Bouton Reprendre */}
+        {isPaused && (
+          <button
+            onClick={resumeAnalysis}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors flex items-center gap-2"
+          >
+            <span>▶️</span>
+            Reprendre
+          </button>
+        )}
+
         {(state.status === "done" ||
           state.status === "error" ||
           analysisState.status === "done" ||
-          analysisState.status === "error") && (
+          analysisState.status === "error" ||
+          isPaused) && (
           <button
             onClick={resetState}
             className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md transition-colors"
@@ -700,7 +871,8 @@ export function ExtractionPanel() {
       {/* Aide */}
       <p className="mt-4 text-xs text-gray-500">
         L'extraction recherche tous les emails provenant de @orsys.fr depuis
-        2014. Les emails déjà stockés sont ignorés pour éviter les doublons.
+        2014. Les emails déjà stockés sont ignorés. Les analyses LLM sont mises
+        en cache pour économiser les appels API.
       </p>
     </section>
   );

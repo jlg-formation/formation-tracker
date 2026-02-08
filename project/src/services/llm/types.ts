@@ -68,7 +68,14 @@ export interface OpenAIChatResponse {
 /**
  * Type de code d'erreur LLM
  */
-export type LLMErrorCode = "API_ERROR" | "PARSE_ERROR" | "CONFIG_ERROR";
+export type LLMErrorCode =
+  | "API_ERROR" // Erreur générique API
+  | "PARSE_ERROR" // Erreur de parsing JSON
+  | "CONFIG_ERROR" // Clé API manquante
+  | "INSUFFICIENT_QUOTA" // Plus d'argent / limite de facturation atteinte
+  | "RATE_LIMIT" // Quota par minute/heure/jour dépassé
+  | "INVALID_API_KEY" // Clé API invalide
+  | "SERVER_ERROR"; // Erreur serveur OpenAI (500, 503)
 
 /**
  * Erreur LLM personnalisée
@@ -77,6 +84,23 @@ export interface LLMError {
   name: "LLMError";
   message: string;
   code: LLMErrorCode;
+  /** Message utilisateur lisible en français */
+  userMessage?: string;
+  /** Détails supplémentaires (ex: retry-after) */
+  details?: {
+    retryAfter?: number; // Secondes avant retry
+    httpStatus?: number;
+    openAIError?: string; // Code erreur OpenAI original
+  };
+  cause?: unknown;
+}
+
+/**
+ * Options pour créer une erreur LLM
+ */
+export interface CreateLLMErrorOptions {
+  userMessage?: string;
+  details?: LLMError["details"];
   cause?: unknown;
 }
 
@@ -86,12 +110,26 @@ export interface LLMError {
 export function createLLMError(
   message: string,
   code: LLMErrorCode,
-  cause?: unknown
+  causeOrOptions?: unknown | CreateLLMErrorOptions
 ): LLMError & Error {
   const error = new Error(message) as LLMError & Error;
   error.name = "LLMError";
   error.code = code;
-  error.cause = cause;
+
+  // Gérer la rétrocompatibilité avec l'ancien format (cause directe)
+  if (
+    causeOrOptions &&
+    typeof causeOrOptions === "object" &&
+    "userMessage" in causeOrOptions
+  ) {
+    const opts = causeOrOptions as CreateLLMErrorOptions;
+    error.userMessage = opts.userMessage;
+    error.details = opts.details;
+    error.cause = opts.cause;
+  } else {
+    error.cause = causeOrOptions;
+  }
+
   return error;
 }
 

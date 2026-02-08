@@ -234,13 +234,24 @@ Format de réponse :
 ## Configuration API OpenAI
 
 ```typescript
+// Modèles disponibles (configurable dans Paramètres)
+const OPENAI_MODELS = [
+  { id: "gpt-4o-mini", name: "GPT-4o Mini", pricing: "~0.15$/1M tokens" }, // Recommandé
+  { id: "gpt-4o", name: "GPT-4o", pricing: "~2.50$/1M tokens" },
+  { id: "gpt-4-turbo", name: "GPT-4 Turbo", pricing: "~10$/1M tokens" },
+  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", pricing: "~0.50$/1M tokens" },
+  { id: "o3-mini", name: "O3 Mini", pricing: "~1.10$/1M tokens" }
+];
+
 const OPENAI_CONFIG = {
-  model: "gpt-4o",
+  model: settings.openaiModel || "gpt-4o-mini", // Configurable par l'utilisateur
   temperature: 0.1, // Faible pour extraction précise
   max_tokens: 2000,
   response_format: { type: "json_object" }
 };
 ```
+
+> **Note** : Le modèle est sélectionnable dans les Paramètres. GPT-4o Mini est recommandé pour un bon rapport qualité/prix.
 
 ---
 

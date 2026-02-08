@@ -14,6 +14,12 @@ import {
 import type { Formation } from "../../types";
 import { getSettings } from "../../stores/settingsStore";
 import {
+  getLLMCacheEntry,
+  cacheClassification,
+  cacheExtraction,
+  cacheLLMResult
+} from "../../stores/llmCacheStore";
+import {
   DEFAULT_OPENAI_CONFIG,
   OPENAI_API_BASE_URL,
   MIN_CONFIDENCE_THRESHOLD
@@ -41,7 +47,133 @@ import type {
   ExtractionResultBonCommande,
   ExtractionResultFacturation
 } from "./types";
-import { createLLMError } from "./types";
+import { createLLMError, type LLMErrorCode } from "./types";
+
+/**
+ * Interface pour les erreurs OpenAI
+ */
+interface OpenAIErrorResponse {
+  error?: {
+    message?: string;
+    type?: string;
+    code?: string;
+  };
+}
+
+/**
+ * Parse une erreur OpenAI et retourne le code d'erreur approprié
+ */
+function parseOpenAIError(
+  httpStatus: number,
+  errorBody: string
+): {
+  code: LLMErrorCode;
+  userMessage: string;
+  retryAfter?: number;
+  openAIError?: string;
+} {
+  let parsed: OpenAIErrorResponse | null = null;
+
+  try {
+    parsed = JSON.parse(errorBody);
+  } catch {
+    // Non-JSON, on continue avec le texte brut
+  }
+
+  const openAICode = parsed?.error?.code || parsed?.error?.type || "";
+  const openAIMessage = parsed?.error?.message || errorBody;
+
+  // Erreur de quota/facturation (plus d'argent)
+  if (
+    openAICode === "insufficient_quota" ||
+    openAICode === "billing_hard_limit_reached" ||
+    openAIMessage.includes("exceeded your current quota") ||
+    openAIMessage.includes("billing")
+  ) {
+    return {
+      code: "INSUFFICIENT_QUOTA",
+      userMessage:
+        "💳 Crédit OpenAI épuisé. Rechargez votre compte sur platform.openai.com.",
+      openAIError: openAICode
+    };
+  }
+
+  // Rate limit (quota par minute/heure/jour)
+  if (httpStatus === 429 || openAICode === "rate_limit_exceeded") {
+    // Essayer d'extraire le temps d'attente du message
+    const retryMatch = openAIMessage.match(
+      /try again in (\d+(?:\.\d+)?)(ms|s|m|h)?/i
+    );
+    let retryAfter: number | undefined;
+    if (retryMatch) {
+      const value = parseFloat(retryMatch[1]);
+      const unit = retryMatch[2]?.toLowerCase() || "s";
+      switch (unit) {
+        case "ms":
+          retryAfter = Math.ceil(value / 1000);
+          break;
+        case "s":
+          retryAfter = Math.ceil(value);
+          break;
+        case "m":
+          retryAfter = Math.ceil(value * 60);
+          break;
+        case "h":
+          retryAfter = Math.ceil(value * 3600);
+          break;
+        default:
+          retryAfter = Math.ceil(value);
+      }
+    }
+
+    let userMessage = "⏱️ Limite de requêtes dépassée.";
+    if (retryAfter) {
+      if (retryAfter < 60) {
+        userMessage += ` Réessayez dans ${retryAfter} secondes.`;
+      } else if (retryAfter < 3600) {
+        userMessage += ` Réessayez dans ${Math.ceil(retryAfter / 60)} minutes.`;
+      } else {
+        userMessage += ` Réessayez dans ${Math.ceil(retryAfter / 3600)} heures.`;
+      }
+    } else {
+      userMessage += " Attendez quelques secondes avant de reprendre.";
+    }
+
+    return {
+      code: "RATE_LIMIT",
+      userMessage,
+      retryAfter,
+      openAIError: openAICode
+    };
+  }
+
+  // Clé API invalide
+  if (httpStatus === 401 || openAICode === "invalid_api_key") {
+    return {
+      code: "INVALID_API_KEY",
+      userMessage:
+        "🔑 Clé API OpenAI invalide. Vérifiez votre clé dans les Paramètres.",
+      openAIError: openAICode
+    };
+  }
+
+  // Erreur serveur OpenAI
+  if (httpStatus >= 500) {
+    return {
+      code: "SERVER_ERROR",
+      userMessage:
+        "🔧 Serveur OpenAI temporairement indisponible. Réessayez dans quelques minutes.",
+      openAIError: openAICode
+    };
+  }
+
+  // Erreur générique
+  return {
+    code: "API_ERROR",
+    userMessage: `❌ Erreur API OpenAI (${httpStatus}): ${openAIMessage.substring(0, 100)}`,
+    openAIError: openAICode
+  };
+}
 
 /**
  * Appelle l'API OpenAI Chat Completions
@@ -75,9 +207,19 @@ async function callOpenAI(
 
   if (!response.ok) {
     const errorBody = await response.text();
+    const errorInfo = parseOpenAIError(response.status, errorBody);
+
     throw createLLMError(
       `Erreur API OpenAI (${response.status}): ${errorBody}`,
-      "API_ERROR"
+      errorInfo.code,
+      {
+        userMessage: errorInfo.userMessage,
+        details: {
+          httpStatus: response.status,
+          retryAfter: errorInfo.retryAfter,
+          openAIError: errorInfo.openAIError
+        }
+      }
     );
   }
 
@@ -159,12 +301,11 @@ export async function classifyEmail(
   email: EmailInput,
   apiKey?: string
 ): Promise<ClassificationResult> {
+  // Récupérer les settings
+  const settings = await getSettings();
+
   // Récupérer la clé API si non fournie
-  let key = apiKey;
-  if (!key) {
-    const settings = await getSettings();
-    key = settings.openaiApiKey;
-  }
+  const key = apiKey || settings.openaiApiKey;
 
   if (!key) {
     throw createLLMError(
@@ -175,7 +316,8 @@ export async function classifyEmail(
 
   const config: OpenAIConfig = {
     ...DEFAULT_OPENAI_CONFIG,
-    apiKey: key
+    apiKey: key,
+    model: settings.openaiModel || DEFAULT_OPENAI_CONFIG.model
   };
 
   // Construire les prompts
@@ -859,12 +1001,11 @@ export async function extractFormation(
     };
   }
 
+  // Récupérer les settings
+  const settings = await getSettings();
+
   // Récupérer la clé API si non fournie
-  let key = apiKey;
-  if (!key) {
-    const settings = await getSettings();
-    key = settings.openaiApiKey;
-  }
+  const key = apiKey || settings.openaiApiKey;
 
   if (!key) {
     throw createLLMError(
@@ -875,7 +1016,8 @@ export async function extractFormation(
 
   const config: OpenAIConfig = {
     ...DEFAULT_OPENAI_CONFIG,
-    apiKey: key
+    apiKey: key,
+    model: settings.openaiModel || DEFAULT_OPENAI_CONFIG.model
   };
 
   // Appeler l'API
@@ -968,4 +1110,263 @@ export async function extractFormationBatch(
   }
 
   return results;
+}
+
+// =============================================================================
+// FONCTIONS AVEC CACHE
+// =============================================================================
+
+/**
+ * Classifie un email en utilisant le cache si disponible
+ * @param email Email à classifier
+ * @param apiKey Clé API OpenAI (optionnel)
+ * @param useCache Utiliser le cache (true par défaut)
+ * @returns Résultat de la classification et indicateur si cache utilisé
+ */
+export async function classifyEmailWithCache(
+  email: EmailInput,
+  apiKey?: string,
+  useCache: boolean = true
+): Promise<{ result: ClassificationResult; fromCache: boolean }> {
+  // Vérifier le cache d'abord
+  if (useCache) {
+    const cached = await getLLMCacheEntry(email.id);
+    if (cached?.classification) {
+      return { result: cached.classification, fromCache: true };
+    }
+  }
+
+  // Pas en cache, appeler le LLM
+  const result = await classifyEmail(email, apiKey);
+
+  // Sauvegarder dans le cache
+  await cacheClassification(email.id, result);
+
+  return { result, fromCache: false };
+}
+
+/**
+ * Extrait les données de formation d'un email en utilisant le cache si disponible
+ * @param email Email à traiter
+ * @param type Type d'email (classification préalable)
+ * @param apiKey Clé API OpenAI (optionnel)
+ * @param useCache Utiliser le cache (true par défaut)
+ * @returns Résultat de l'extraction et indicateur si cache utilisé
+ */
+export async function extractFormationWithCache(
+  email: EmailInput,
+  type: TypeEmail,
+  apiKey?: string,
+  useCache: boolean = true
+): Promise<{ result: ExtractionResult; fromCache: boolean }> {
+  // Vérifier le cache d'abord
+  if (useCache) {
+    const cached = await getLLMCacheEntry(email.id);
+    if (cached?.extraction) {
+      return { result: cached.extraction, fromCache: true };
+    }
+  }
+
+  // Pas en cache, appeler le LLM
+  const result = await extractFormation(email, type, apiKey);
+
+  // Sauvegarder dans le cache
+  await cacheExtraction(email.id, result);
+
+  return { result, fromCache: false };
+}
+
+/**
+ * Résultat de l'analyse complète d'un email (classification + extraction)
+ */
+export interface AnalyzeEmailResult {
+  classification: ClassificationResult;
+  extraction: ExtractionResult | null;
+  fromCache: {
+    classification: boolean;
+    extraction: boolean;
+  };
+}
+
+/**
+ * Analyse complète d'un email avec cache (classification + extraction)
+ * @param email Email à analyser
+ * @param apiKey Clé API OpenAI (optionnel)
+ * @param useCache Utiliser le cache (true par défaut)
+ * @returns Résultat complet de l'analyse
+ */
+export async function analyzeEmailWithCache(
+  email: EmailInput,
+  apiKey?: string,
+  useCache: boolean = true
+): Promise<AnalyzeEmailResult> {
+  // Vérifier le cache
+  let classificationFromCache = false;
+  let extractionFromCache = false;
+  let classification: ClassificationResult;
+  let extraction: ExtractionResult | null = null;
+
+  if (useCache) {
+    const cached = await getLLMCacheEntry(email.id);
+    if (cached?.classification) {
+      classification = cached.classification;
+      classificationFromCache = true;
+
+      if (cached.extraction) {
+        extraction = cached.extraction;
+        extractionFromCache = true;
+      }
+    } else {
+      // Classification non en cache, la faire
+      classification = await classifyEmail(email, apiKey);
+    }
+  } else {
+    classification = await classifyEmail(email, apiKey);
+  }
+
+  // Si extraction pas encore faite et type extractible
+  if (!extraction) {
+    const isExtractible =
+      classification.type !== TypeEmail.AUTRE &&
+      classification.type !== TypeEmail.RAPPEL &&
+      classification.confidence >= MIN_CONFIDENCE_THRESHOLD;
+
+    if (isExtractible) {
+      extraction = await extractFormation(email, classification.type, apiKey);
+    }
+  }
+
+  // Sauvegarder dans le cache
+  if (!classificationFromCache || !extractionFromCache) {
+    await cacheLLMResult(email.id, classification, extraction);
+  }
+
+  return {
+    classification,
+    extraction,
+    fromCache: {
+      classification: classificationFromCache,
+      extraction: extractionFromCache
+    }
+  };
+}
+
+/**
+ * Type pour le signal d'interruption
+ */
+export interface AnalysisAbortSignal {
+  aborted: boolean;
+}
+
+/**
+ * Callback de progression avec statistiques de cache
+ */
+export interface AnalysisProgressCallback {
+  (
+    current: number,
+    total: number,
+    stats: {
+      fromCache: number;
+      fromLLM: number;
+      errors: number;
+    }
+  ): void;
+}
+
+/**
+ * Analyse plusieurs emails en batch avec support cache et interruption
+ * @param emails Liste d'emails à analyser
+ * @param apiKey Clé API OpenAI (optionnel)
+ * @param options Options d'analyse
+ * @returns Map des résultats et statistiques
+ */
+export async function analyzeEmailBatchWithCache(
+  emails: EmailInput[],
+  apiKey?: string,
+  options?: {
+    useCache?: boolean;
+    abortSignal?: AnalysisAbortSignal;
+    onProgress?: AnalysisProgressCallback;
+    delayBetweenCalls?: number;
+  }
+): Promise<{
+  results: Map<string, AnalyzeEmailResult>;
+  stats: {
+    total: number;
+    processed: number;
+    fromCache: number;
+    fromLLM: number;
+    errors: number;
+    aborted: boolean;
+  };
+}> {
+  const results = new Map<string, AnalyzeEmailResult>();
+  const useCache = options?.useCache ?? true;
+  const delayMs = options?.delayBetweenCalls ?? 500;
+
+  let fromCache = 0;
+  let fromLLM = 0;
+  let errors = 0;
+
+  for (let i = 0; i < emails.length; i++) {
+    // Vérifier le signal d'interruption
+    if (options?.abortSignal?.aborted) {
+      return {
+        results,
+        stats: {
+          total: emails.length,
+          processed: i,
+          fromCache,
+          fromLLM,
+          errors,
+          aborted: true
+        }
+      };
+    }
+
+    const email = emails[i];
+
+    try {
+      const result = await analyzeEmailWithCache(email, apiKey, useCache);
+      results.set(email.id, result);
+
+      if (result.fromCache.classification && result.fromCache.extraction) {
+        fromCache++;
+      } else {
+        fromLLM++;
+        // Délai seulement si on a fait un appel LLM
+        if (i < emails.length - 1 && delayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+    } catch (error) {
+      console.error(`Erreur analyse email ${email.id}:`, error);
+      errors++;
+
+      // Résultat par défaut en cas d'erreur
+      results.set(email.id, {
+        classification: {
+          type: TypeEmail.AUTRE,
+          confidence: 0,
+          reason: error instanceof Error ? error.message : "Erreur inconnue"
+        },
+        extraction: null,
+        fromCache: { classification: false, extraction: false }
+      });
+    }
+
+    options?.onProgress?.(i + 1, emails.length, { fromCache, fromLLM, errors });
+  }
+
+  return {
+    results,
+    stats: {
+      total: emails.length,
+      processed: emails.length,
+      fromCache,
+      fromLLM,
+      errors,
+      aborted: false
+    }
+  };
 }
