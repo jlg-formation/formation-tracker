@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "currentStep": 11,
-  "lastUpdated": "2026-02-08T16:15:00.000Z",
+  "currentStep": 13,
+  "lastUpdated": "2026-02-08T16:36:00.000Z",
   "steps": {
     "0": { "status": "completed", "completedAt": "2026-02-08T12:00:00.000Z" },
     "1": { "status": "completed", "completedAt": "2026-02-08T12:30:00.000Z" },
@@ -30,8 +30,16 @@
       "completedAt": "2026-02-08T16:15:00.000Z",
       "note": "Service géocodage Nominatim avec adapter pattern, cache IndexedDB, rate limiting, et 22 tests"
     },
-    "11": { "status": "not-started" },
-    "12": { "status": "not-started" },
+    "11": {
+      "status": "completed",
+      "completedAt": "2026-02-08T16:28:00.000Z",
+      "note": "Logique de fusion avec clé unique codeEtendu+dateDebut, gestion annulations, 26 tests"
+    },
+    "12": {
+      "status": "completed",
+      "completedAt": "2026-02-08T16:36:00.000Z",
+      "note": "Dashboard Stats Cards: 4 KPI, hook useFormations, utils stats avec 26 tests"
+    },
     "13": { "status": "not-started" },
     "14": { "status": "not-started" },
     "15": { "status": "not-started" },
@@ -81,6 +89,14 @@
     "project/src/services/geocoding/adapter.ts",
     "project/src/services/geocoding/nominatim.ts",
     "project/src/services/geocoding/index.ts",
-    "project/src/services/geocoding/geocoding.test.ts"
+    "project/src/services/geocoding/geocoding.test.ts",
+    "project/src/utils/fusion.ts",
+    "project/src/utils/fusion.test.ts",
+    "project/src/utils/stats.ts",
+    "project/src/utils/stats.test.ts",
+    "project/src/hooks/useFormations.ts",
+    "project/src/components/dashboard/StatsCards.tsx",
+    "project/src/components/dashboard/Dashboard.tsx",
+    "project/src/components/dashboard/index.ts"
   ]
 }

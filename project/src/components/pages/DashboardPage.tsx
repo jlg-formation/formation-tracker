@@ -1,4 +1,5 @@
 import { ExtractionPanel } from "../extraction";
+import { Dashboard } from "../dashboard";
 
 export function DashboardPage() {
   return (
@@ -11,11 +12,8 @@ export function DashboardPage() {
         <ExtractionPanel />
       </div>
 
-      {/* Espace réservé pour les statistiques */}
-      <div className="p-8 bg-indigo-600/10 border border-dashed border-indigo-600 rounded-lg text-gray-400 text-center">
-        Les statistiques et graphiques seront ajoutés dans les prochaines
-        étapes.
-      </div>
+      {/* Dashboard avec statistiques */}
+      <Dashboard />
     </div>
   );
 }
