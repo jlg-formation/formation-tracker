@@ -144,6 +144,17 @@ Le type `Formation` (voir `docs/02-data-model.ts`) contient :
 - **Langue unique : Français** pour toute l'interface utilisateur
 - Messages, labels, boutons en français
 
+### Responsive Design
+
+- **Mobile-first** : L'application doit être utilisable sur tous les appareils
+- **Breakpoints Tailwind** :
+  - Mobile (défaut) : < 768px
+  - Tablette (`md:`) : ≥ 768px
+  - Desktop (`lg:`) : ≥ 1024px
+- **Navigation** : Menu hamburger sur mobile, horizontal sur desktop
+- **Grids** : Utiliser `grid-cols-1 md:grid-cols-2 lg:grid-cols-4` pour les cartes
+- **Padding** : `p-4 md:p-6 lg:p-8` pour les conteneurs principaux
+
 ### Linting et formatage
 
 - **ESLint** : Prévu (voir `docs/08-deployment.md`) mais **pas encore configuré**

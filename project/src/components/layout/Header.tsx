@@ -1,65 +1,77 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 
-export function Header() {
+const navLinks = [
+  { to: "/", label: "Dashboard", end: true },
+  { to: "/carte", label: "Carte" },
+  { to: "/formations", label: "Formations" },
+  { to: "/parametres", label: "⚙️ Paramètres" },
+];
+
+function NavItem({ to, label, end, onClick }: { to: string; label: string; end?: boolean; onClick?: () => void }) {
   return (
-    <header className="flex justify-between items-center px-8 py-4 bg-[#1a1a2e] border-b border-[#16213e]">
-      <div className="flex items-center gap-2">
-        <span className="text-2xl">📊</span>
-        <span className="text-xl font-semibold text-white">
-          ORSYS Training Tracker
-        </span>
+    <NavLink
+      to={to}
+      end={end}
+      onClick={onClick}
+      className={({ isActive }) =>
+        `px-4 py-2 rounded-md transition-all duration-200 no-underline ${
+          isActive
+            ? "bg-indigo-600 text-white"
+            : "text-gray-400 hover:text-white hover:bg-white/10"
+        }`
+      }
+    >
+      {label}
+    </NavLink>
+  );
+}
+
+export function Header() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  return (
+    <header className="bg-[#1a1a2e] border-b border-[#16213e]">
+      <div className="flex justify-between items-center px-4 md:px-8 py-4">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">📊</span>
+          <span className="text-lg md:text-xl font-semibold text-white">
+            ORSYS Training Tracker
+          </span>
+        </div>
+
+        {/* Navigation desktop */}
+        <nav className="hidden md:flex gap-2">
+          {navLinks.map((link) => (
+            <NavItem key={link.to} {...link} />
+          ))}
+        </nav>
+
+        {/* Bouton hamburger mobile */}
+        <button
+          className="md:hidden p-2 text-gray-400 hover:text-white"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label="Menu"
+          aria-expanded={isMenuOpen}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {isMenuOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
       </div>
-      <nav className="flex gap-2">
-        <NavLink
-          to="/"
-          className={({ isActive }) =>
-            `px-4 py-2 rounded-md transition-all duration-200 no-underline ${
-              isActive
-                ? "bg-indigo-600 text-white"
-                : "text-gray-400 hover:text-white hover:bg-white/10"
-            }`
-          }
-          end
-        >
-          Dashboard
-        </NavLink>
-        <NavLink
-          to="/carte"
-          className={({ isActive }) =>
-            `px-4 py-2 rounded-md transition-all duration-200 no-underline ${
-              isActive
-                ? "bg-indigo-600 text-white"
-                : "text-gray-400 hover:text-white hover:bg-white/10"
-            }`
-          }
-        >
-          Carte
-        </NavLink>
-        <NavLink
-          to="/formations"
-          className={({ isActive }) =>
-            `px-4 py-2 rounded-md transition-all duration-200 no-underline ${
-              isActive
-                ? "bg-indigo-600 text-white"
-                : "text-gray-400 hover:text-white hover:bg-white/10"
-            }`
-          }
-        >
-          Formations
-        </NavLink>
-        <NavLink
-          to="/parametres"
-          className={({ isActive }) =>
-            `px-4 py-2 rounded-md transition-all duration-200 no-underline ${
-              isActive
-                ? "bg-indigo-600 text-white"
-                : "text-gray-400 hover:text-white hover:bg-white/10"
-            }`
-          }
-        >
-          ⚙️ Paramètres
-        </NavLink>
-      </nav>
+
+      {/* Navigation mobile */}
+      {isMenuOpen && (
+        <nav className="md:hidden flex flex-col gap-1 px-4 pb-4">
+          {navLinks.map((link) => (
+            <NavItem key={link.to} {...link} onClick={() => setIsMenuOpen(false)} />
+          ))}
+        </nav>
+      )}
     </header>
   );
 }

@@ -306,32 +306,62 @@ Affiché pendant l'extraction :
 
 ## Responsive design
 
-### Breakpoints
+L'application est **mobile-first** et utilise les classes responsives de Tailwind CSS v4.
 
-| Breakpoint  | Largeur    | Adaptations                                              |
-| ----------- | ---------- | -------------------------------------------------------- |
-| **Mobile**  | < 640px    | Navigation hamburger, cartes empilées, carte plein écran |
-| **Tablet**  | 640-1024px | 2 colonnes stats, sidebar rétractable                    |
-| **Desktop** | > 1024px   | Layout complet, 4 colonnes stats                         |
+### Breakpoints Tailwind
+
+| Breakpoint  | Préfixe | Largeur min | Adaptations                                              |
+| ----------- | ------- | ----------- | -------------------------------------------------------- |
+| **Mobile**  | (défaut)| < 768px     | Menu hamburger, cartes empilées, padding réduit          |
+| **Tablette**| `md:`   | ≥ 768px     | Navigation horizontale, 2 colonnes stats                 |
+| **Desktop** | `lg:`   | ≥ 1024px    | Layout complet, 4 colonnes stats, padding standard       |
+
+### Composants responsive implémentés
+
+| Composant    | Mobile (< 768px)               | Desktop (≥ 768px)              |
+| ------------ | ------------------------------ | ------------------------------ |
+| **Header**   | Menu hamburger déroulant       | Navigation horizontale         |
+| **Layout**   | `p-4` (padding réduit)         | `md:p-6 lg:p-8`                |
+| **Footer**   | Texte `text-xs`, flex-wrap     | Texte `md:text-sm`             |
+| **StatsCards** | 1 colonne empilée            | Grid `md:grid-cols-2 lg:grid-cols-4` |
+| **Tableau**  | Scroll horizontal              | Affichage complet              |
+| **Modal**    | Plein écran                    | Centré avec overlay            |
 
 ### Navigation mobile
 
 ```
 ┌─────────────────────┐
-│ ☰  ORSYS Tracker    │
+│ 📊 ORSYS Tracker [☰]│  ← Bouton hamburger à droite
 ├─────────────────────┤
 │                     │
-│ ┌─────────────────┐ │
+│ ┌─────────────────┐ │  ← Menu déroulant (affiché au clic)
 │ │   Dashboard     │ │
 │ ├─────────────────┤ │
 │ │   Carte         │ │
 │ ├─────────────────┤ │
-│ │   Liste         │ │
+│ │   Formations    │ │
 │ ├─────────────────┤ │
-│ │   Paramètres    │ │
+│ │ ⚙️ Paramètres   │ │
 │ └─────────────────┘ │
 │                     │
 └─────────────────────┘
+```
+
+### Classes Tailwind responsive courantes
+
+```tsx
+// Layout responsive
+<main className="p-4 md:p-6 lg:p-8">
+
+// Grid responsive
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+// Navigation responsive
+<nav className="hidden md:flex gap-2">           {/* Desktop */}
+<nav className="md:hidden flex flex-col gap-1">  {/* Mobile */}
+
+// Texte responsive
+<span className="text-lg md:text-xl">
 ```
 
 ---
