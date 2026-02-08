@@ -2,16 +2,22 @@ import { NavLink } from "react-router-dom";
 
 export function Header() {
   return (
-    <header className="header">
-      <div className="header-brand">
-        <span className="header-logo">📊</span>
-        <span className="header-title">ORSYS Training Tracker</span>
+    <header className="flex justify-between items-center px-8 py-4 bg-[#1a1a2e] border-b border-[#16213e]">
+      <div className="flex items-center gap-2">
+        <span className="text-2xl">📊</span>
+        <span className="text-xl font-semibold text-white">
+          ORSYS Training Tracker
+        </span>
       </div>
-      <nav className="header-nav">
+      <nav className="flex gap-2">
         <NavLink
           to="/"
           className={({ isActive }) =>
-            isActive ? "nav-link active" : "nav-link"
+            `px-4 py-2 rounded-md transition-all duration-200 no-underline ${
+              isActive
+                ? "bg-indigo-600 text-white"
+                : "text-gray-400 hover:text-white hover:bg-white/10"
+            }`
           }
           end
         >
@@ -20,7 +26,11 @@ export function Header() {
         <NavLink
           to="/carte"
           className={({ isActive }) =>
-            isActive ? "nav-link active" : "nav-link"
+            `px-4 py-2 rounded-md transition-all duration-200 no-underline ${
+              isActive
+                ? "bg-indigo-600 text-white"
+                : "text-gray-400 hover:text-white hover:bg-white/10"
+            }`
           }
         >
           Carte
@@ -28,7 +38,11 @@ export function Header() {
         <NavLink
           to="/formations"
           className={({ isActive }) =>
-            isActive ? "nav-link active" : "nav-link"
+            `px-4 py-2 rounded-md transition-all duration-200 no-underline ${
+              isActive
+                ? "bg-indigo-600 text-white"
+                : "text-gray-400 hover:text-white hover:bg-white/10"
+            }`
           }
         >
           Formations
@@ -36,7 +50,11 @@ export function Header() {
         <NavLink
           to="/parametres"
           className={({ isActive }) =>
-            isActive ? "nav-link active" : "nav-link"
+            `px-4 py-2 rounded-md transition-all duration-200 no-underline ${
+              isActive
+                ? "bg-indigo-600 text-white"
+                : "text-gray-400 hover:text-white hover:bg-white/10"
+            }`
           }
         >
           ⚙️ Paramètres

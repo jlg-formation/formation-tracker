@@ -28,26 +28,26 @@ Tu es un développeur expert React/TypeScript. Ce prompt est **itératif et idem
 
 Ce tableau permet de voir rapidement ce qui est démontrable à chaque étape pour présenter l'avancement du projet.
 
-| Étape | Nom                | Ce qu'on peut montrer au chef                |
-| ----- | ------------------ | -------------------------------------------- |
-| 0     | Init Vite + React  | Page React de base qui se lance en local     |
-| 1     | Vitest + Tests     | Tests qui passent, rapport de couverture     |
-| 2     | Types + Structure  | Types TypeScript, tests des enums            |
-| 3     | IndexedDB          | Tables dans DevTools, tests CRUD             |
-| 4     | Layout + Routing   | Navigation entre les 4 pages                 |
-| 5     | Page Paramètres    | Formulaire de config, sauvegarde persistante |
-| 6     | Gmail OAuth        | Connexion Google fonctionnelle               |
-| 7     | Extraction emails  | Barre de progression, emails stockés         |
-| 8     | LLM Classification | Email → type détecté avec confiance          |
-| 9     | LLM Extraction     | Email brut → Formation structurée            |
-| 10    | Géocodage          | Adresse → coordonnées GPS, cache             |
-| 11    | Fusion             | Plusieurs emails → 1 formation fusionnée     |
-| 12    | Dashboard Stats    | 4 cartes KPI avec chiffres réels             |
-| 13    | Graphiques D3      | Barres par année, camembert, top 10          |
-| 14    | Carte Leaflet      | Marqueurs interactifs sur carte France       |
-| 15    | Liste formations   | Filtres, recherche, cartes détaillées        |
-| 16    | Export             | Téléchargement JSON/CSV/PDF                  |
-| 17    | Finitions          | Parcours complet, tests 70%+, build prod     |
+| Étape | Nom                | Ce qu'on peut montrer au chef                      |
+| ----- | ------------------ | -------------------------------------------------- |
+| 0     | Init Vite + React  | Page React de base qui se lance en local           |
+| 1     | Vitest + Tests     | Tests qui passent, rapport de couverture           |
+| 2     | Types + Structure  | Types TypeScript, tests des enums                  |
+| 3     | IndexedDB          | Tables dans DevTools, tests CRUD                   |
+| 4     | Tailwind + Layout  | Tailwind CSS v4 installé, navigation entre 4 pages |
+| 5     | Page Paramètres    | Formulaire de config, sauvegarde persistante       |
+| 6     | Gmail OAuth        | Connexion Google fonctionnelle                     |
+| 7     | Extraction emails  | Barre de progression, emails stockés               |
+| 8     | LLM Classification | Email → type détecté avec confiance                |
+| 9     | LLM Extraction     | Email brut → Formation structurée                  |
+| 10    | Géocodage          | Adresse → coordonnées GPS, cache                   |
+| 11    | Fusion             | Plusieurs emails → 1 formation fusionnée           |
+| 12    | Dashboard Stats    | 4 cartes KPI avec chiffres réels                   |
+| 13    | Graphiques D3      | Barres par année, camembert, top 10                |
+| 14    | Carte Leaflet      | Marqueurs interactifs sur carte France             |
+| 15    | Liste formations   | Filtres, recherche, cartes détaillées              |
+| 16    | Export             | Téléchargement JSON/CSV/PDF                        |
+| 17    | Finitions          | Parcours complet, tests 70%+, build prod           |
 
 ---
 
@@ -264,33 +264,76 @@ import "fake-indexeddb/auto";
 
 ---
 
-### Étape 4 : Layout de base + Routing
+### Étape 4 : Tailwind CSS v4 + Layout + Routing
 
 **Critères de complétion :**
 
+- [ ] `tailwindcss` et `@tailwindcss/vite` dans les dépendances
+- [ ] `project/vite.config.ts` configuré avec le plugin `@tailwindcss/vite`
+- [ ] `project/src/index.css` contient `@import "tailwindcss"`
 - [ ] `react-router-dom` dans les dépendances
-- [ ] `project/src/components/layout/Header.tsx` existe
-- [ ] `project/src/components/layout/Footer.tsx` existe
+- [ ] `project/src/components/layout/Header.tsx` existe avec classes Tailwind
+- [ ] `project/src/components/layout/Footer.tsx` existe avec classes Tailwind
 - [ ] `project/src/App.tsx` avec routes : `/`, `/carte`, `/formations`, `/parametres`
+- [ ] `project/src/App.css` supprimé ou vidé (CSS personnalisé minimal)
+- [ ] Tous les composants utilisent des classes Tailwind (pas de CSS personnalisé)
 - [ ] Navigation fonctionnelle entre les pages
 
 **Actions si incomplet :**
 
 ```bash
 cd project
+bun add tailwindcss @tailwindcss/vite
 bun add react-router-dom
 ```
 
-Créer les composants layout et configurer le router.
+Configurer `vite.config.ts` avec le plugin Tailwind v4 :
+
+```typescript
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()]
+  // ... reste de la config
+});
+```
+
+Remplacer le contenu de `project/src/index.css` :
+
+```css
+@import "tailwindcss";
+
+/* Thème personnalisé ORSYS (optionnel) */
+@theme {
+  --color-orsys-primary: #0066cc;
+  --color-orsys-dark: #1a1a2e;
+}
+```
+
+Supprimer ou vider `project/src/App.css` et refactorer tous les composants pour utiliser des classes Tailwind :
+
+```tsx
+// ✅ BON : Classes Tailwind
+<header className="flex justify-between items-center p-4 bg-gray-900 border-b border-gray-800">
+  <span className="text-xl font-semibold text-white">
+    ORSYS Training Tracker
+  </span>
+</header>
+
+// ❌ MAUVAIS : CSS personnalisé
+// .header { display: flex; justify-content: space-between; }
+```
 
 **🎯 Démo possible :**
 
-> _"La navigation de l'application est en place."_
+> _"Tailwind CSS v4 est installé et la navigation fonctionne."_
 >
+> - Montrer que Tailwind est configuré (pas de fichier CSS personnalisé)
 > - Lancer `bun run dev` et naviguer entre les 4 pages
-> - Montrer le header avec le menu de navigation
-> - Cliquer sur Accueil, Carte, Formations, Paramètres
-> - Expliquer : "L'architecture de l'interface est posée. On a 4 sections principales qui vont se remplir progressivement."
+> - Inspecter le DOM → montrer les classes Tailwind sur les éléments
+> - Expliquer : "On utilise Tailwind CSS v4 pour le styling. Pas de CSS à maintenir, tout est dans les classes utilitaires."
 
 ---
 
@@ -663,26 +706,26 @@ Si le fichier existe, lire `currentStep` et reprendre à cette étape.
 
 Si le fichier d'état n'existe pas, déterminer l'étape par inspection :
 
-| Étape | Fichier à vérifier                                      |
-| ----- | ------------------------------------------------------- |
-| 0     | `project/package.json`                                  |
-| 1     | `project/vitest.config.ts`                              |
-| 2     | `project/src/types/index.ts`                            |
-| 3     | `project/src/stores/db.ts`                              |
-| 4     | `project/src/components/layout/Header.tsx`              |
-| 5     | `project/src/components/settings/SettingsPage.tsx`      |
-| 6     | `project/src/services/gmail/auth.ts`                    |
-| 7     | `project/src/components/extraction/ExtractionPanel.tsx` |
-| 8     | `project/src/services/llm/parser.ts`                    |
-| 9     | `project/src/services/llm/prompts.ts` (extraction)      |
-| 10    | `project/src/services/geocoding/nominatim.ts`           |
-| 11    | `project/src/utils/fusion.ts`                           |
-| 12    | `project/src/components/dashboard/Dashboard.tsx`        |
-| 13    | `project/src/components/dashboard/YearlyChart.tsx`      |
-| 14    | `project/src/components/map/MapView.tsx`                |
-| 15    | `project/src/components/formations/FormationList.tsx`   |
-| 16    | `project/src/services/export/pdf.ts`                    |
-| 17    | Tous les critères de finition                           |
+| Étape | Fichier à vérifier                                                       |
+| ----- | ------------------------------------------------------------------------ |
+| 0     | `project/package.json`                                                   |
+| 1     | `project/vitest.config.ts`                                               |
+| 2     | `project/src/types/index.ts`                                             |
+| 3     | `project/src/stores/db.ts`                                               |
+| 4     | `tailwindcss` dans package.json + `@import "tailwindcss"` dans index.css |
+| 5     | `project/src/components/settings/SettingsPage.tsx`                       |
+| 6     | `project/src/services/gmail/auth.ts`                                     |
+| 7     | `project/src/components/extraction/ExtractionPanel.tsx`                  |
+| 8     | `project/src/services/llm/parser.ts`                                     |
+| 9     | `project/src/services/llm/prompts.ts` (extraction)                       |
+| 10    | `project/src/services/geocoding/nominatim.ts`                            |
+| 11    | `project/src/utils/fusion.ts`                                            |
+| 12    | `project/src/components/dashboard/Dashboard.tsx`                         |
+| 13    | `project/src/components/dashboard/YearlyChart.tsx`                       |
+| 14    | `project/src/components/map/MapView.tsx`                                 |
+| 15    | `project/src/components/formations/FormationList.tsx`                    |
+| 16    | `project/src/services/export/pdf.ts`                                     |
+| 17    | Tous les critères de finition                                            |
 
 Après détermination, **créer le fichier d'état** avec l'étape trouvée.
 

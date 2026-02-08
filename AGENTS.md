@@ -17,6 +17,7 @@ Extraire automatiquement les données de formation depuis les emails Gmail (doma
 | Runtime        | Bun                                       |
 | Framework      | React + TypeScript                        |
 | Build          | Vite                                      |
+| **Styling**    | **Tailwind CSS v4** (CSS minimal)         |
 | Graphiques     | D3.js                                     |
 | Cartographie   | Leaflet.js + react-leaflet                |
 | Stockage local | IndexedDB (via Dexie.js)                  |

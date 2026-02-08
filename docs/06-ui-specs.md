@@ -359,3 +359,57 @@ Affiché pendant l'extraction :
 | **Body**      | Inter Regular  | 14px   |
 | **Small**     | Inter Regular  | 12px   |
 | **Code**      | JetBrains Mono | 13px   |
+
+---
+
+## Conventions de styling : Tailwind CSS v4
+
+### Principes généraux
+
+- **Tailwind CSS v4** est le système de styling principal
+- **CSS personnalisé minimal** : éviter les fichiers `.css` sauf nécessité absolue
+- **Classes utilitaires** : privilégier les classes Tailwind directement dans le JSX
+
+### Quand utiliser du CSS personnalisé
+
+| Cas d'usage               | Approche                                      |
+| ------------------------- | --------------------------------------------- |
+| Layout, spacing, couleurs | ✅ Classes Tailwind uniquement                |
+| Composants interactifs    | ✅ Classes Tailwind + variants (hover, focus) |
+| Intégration Leaflet/D3.js | ⚠️ CSS minimal pour surcharges nécessaires    |
+| Animations complexes      | ⚠️ CSS si non couvert par Tailwind            |
+| Reset/normalisation       | ⚠️ Dans `index.css` uniquement                |
+
+### Exemples de classes Tailwind courantes
+
+```tsx
+// ✅ BON : Classes Tailwind dans le JSX
+<div className="flex items-center gap-4 p-4 bg-gray-900 rounded-lg">
+  <h1 className="text-xl font-semibold text-white">Titre</h1>
+  <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white">
+    Action
+  </button>
+</div>
+
+// ❌ MAUVAIS : CSS personnalisé pour du layout basique
+// .container { display: flex; gap: 1rem; }
+```
+
+### Configuration Tailwind v4
+
+Le fichier `tailwind.config.ts` définit :
+
+- **Couleurs personnalisées** selon la palette ORSYS (voir section Palette)
+- **Breakpoints** : sm (640px), md (768px), lg (1024px), xl (1280px)
+- **Dark mode** : `class` (toggle manuel)
+
+### Classes spécifiques au projet
+
+| Usage               | Classes recommandées                                              |
+| ------------------- | ----------------------------------------------------------------- |
+| Carte KPI           | `bg-gray-800 rounded-lg p-4 shadow-md`                            |
+| Bouton primaire     | `bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded`      |
+| Bouton secondaire   | `bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded`      |
+| Input               | `bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white` |
+| Navigation active   | `bg-indigo-600 text-white`                                        |
+| Navigation inactive | `text-gray-400 hover:text-white`                                  |

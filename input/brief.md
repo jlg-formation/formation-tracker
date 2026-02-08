@@ -148,6 +148,7 @@ Chaque formation extraite contiendra les informations suivantes :
 | ------------ | ------------------------------------------------------- |
 | Runtime      | Bun                                                     |
 | Front-end    | Vite + React + TypeScript                               |
+| **Styling**  | **Tailwind CSS v4** (CSS personnalisé minimal)          |
 | Graphiques   | D3.js                                                   |
 | Cartographie | Leaflet.js                                              |
 | Géocodage    | Adapter pattern (Nominatim / Google Geocoding / Mapbox) |
@@ -157,6 +158,15 @@ Chaque formation extraite contiendra les informations suivantes :
 | **Tests**    | **Vitest + Testing Library**                            |
 | Déploiement  | GitHub Pages (statique)                                 |
 | Langue UI    | Français uniquement                                     |
+
+### Conventions CSS
+
+- **Tailwind CSS v4** : Utiliser les classes utilitaires Tailwind en priorité
+- **CSS personnalisé minimal** : Éviter les fichiers CSS personnalisés, sauf pour :
+  - Intégration de librairies tierces (Leaflet, D3.js)
+  - Animations complexes non couvertes par Tailwind
+  - Reset/normalisation de base
+- **Classes Tailwind** : Privilégier les classes directement dans le JSX
 
 ---
 

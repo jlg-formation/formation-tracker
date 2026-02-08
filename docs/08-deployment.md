@@ -145,6 +145,60 @@ bun add -d vitest @vitest/coverage-v8 @testing-library/react @testing-library/je
 
 ---
 
+## Configuration Tailwind CSS v4
+
+### Installation
+
+```bash
+cd project
+bun add tailwindcss @tailwindcss/vite
+```
+
+### Configuration Vite pour Tailwind v4
+
+Dans `vite.config.ts`, ajouter le plugin Tailwind :
+
+```typescript
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()]
+  // ... reste de la config
+});
+```
+
+### Fichier CSS principal : project/src/index.css
+
+```css
+@import "tailwindcss";
+
+/* Variables personnalisées (optionnel) */
+@theme {
+  --color-orsys-primary: #0066cc;
+  --color-orsys-dark: #1a1a2e;
+  --color-orsys-success: #28a745;
+  --color-orsys-error: #dc3545;
+  --color-orsys-warning: #ffc107;
+}
+
+/* CSS personnalisé minimal - uniquement pour intégrations tierces */
+/* Leaflet, D3.js, etc. */
+```
+
+### Bonnes pratiques Tailwind v4
+
+| Pratique             | Recommandation                      |
+| -------------------- | ----------------------------------- |
+| Classes dans JSX     | ✅ Toujours privilégier             |
+| Fichiers CSS séparés | ❌ Éviter sauf intégrations tierces |
+| @apply dans CSS      | ⚠️ Limité aux cas exceptionnels     |
+| Thème personnalisé   | ✅ Via `@theme` dans index.css      |
+| Dark mode            | ✅ Classes `dark:` natives          |
+
+---
+
 ## Variables d'environnement
 
 ### project/.env.example
