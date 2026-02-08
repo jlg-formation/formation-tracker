@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "currentStep": 8,
-  "lastUpdated": "2026-02-08T14:33:00.000Z",
+  "currentStep": 9,
+  "lastUpdated": "2026-02-08T15:32:00.000Z",
   "steps": {
     "0": { "status": "completed", "completedAt": "2026-02-08T12:00:00.000Z" },
     "1": { "status": "completed", "completedAt": "2026-02-08T12:30:00.000Z" },
@@ -11,7 +11,7 @@
     "5": { "status": "completed", "completedAt": "2026-02-08T13:18:00.000Z" },
     "6": { "status": "completed", "completedAt": "2026-02-08T13:25:00.000Z" },
     "7": { "status": "completed", "completedAt": "2026-02-08T14:33:00.000Z" },
-    "8": { "status": "not-started" },
+    "8": { "status": "completed", "completedAt": "2026-02-08T15:32:00.000Z" },
     "9": { "status": "not-started" },
     "10": { "status": "not-started" },
     "11": { "status": "not-started" },
@@ -55,6 +55,12 @@
     "project/src/services/gmail/index.ts",
     "project/src/hooks/useGmailAuth.ts",
     "project/src/components/extraction/ExtractionPanel.tsx",
-    "project/src/components/extraction/index.ts"
+    "project/src/components/extraction/index.ts",
+    "project/src/services/llm/types.ts",
+    "project/src/services/llm/prompts.ts",
+    "project/src/services/llm/config.ts",
+    "project/src/services/llm/parser.ts",
+    "project/src/services/llm/index.ts",
+    "project/src/services/llm/parser.test.ts"
   ]
 }
