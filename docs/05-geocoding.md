@@ -23,12 +23,17 @@ L'application utilise un **Adapter Pattern** permettant de switcher facilement e
 
 Objectif : permettre de **mettre à jour facilement** les coordonnées GPS lorsque le géocodage automatique échoue ou manque de précision.
 
-Principe :
+User flow (référence : clarification `005-gps`) :
 
-- depuis l'interface, l'utilisateur peut ouvrir une carte et **définir d'un clic** l'endroit exact où la formation a eu lieu ;
-- la correction met à jour les coordonnées GPS persistées (IndexedDB) pour que :
-  - le marqueur sur la carte reflète la position corrigée ;
-  - les exports (JSON/CSV/PDF) utilisent les coordonnées corrigées.
+1. L'utilisateur sélectionne une formation dans la page **Formations**.
+2. Il est redirigé vers la **page détail** de la formation.
+3. Sur cette page, une **carte** est visible (avec la position GPS si elle existe).
+4. L'utilisateur peut corriger cette position en cliquant sur **« Corriger la position »**, puis en cliquant sur la carte à l'endroit exact, puis en cliquant sur **« Valider la nouvelle position »**.
+
+Persistance :
+
+- la correction met à jour les coordonnées GPS persistées (IndexedDB) pour que le marqueur sur la carte reflète la position corrigée ;
+- les exports (JSON/CSV/PDF) utilisent les coordonnées corrigées.
 
 ---
 

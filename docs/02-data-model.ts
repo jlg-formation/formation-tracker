@@ -68,7 +68,7 @@ export interface Lieu {
   nom: string;
   /** Adresse postale complète */
   adresse: string;
-  /** Coordonnées GPS (géocodage automatique) */
+  /** Coordonnées GPS (géocodage automatique ou correction manuelle) */
   gps: CoordonneesGPS | null;
   /** Salle (si précisée) */
   salle?: string;

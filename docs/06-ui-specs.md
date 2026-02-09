@@ -118,14 +118,14 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 
 ### Fonctionnalités carte
 
-| Fonctionnalité      | Description                                                                                                 |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Clustering**      | Regroupement des marqueurs proches (Leaflet.markercluster)                                                  |
-| **Popup**           | Au clic sur marqueur : nom lieu, nb formations, liste courte                                                |
-| **Zoom**            | Contrôles zoom + molette souris                                                                             |
-| **Filtres**         | Filtre dynamique des marqueurs                                                                              |
-| **Centrage France** | Vue initiale centrée sur la France                                                                          |
-| **Correction GPS**  | Permet de corriger les coordonnées GPS en cliquant sur la carte lorsque le géocodage est absent ou imprécis |
+| Fonctionnalité      | Description                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Clustering**      | Regroupement des marqueurs proches (Leaflet.markercluster)                                                    |
+| **Popup**           | Au clic sur marqueur : nom lieu, nb formations, liste courte                                                  |
+| **Zoom**            | Contrôles zoom + molette souris                                                                               |
+| **Filtres**         | Filtre dynamique des marqueurs                                                                                |
+| **Centrage France** | Vue initiale centrée sur la France                                                                            |
+| **Données GPS**     | Les marqueurs utilisent les coordonnées GPS stockées pour chaque formation (géocodage ou correction manuelle) |
 
 ### Popup marqueur
 
@@ -184,44 +184,72 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 | **Filtres**            | Multi-sélection année, type, statut, code, lieu |
 | **Tri**                | Clic sur en-tête de colonne pour trier          |
 | **Pagination**         | 20 éléments par page                            |
-| **Ligne cliquable**    | Ouvre le modal détail                           |
+| **Ligne cliquable**    | Redirige vers la page détail de la formation    |
 | **Indicateur annulée** | Icône ❌ et texte barré                         |
 
-### Modal détail formation
+---
+
+## Page détail : Formation
+
+Cette page est accessible en cliquant sur une formation depuis la page **Formations** (liste).
+
+Objectifs :
+
+- afficher toutes les informations de la formation ;
+- afficher une carte centrée sur le lieu ;
+- permettre la **correction manuelle** des coordonnées GPS via un flow simple.
+
+### Layout (conceptuel)
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  ╳                                                                       │
-│                                                                          │
-│  GIAPA1 - L'intelligence artificielle au service des développeurs      │
-│  ═══════════════════════════════════════════════════════════════════    │
-│                                                                          │
-│  📅 Dates          04/02/2026 → 06/02/2026 (3 jours)                    │
-│  📍 Lieu           ORSYS Paris La Défense                                │
-│                    Paroi Nord Grande Arche, 1 parvis de la Défense       │
-│  🧭 GPS            48.8925, 2.2356                     [Corriger sur carte]│
-│  🏢 Type           Inter-entreprise                                      │
-│  📊 Niveau         Standard                                              │
-│  👥 Participants   5                                                     │
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ Participants                                                        │ │
-│  │ • ALVES Lionel - lionel.alves@wam-ingenierie.fr                    │ │
-│  │ • BOUMJAHED Hicham - hicham.boumjahed@april.com                    │ │
-│  │ • KLEIBER Cyprien - cyprien.kleiber@cgi.com                        │ │
-│  │ • RAMAMBAZAFY Hajatiana - h.ramambazafy@brgm.fr                    │ │
-│  │ • TEDJAR Lamri - lamri.tedjar@cibtp.fr                             │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                          │
-│  🔑 Mot de passe DocAdmin : 6d3nSFCYT                 [📋 Copier]       │
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ Facturation                                                         │ │
-│  │ Entité : ORSYS                                                      │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       DÉTAIL FORMATION (page)                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  GIAPA1 - L'intelligence artificielle au service des développeurs            │
+│                                                                             │
+│  📅 Dates          04/02/2026 → 06/02/2026 (3 jours)                         │
+│  📍 Lieu           ORSYS Paris La Défense                                     │
+│                    Paroi Nord Grande Arche, 1 parvis de la Défense           │
+│  🧭 GPS            48.8925, 2.2356                                            │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                              CARTE                                   │   │
+│  │  - marqueur position actuelle (si GPS connu)                          │   │
+│  │  - clic sur la carte en mode correction : nouvelle position candidate │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  [Corriger la position]   [Valider la nouvelle position]                     │
+│                                                                             │
+│  🏢 Type           Inter-entreprise                                          │
+│  📊 Niveau         Standard                                                  │
+│  👥 Participants   5                                                         │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ Participants                                                          │   │
+│  │ • ALVES Lionel - lionel.alves@wam-ingenierie.fr                        │   │
+│  │ • ...                                                                  │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  🔑 Mot de passe DocAdmin : 6d3nSFCYT                     [📋 Copier]       │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ Facturation                                                           │   │
+│  │ Entité : ORSYS                                                        │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
 ```
+
+### Flow : correction des coordonnées GPS
+
+1. L'utilisateur sélectionne une formation (page **Formations**).
+2. Il est redirigé vers la **page détail** de cette formation.
+3. La page affiche une **carte** (avec la position GPS si elle existe).
+4. L'utilisateur peut mettre à jour la position GPS en :
+
+- cliquant sur **« Corriger la position »** ;
+- cliquant à l'endroit de la nouvelle position sur la carte ;
+- cliquant sur **« Valider la nouvelle position »**.
 
 ---
 
