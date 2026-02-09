@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "currentStep": 15,
-  "lastUpdated": "2026-02-09T12:20:00.000Z",
+  "currentStep": 16,
+  "lastUpdated": "2026-02-09T13:45:00.000Z",
   "steps": {
     "0": { "status": "completed", "completedAt": "2026-02-08T12:00:00.000Z" },
     "1": { "status": "completed", "completedAt": "2026-02-08T12:30:00.000Z" },
@@ -50,7 +50,11 @@
       "completedAt": "2026-02-09T12:20:00.000Z",
       "note": "Carte Leaflet: MapView avec marqueurs, popups détaillés, groupement par lieu, légende, responsive"
     },
-    "15": { "status": "not-started" },
+    "15": {
+      "status": "completed",
+      "completedAt": "2026-02-09T13:45:00.000Z",
+      "note": "Liste formations: FormationCard, Filters (recherche/année/type/statut), FormationList avec pagination, modal détail, responsive"
+    },
     "16": { "status": "not-started" },
     "17": { "status": "not-started" }
   },
@@ -110,6 +114,10 @@
     "project/src/components/dashboard/TopCoursesChart.tsx",
     "project/src/components/dashboard/TypePieChart.tsx",
     "project/src/components/map/MapView.tsx",
-    "project/src/components/map/index.ts"
+    "project/src/components/map/index.ts",
+    "project/src/components/formations/FormationCard.tsx",
+    "project/src/components/formations/Filters.tsx",
+    "project/src/components/formations/FormationList.tsx",
+    "project/src/components/formations/index.ts"
   ]
 }
