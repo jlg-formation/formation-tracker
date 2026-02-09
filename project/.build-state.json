@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "currentStep": 16,
-  "lastUpdated": "2026-02-09T13:45:00.000Z",
+  "currentStep": 17,
+  "lastUpdated": "2026-02-09T14:00:00.000Z",
   "steps": {
     "0": { "status": "completed", "completedAt": "2026-02-08T12:00:00.000Z" },
     "1": { "status": "completed", "completedAt": "2026-02-08T12:30:00.000Z" },
@@ -55,7 +55,11 @@
       "completedAt": "2026-02-09T13:45:00.000Z",
       "note": "Liste formations: FormationCard, Filters (recherche/année/type/statut), FormationList avec pagination, modal détail, responsive"
     },
-    "16": { "status": "not-started" },
+    "16": {
+      "status": "completed",
+      "completedAt": "2026-02-09T14:00:00.000Z",
+      "note": "Export JSON/CSV/PDF: services avec tests (23 tests), boutons d'export dans le Dashboard, jsPDF + autotable"
+    },
     "17": { "status": "not-started" }
   },
   "errors": [],
@@ -118,6 +122,12 @@
     "project/src/components/formations/FormationCard.tsx",
     "project/src/components/formations/Filters.tsx",
     "project/src/components/formations/FormationList.tsx",
-    "project/src/components/formations/index.ts"
+    "project/src/components/formations/index.ts",
+    "project/src/services/export/utils.ts",
+    "project/src/services/export/json.ts",
+    "project/src/services/export/csv.ts",
+    "project/src/services/export/pdf.ts",
+    "project/src/services/export/index.ts",
+    "project/src/services/export/export.test.ts"
   ]
 }

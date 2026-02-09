@@ -2,19 +2,23 @@
  * Composant Dashboard - Affiche le tableau de bord principal
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useFormations } from "../../hooks/useFormations";
 import { calculateStats, getEmptyStats } from "../../utils/stats";
 import { StatsCards } from "./StatsCards";
 import { YearlyChart } from "./YearlyChart";
 import { TopCoursesChart } from "./TopCoursesChart";
 import { TypePieChart } from "./TypePieChart";
+import { exportToJson, exportToCsv, exportToPdf } from "../../services/export";
 
 /**
  * Dashboard principal avec statistiques et graphiques
  */
 export function Dashboard() {
   const { formations, loading, error } = useFormations();
+  const [exporting, setExporting] = useState<"json" | "csv" | "pdf" | null>(
+    null
+  );
 
   // Calcul des statistiques
   const stats = useMemo(() => {
@@ -23,6 +27,34 @@ export function Dashboard() {
     }
     return calculateStats(formations);
   }, [formations]);
+
+  // Handlers d'export
+  const handleExportJson = async () => {
+    setExporting("json");
+    try {
+      await exportToJson(formations);
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleExportCsv = () => {
+    setExporting("csv");
+    try {
+      exportToCsv(formations);
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleExportPdf = () => {
+    setExporting("pdf");
+    try {
+      exportToPdf(formations, stats);
+    } finally {
+      setExporting(null);
+    }
+  };
 
   if (error) {
     return (
@@ -35,6 +67,59 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* En-tête avec boutons d'export */}
+      {formations.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+          <div>
+            <h2 className="text-lg font-medium text-gray-200">
+              📊 Exporter les données
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">
+              {formations.length} formation{formations.length > 1 ? "s" : ""}{" "}
+              disponible{formations.length > 1 ? "s" : ""}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleExportJson}
+              disabled={exporting !== null}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              {exporting === "json" ? (
+                <span className="animate-spin">⏳</span>
+              ) : (
+                <span>📄</span>
+              )}
+              JSON
+            </button>
+            <button
+              onClick={handleExportCsv}
+              disabled={exporting !== null}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              {exporting === "csv" ? (
+                <span className="animate-spin">⏳</span>
+              ) : (
+                <span>📊</span>
+              )}
+              CSV
+            </button>
+            <button
+              onClick={handleExportPdf}
+              disabled={exporting !== null}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              {exporting === "pdf" ? (
+                <span className="animate-spin">⏳</span>
+              ) : (
+                <span>📕</span>
+              )}
+              PDF
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Cartes KPI */}
       <StatsCards stats={stats} loading={loading} />
 
