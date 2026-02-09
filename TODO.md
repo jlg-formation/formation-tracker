@@ -31,11 +31,11 @@
 
 ### Critique
 
-| ID    | Fonctionnalité       | Spécification                                                                | État                              | Priorité |
-| ----- | -------------------- | ---------------------------------------------------------------------------- | --------------------------------- | -------- |
-| id009 | Import de données    | [06-ui-specs.md](docs/06-ui-specs.md) - "Importer des données" dans Settings | Message "sera disponible" affiché | Haute    |
-| id010 | Export dans Settings | "Exporter toutes les données" dans Settings                                  | Non implémenté                    | Haute    |
-| id011 | Purge des données    | "Vider le cache emails/formations" dans Settings                             | Non implémenté                    | Haute    |
+| ID        | Fonctionnalité           | Spécification                                                                    | État          | Priorité  |
+| --------- | ------------------------ | -------------------------------------------------------------------------------- | ------------- | --------- |
+| ~~id009~~ | ~~Import de données~~    | ~~[06-ui-specs.md](docs/06-ui-specs.md) - "Importer des données" dans Settings~~ | ✅ Implémenté | ~~Haute~~ |
+| ~~id010~~ | ~~Export dans Settings~~ | ~~"Exporter toutes les données" dans Settings~~                                  | ✅ Implémenté | ~~Haute~~ |
+| ~~id011~~ | ~~Purge des données~~    | ~~"Vider le cache emails/formations" dans Settings~~                             | ✅ Implémenté | ~~Haute~~ |
 
 ### Important
 
@@ -141,7 +141,7 @@ Global:        73.43% (objectif: > 70%) ✅
 ### Sprint 1 - Corrections critiques
 
 - [x] `id029` Ajouter les dépendances de test manquantes
-- [ ] `id009` `id010` Implémenter import/export de données dans Settings
+- [x] `id009` `id010` `id011` Implémenter import/export/purge de données dans Settings
 - [ ] `id001` Ajouter le clustering Leaflet sur la carte
 
 ### Sprint 2 - Fonctionnalités manquantes

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSettings } from "../../hooks/useSettings";
 import { useGmailAuth } from "../../hooks/useGmailAuth";
 import {
@@ -12,6 +12,12 @@ import {
   preloadKnownLocations,
   clearGeocache
 } from "../../services/geocoding";
+import { exportToJson, parseExportJson } from "../../services/export";
+import {
+  getAllFormations,
+  clearFormations
+} from "../../stores/formationsStore";
+import { db } from "../../stores/db";
 import type { CoordonneesGPS } from "../../types";
 import { OPENAI_MODELS, type OpenAIModelId } from "../../types";
 
@@ -158,6 +164,16 @@ export function SettingsPage() {
     withoutCoords: number;
   } | null>(null);
 
+  // État pour la gestion des données locales
+  const [formationsCount, setFormationsCount] = useState(0);
+  const [dataOperationStatus, setDataOperationStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [dataOperationMessage, setDataOperationMessage] = useState<
+    string | null
+  >(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Synchroniser les valeurs locales au chargement
   useEffect(() => {
     if (!loading) {
@@ -173,6 +189,21 @@ export function SettingsPage() {
       setLocalGoogleClientId(clientId);
     }
   }, [clientId]);
+
+  // Charger les statistiques de données locales
+  useEffect(() => {
+    const loadDataStats = async () => {
+      try {
+        const formations = await getAllFormations();
+        setFormationsCount(formations.length);
+        const stats = await getGeocacheStats();
+        setGeocacheStats(stats);
+      } catch (err) {
+        console.error("Erreur lors du chargement des stats:", err);
+      }
+    };
+    loadDataStats();
+  }, []);
 
   const handleSaveOpenAIKey = async () => {
     await updateSettings({ openaiApiKey: localOpenAIKey || undefined });
@@ -195,6 +226,146 @@ export function SettingsPage() {
   const showSaveSuccess = () => {
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
+  };
+
+  /**
+   * Exporte toutes les formations au format JSON
+   */
+  const handleExportData = async () => {
+    setDataOperationStatus("loading");
+    setDataOperationMessage(null);
+    try {
+      const formations = await getAllFormations();
+      if (formations.length === 0) {
+        setDataOperationStatus("error");
+        setDataOperationMessage("Aucune formation à exporter.");
+        return;
+      }
+      await exportToJson(formations);
+      setDataOperationStatus("success");
+      setDataOperationMessage(
+        `${formations.length} formation(s) exportée(s) avec succès.`
+      );
+      setTimeout(() => {
+        setDataOperationStatus("idle");
+        setDataOperationMessage(null);
+      }, 3000);
+    } catch (err) {
+      setDataOperationStatus("error");
+      setDataOperationMessage(
+        err instanceof Error ? err.message : "Erreur lors de l'export"
+      );
+    }
+  };
+
+  /**
+   * Déclenche le sélecteur de fichier pour l'import
+   */
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  /**
+   * Importe des formations depuis un fichier JSON
+   */
+  const handleImportData = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setDataOperationStatus("loading");
+    setDataOperationMessage(null);
+
+    try {
+      const content = await file.text();
+      const exportData = parseExportJson(content);
+
+      // Importer les formations
+      let imported = 0;
+      let updated = 0;
+
+      for (const formation of exportData.formations) {
+        // Vérifier si la formation existe déjà (par codeEtendu + dateDebut)
+        const existing = await db.formations
+          .where("codeEtendu")
+          .equals(formation.codeEtendu)
+          .and((f) => f.dateDebut === formation.dateDebut)
+          .first();
+
+        if (existing) {
+          // Mettre à jour la formation existante
+          await db.formations.put({
+            ...formation,
+            id: existing.id,
+            updatedAt: new Date().toISOString()
+          });
+          updated++;
+        } else {
+          // Ajouter une nouvelle formation
+          await db.formations.add({
+            ...formation,
+            id: formation.id || crypto.randomUUID(),
+            createdAt: formation.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+          imported++;
+        }
+      }
+
+      // Rafraîchir le compteur
+      const formations = await getAllFormations();
+      setFormationsCount(formations.length);
+
+      setDataOperationStatus("success");
+      setDataOperationMessage(
+        `Import terminé : ${imported} nouvelle(s) formation(s), ${updated} mise(s) à jour.`
+      );
+      setTimeout(() => {
+        setDataOperationStatus("idle");
+        setDataOperationMessage(null);
+      }, 5000);
+    } catch (err) {
+      setDataOperationStatus("error");
+      setDataOperationMessage(
+        err instanceof Error ? err.message : "Erreur lors de l'import"
+      );
+    } finally {
+      // Réinitialiser l'input file pour permettre de réimporter le même fichier
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  /**
+   * Supprime toutes les formations
+   */
+  const handleClearFormations = async () => {
+    if (
+      !confirm(
+        "Êtes-vous sûr de vouloir supprimer toutes les formations ? Cette action est irréversible."
+      )
+    ) {
+      return;
+    }
+
+    setDataOperationStatus("loading");
+    try {
+      await clearFormations();
+      setFormationsCount(0);
+      setDataOperationStatus("success");
+      setDataOperationMessage("Toutes les formations ont été supprimées.");
+      setTimeout(() => {
+        setDataOperationStatus("idle");
+        setDataOperationMessage(null);
+      }, 3000);
+    } catch (err) {
+      setDataOperationStatus("error");
+      setDataOperationMessage(
+        err instanceof Error ? err.message : "Erreur lors de la suppression"
+      );
+    }
   };
 
   const handleSaveGoogleClientId = () => {
@@ -359,9 +530,27 @@ export function SettingsPage() {
    * Vide le cache de géocodage
    */
   const handleClearGeocache = async () => {
-    await clearGeocache();
-    await loadGeocacheStats();
-    setGeocodingTestResult(null);
+    if (!confirm("Êtes-vous sûr de vouloir vider le cache de géocodage ?")) {
+      return;
+    }
+
+    setDataOperationStatus("loading");
+    try {
+      await clearGeocache();
+      await loadGeocacheStats();
+      setGeocodingTestResult(null);
+      setDataOperationStatus("success");
+      setDataOperationMessage("Cache de géocodage vidé.");
+      setTimeout(() => {
+        setDataOperationStatus("idle");
+        setDataOperationMessage(null);
+      }, 3000);
+    } catch (err) {
+      setDataOperationStatus("error");
+      setDataOperationMessage(
+        err instanceof Error ? err.message : "Erreur lors de la purge du cache"
+      );
+    }
   };
 
   // Charger les stats du cache au montage
@@ -1094,10 +1283,98 @@ export function SettingsPage() {
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <span>💾</span> Données locales
         </h2>
-        <p className="text-sm text-gray-400">
-          Les fonctionnalités de gestion des données (export, import, purge)
-          seront disponibles dans une prochaine version.
-        </p>
+
+        {/* Statistiques */}
+        <div className="space-y-3 mb-6">
+          <div className="flex justify-between items-center p-3 bg-gray-900/50 rounded">
+            <span className="text-gray-300">Formations</span>
+            <div className="flex items-center gap-3">
+              <span className="text-white font-medium">
+                {formationsCount} entrée(s)
+              </span>
+              <button
+                onClick={handleClearFormations}
+                disabled={
+                  formationsCount === 0 || dataOperationStatus === "loading"
+                }
+                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
+              >
+                🗑️ Tout supprimer
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center p-3 bg-gray-900/50 rounded">
+            <span className="text-gray-300">Cache géocodage</span>
+            <div className="flex items-center gap-3">
+              <span className="text-white font-medium">
+                {geocacheStats ? `${geocacheStats.total} adresse(s)` : "..."}
+              </span>
+              <button
+                onClick={handleClearGeocache}
+                disabled={
+                  !geocacheStats ||
+                  geocacheStats.total === 0 ||
+                  dataOperationStatus === "loading"
+                }
+                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
+              >
+                🗑️ Vider
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Boutons export/import */}
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleExportData}
+            disabled={
+              formationsCount === 0 || dataOperationStatus === "loading"
+            }
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-2"
+          >
+            {dataOperationStatus === "loading" ? (
+              <span className="animate-spin">⏳</span>
+            ) : (
+              <span>📥</span>
+            )}
+            Exporter toutes les données
+          </button>
+
+          <button
+            onClick={handleImportClick}
+            disabled={dataOperationStatus === "loading"}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-2"
+          >
+            <span>📤</span>
+            Importer des données
+          </button>
+
+          {/* Input file caché */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImportData}
+            className="hidden"
+          />
+        </div>
+
+        {/* Message de feedback */}
+        {dataOperationMessage && (
+          <div
+            className={`mt-4 p-3 rounded text-sm ${
+              dataOperationStatus === "success"
+                ? "bg-green-900/30 border border-green-600 text-green-300"
+                : dataOperationStatus === "error"
+                  ? "bg-red-900/30 border border-red-600 text-red-300"
+                  : "bg-blue-900/30 border border-blue-600 text-blue-300"
+            }`}
+          >
+            {dataOperationMessage}
+          </div>
+        )}
       </section>
     </div>
   );
