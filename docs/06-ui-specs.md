@@ -319,8 +319,32 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 │  │  [📥 Exporter toutes les données]  [📤 Importer des données]         │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │  🚨 Erreurs                                                           │  │
+│  │  ────────                                                             │  │
+│  │  Certaines incohérences peuvent apparaître lors du traitement des     │  │
+│  │  emails (ex. : recouvrement de dates entre deux formations).          │  │
+│  │                                                                        │  │
+│  │  Formations à problème : 2                                            │  │
+│  │  • GIAPA1 — 04/02/2026 → 06/02/2026                                   │  │
+│  │    ↳ Recouvrement avec : BOA — 05/02/2026 → 07/02/2026                │  │
+│  │  • ...                                                                │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Section « Erreurs »
+
+Objectif : **signaler les incohérences détectées** dans les données, afin d'identifier une erreur potentielle dans le traitement des emails.
+
+Règle : **deux formations ne peuvent pas avoir lieu aux mêmes dates**. Si un recouvrement est détecté, les formations concernées apparaissent dans cette section.
+
+Contenu minimal pour chaque entrée :
+
+- Identifiant lisible de la formation (ex. `codeEtendu` et/ou titre)
+- Période (date début → date fin)
+- Description du problème (ex. « Recouvrement avec … »)
 
 ---
 

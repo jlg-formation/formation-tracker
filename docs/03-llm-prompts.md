@@ -93,7 +93,8 @@ Extrais les informations demandées et retourne un objet JSON valide.
 Règles :
 - Si une information n'est pas présente dans l'email, utilise null
 - Les dates doivent être au format ISO 8601 (YYYY-MM-DD)
-- Les codes formation ORSYS font généralement 6 caractères (ex: GIAPA1)
+- Les formations ORSYS ont un code sujet (ex: `FAN`) qui peut être étendu avec un identifiant de centre (1 ou 2 lettres) et un chiffre (ex: `GIAPA1`)
+- La mention `(FR)` peut apparaître : elle indique la langue de la formation et ne correspond pas à un centre
 - Sois précis et ne devine pas les informations manquantes
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après.
@@ -111,7 +112,7 @@ Extrais les informations de cette convocation de formation inter-entreprise :
 Format de réponse :
 {
   "titre": "Intitulé complet de la formation",
-  "codeEtendu": "Code 6 caractères (ex: GIAPA1)",
+  "codeEtendu": "Code étendu (ex: GIAPA1)",
   "dateDebut": "YYYY-MM-DD",
   "dateFin": "YYYY-MM-DD",
   "dates": ["YYYY-MM-DD", ...],

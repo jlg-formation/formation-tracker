@@ -110,9 +110,9 @@ export interface Formation {
   // --- Informations générales ---
   /** Intitulé complet de la formation */
   titre: string;
-  /** Code court (ex: "BOA") - optionnel car pas toujours présent */
+  /** Code court du sujet (ex: "BOA") - optionnel car pas toujours présent */
   codeFormation?: string;
-  /** Code étendu (ex: "GIAPA1") */
+  /** Code étendu (ex: "GIAPA1") : généralement code sujet + centre (1 ou 2 lettres) + chiffre. La mention "(FR)" vue dans certains emails indique la langue, pas un centre. */
   codeEtendu: string;
   /** Statut de la formation */
   statut: StatutFormation;

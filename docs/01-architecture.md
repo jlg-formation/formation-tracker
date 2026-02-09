@@ -69,7 +69,8 @@ ORSYS Training Tracker est une **Single Page Application (SPA)** React qui perme
 5. **Extraction LLM** : Les données structurées sont extraites en JSON
 6. **Géocodage** : Les adresses sont converties en coordonnées GPS
 7. **Fusion** : Les emails relatifs à la même session sont fusionnés
-8. **Stockage** : Les formations sont persistées dans IndexedDB
+8. **Contrôles de cohérence** : Détection d'incohérences (ex. recouvrement de dates entre formations) et signalement dans l'interface (section « Erreurs » des paramètres)
+9. **Stockage** : Les formations sont persistées dans IndexedDB
 
 ---
 
@@ -79,6 +80,12 @@ ORSYS Training Tracker est une **Single Page Application (SPA)** React qui perme
 - **Demande intra** (`demande-intra`) : une demande de formation intra par email **n'engage pas ORSYS** et ne doit pas être comptabilisée comme une formation confirmée (emails à ignorer côté création/statistiques, éventuellement tracés dans le cache emails).
 - **Annulations** : un email `annulation` marque la session comme **annulée** et elle doit être exclue des statistiques de formations dispensées.
 - Mention **« Annulé et remplacé »** : à traiter comme une **annulation** ; indique qu'une nouvelle session est probablement créée en remplacement (ex. changement de dates et/ou de code formation). La session de remplacement est gérée par les emails ultérieurs (nouvelle convocation / bon de commande).
+
+---
+
+## Contrôles de cohérence
+
+- **Recouvrement de dates** : deux formations ne peuvent pas avoir lieu aux mêmes dates. Un recouvrement indique une erreur probable dans le traitement des emails et doit être **signalé dans l'interface web**.
 
 ---
 
