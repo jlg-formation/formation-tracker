@@ -3,12 +3,8 @@
  */
 
 import { useState, useMemo, useCallback } from "react";
-import type { Formation, FormationFilters } from "../../types";
-import {
-  StatutFormation,
-  TypeSession,
-  NiveauPersonnalisation
-} from "../../types";
+import { useNavigate } from "react-router-dom";
+import type { FormationFilters } from "../../types";
 import { useFormations } from "../../hooks/useFormations";
 import { FormationCard } from "./FormationCard";
 import { Filters } from "./Filters";
@@ -144,264 +140,12 @@ function Pagination({
 }
 
 /**
- * Modal de détail d'une formation
- */
-interface FormationModalProps {
-  formation: Formation;
-  onClose: () => void;
-}
-
-function formatDate(isoDate: string): string {
-  try {
-    const date = new Date(isoDate);
-    return date.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    });
-  } catch {
-    return isoDate;
-  }
-}
-
-function FormationModal({ formation, onClose }: FormationModalProps) {
-  const isAnnulee = formation.statut === StatutFormation.ANNULEE;
-  const isIntra = formation.typeSession === TypeSession.INTRA;
-
-  const handleCopyPassword = useCallback(() => {
-    if (formation.motDePasseDocadmin) {
-      navigator.clipboard.writeText(formation.motDePasseDocadmin);
-    }
-  }, [formation.motDePasseDocadmin]);
-
-  // Fermer le modal avec Escape
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    },
-    [onClose]
-  );
-
-  return (
-    <div
-      className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"
-      onClick={onClose}
-      onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-    >
-      <div
-        className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* En-tête */}
-        <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-4 flex justify-between items-start">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              {isAnnulee && <span className="text-red-400">❌</span>}
-              <span
-                className={`font-mono text-sm ${
-                  isAnnulee ? "text-gray-500" : "text-blue-400"
-                }`}
-              >
-                {formation.codeEtendu}
-              </span>
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  isIntra
-                    ? "bg-purple-500/20 text-purple-300"
-                    : "bg-green-500/20 text-green-300"
-                }`}
-              >
-                {isIntra ? "Intra" : "Inter"}
-              </span>
-              {isAnnulee && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300">
-                  Annulée
-                </span>
-              )}
-            </div>
-            <h2
-              id="modal-title"
-              className={`text-lg font-semibold ${
-                isAnnulee ? "text-gray-400 line-through" : "text-white"
-              }`}
-            >
-              {formation.titre}
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="btn text-gray-400 hover:text-white p-1 text-xl"
-            aria-label="Fermer"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Contenu */}
-        <div className="p-4 space-y-4">
-          {/* Informations principales */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Dates */}
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">📅</span>
-              <div>
-                <div className="text-sm text-gray-400">Dates</div>
-                <div className="text-white">
-                  {formatDate(formation.dateDebut)} →{" "}
-                  {formatDate(formation.dateFin)}
-                </div>
-                <div className="text-sm text-gray-400">
-                  ({formation.nombreJours} jour
-                  {formation.nombreJours > 1 ? "s" : ""})
-                </div>
-              </div>
-            </div>
-
-            {/* Lieu */}
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">📍</span>
-              <div>
-                <div className="text-sm text-gray-400">Lieu</div>
-                <div className="text-white">
-                  {formation.lieu?.nom || "Non précisé"}
-                </div>
-                {formation.lieu?.adresse && (
-                  <div className="text-sm text-gray-400">
-                    {formation.lieu.adresse}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Type */}
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">🏢</span>
-              <div>
-                <div className="text-sm text-gray-400">Type</div>
-                <div className="text-white">
-                  {isIntra ? "Intra-entreprise" : "Inter-entreprise"}
-                </div>
-              </div>
-            </div>
-
-            {/* Niveau */}
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">📊</span>
-              <div>
-                <div className="text-sm text-gray-400">Niveau</div>
-                <div className="text-white">
-                  {formation.niveauPersonnalisation ===
-                  NiveauPersonnalisation.SPECIFIQUE
-                    ? "Spécifique"
-                    : formation.niveauPersonnalisation ===
-                        NiveauPersonnalisation.ULTRA_SPECIFIQUE
-                      ? "Ultra-spécifique"
-                      : "Standard"}
-                </div>
-              </div>
-            </div>
-
-            {/* Client (intra) */}
-            {isIntra && formation.client && (
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">🏭</span>
-                <div>
-                  <div className="text-sm text-gray-400">Client</div>
-                  <div className="text-white">{formation.client}</div>
-                </div>
-              </div>
-            )}
-
-            {/* Participants */}
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">👥</span>
-              <div>
-                <div className="text-sm text-gray-400">Participants</div>
-                <div className="text-white">
-                  {formation.nombreParticipants ?? 0}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Liste des participants */}
-          {formation.participants && formation.participants.length > 0 && (
-            <div className="bg-gray-700/50 rounded-lg p-4">
-              <h3 className="font-semibold text-white mb-3">Participants</h3>
-              <ul className="space-y-1.5">
-                {formation.participants.map((p, idx) => (
-                  <li key={idx} className="text-sm text-gray-300">
-                    • {p.nom}
-                    {p.email && (
-                      <span className="text-gray-500"> - {p.email}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Mot de passe DocAdmin */}
-          {formation.motDePasseDocadmin && (
-            <div className="bg-gray-700/50 rounded-lg p-4 flex items-center justify-between">
-              <div>
-                <span className="text-sm text-gray-400">
-                  🔑 Mot de passe DocAdmin :{" "}
-                </span>
-                <code className="font-mono text-blue-400">
-                  {formation.motDePasseDocadmin}
-                </code>
-              </div>
-              <button
-                onClick={handleCopyPassword}
-                className="btn text-gray-400 hover:text-white px-2 py-1"
-                title="Copier"
-              >
-                📋
-              </button>
-            </div>
-          )}
-
-          {/* Facturation */}
-          {formation.facturation && (
-            <div className="bg-gray-700/50 rounded-lg p-4">
-              <h3 className="font-semibold text-white mb-2">Facturation</h3>
-              <div className="text-sm text-gray-300">
-                <div>Entité : {formation.facturation.entite}</div>
-                {formation.facturation.referenceIntra && (
-                  <div>
-                    Référence intra : {formation.facturation.referenceIntra}
-                  </div>
-                )}
-                {formation.facturation.referenceCommande && (
-                  <div>
-                    Référence commande :{" "}
-                    {formation.facturation.referenceCommande}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
  * Composant principal de la liste des formations
  */
 export function FormationList() {
   const [filters, setFilters] = useState<FormationFilters>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedFormation, setSelectedFormation] = useState<Formation | null>(
-    null
-  );
+  const navigate = useNavigate();
 
   const { formations, loading, error } = useFormations();
 
@@ -534,7 +278,7 @@ export function FormationList() {
               <FormationCard
                 key={formation.id}
                 formation={formation}
-                onClick={setSelectedFormation}
+                onClick={() => navigate(`/formations/${formation.id}`)}
               />
             ))}
           </div>
@@ -547,14 +291,6 @@ export function FormationList() {
             onPageChange={setCurrentPage}
           />
         </>
-      )}
-
-      {/* Modal détail */}
-      {selectedFormation && (
-        <FormationModal
-          formation={selectedFormation}
-          onClose={() => setSelectedFormation(null)}
-        />
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useFormations } from "../../hooks/useFormations";
 import { MapView } from "../map";
 import {
@@ -12,6 +13,7 @@ type GeocodingStatus = "idle" | "running" | "completed" | "error";
 
 export function MapPage() {
   const { formations, loading, error, refresh } = useFormations();
+  const navigate = useNavigate();
 
   // État du géocodage
   const [geocodingStatus, setGeocodingStatus] =
@@ -219,6 +221,9 @@ export function MapPage() {
         <div className="h-[60vh] md:h-[65vh] lg:h-[70vh]">
           <MapView
             formations={formations}
+            onFormationSelect={(formation) =>
+              navigate(`/formations/${formation.id}`)
+            }
             height="100%"
             className="rounded-lg overflow-hidden border border-[#16213e]"
           />

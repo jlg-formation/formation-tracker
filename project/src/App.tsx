@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/layout";
 import {
   DashboardPage,
+  FormationDetailPage,
   MapPage,
   FormationsPage,
   SettingsPage
@@ -16,6 +17,10 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="carte" element={<MapPage />} />
           <Route path="formations" element={<FormationsPage />} />
+          <Route
+            path="formations/:formationId"
+            element={<FormationDetailPage />}
+          />
           <Route path="parametres" element={<SettingsPage />} />
         </Route>
       </Routes>

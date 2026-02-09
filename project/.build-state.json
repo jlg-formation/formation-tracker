@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "currentStep": 18,
-  "lastUpdated": "2026-02-09T15:28:36.6636372Z",
+  "lastUpdated": "2026-02-09T15:44:31.345Z",
   "todos": {
     "id001": {
       "status": "completed",
@@ -23,6 +23,12 @@
       "status": "completed",
       "completedAt": "2026-02-09T16:15:30.000Z",
       "note": "Favicon SVG présent dans public/ et <title> défini dans index.html; script test basculé sur vitest run pour éviter le mode watch"
+    },
+    "id035": {
+      "status": "completed",
+      "startedAt": "2026-02-09T15:38:50.2596680Z",
+      "completedAt": "2026-02-09T15:44:31.345Z",
+      "note": "Page détail formation dédiée (route) + accès depuis carte et liste + affichage emails bruts rattachés"
     }
   },
   "steps": {
@@ -155,6 +161,8 @@
     "project/src/services/export/csv.ts",
     "project/src/services/export/pdf.ts",
     "project/src/services/export/index.ts",
-    "project/src/services/export/export.test.ts"
+    "project/src/services/export/export.test.ts",
+    "project/src/components/pages/FormationDetailPage.tsx",
+    "project/src/components/pages/FormationDetailPage.test.tsx"
   ]
 }

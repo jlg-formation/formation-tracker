@@ -153,7 +153,7 @@ Global:        73.43% (objectif: > 70%) ✅
 
 - [ ] `id012` Implémenter les filtres sur la page Carte
 - [ ] `id013` Ajouter le tri par colonnes dans la liste
-- [ ] `id035` Page détail formation + affichage des emails bruts rattachés (debug)
+- [x] `id035` Page détail formation + affichage des emails bruts rattachés (debug)
 - [ ] `id002` Créer les adapters Google et Mapbox pour le géocodage
 
 ### Sprint 3 - Amélioration qualité
