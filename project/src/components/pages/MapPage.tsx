@@ -216,7 +216,7 @@ export function MapPage() {
 
       {/* Carte */}
       {!loading && !error && (
-        <div className="h-[400px] md:h-[500px] lg:h-[600px]">
+        <div className="h-100 md:h-125 lg:h-150">
           <MapView
             formations={formations}
             height="100%"

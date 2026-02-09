@@ -253,7 +253,7 @@ export function MapView({
   return (
     <div className={`relative ${className}`} style={{ height }}>
       {/* Badge avec le nombre de formations */}
-      <div className="absolute top-4 right-4 z-[1000] bg-[#1a1a2e]/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-[#16213e]">
+      <div className="absolute top-4 right-4 z-1000 bg-orsys-dark/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-[#16213e]">
         <span className="text-sm text-gray-300">
           <span className="font-semibold text-white">
             {formationsWithGPS.length}
@@ -370,7 +370,7 @@ export function MapView({
       </MapContainer>
 
       {/* Légende */}
-      <div className="absolute bottom-4 left-4 z-[1000] bg-[#1a1a2e]/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-[#16213e]">
+      <div className="absolute bottom-4 left-4 z-1000 bg-orsys-dark/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-[#16213e]">
         <div className="flex items-center gap-4 text-xs text-gray-400">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-blue-500"></span>
