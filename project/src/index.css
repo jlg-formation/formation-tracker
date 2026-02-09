@@ -13,3 +13,22 @@
 body {
   @apply bg-gray-950 text-gray-100 min-h-screen;
 }
+
+/* Fix Leaflet avec Tailwind - empêcher les conflits de styles */
+.leaflet-container {
+  font-family: inherit;
+  height: 100%;
+  width: 100%;
+}
+
+.leaflet-tile-pane {
+  z-index: 1;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+}
