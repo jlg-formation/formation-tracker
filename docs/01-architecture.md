@@ -83,6 +83,7 @@ Après extraction, si le géocodage est absent ou imprécis, l'utilisateur peut 
 - **Annulations** : un email `annulation` marque la session comme **annulée**.
   - Par défaut, les formations **annulées** ne sont **pas incluses** dans les **statistiques globales**.
   - Elles sont **comptabilisées séparément** (ex. indicateur « Annulées »).
+- **Formations futures** : par défaut, les formations dont la date de début est dans le futur (non encore réalisées) ne sont **pas affichées** dans les statistiques ni dans les vues principales.
 - **Preuves de réalisation** :
   - `emargements` : suivi des signatures / feuille d'émargement (ex. "Service suivi qualité inter"). Preuve forte que la session a eu lieu.
   - `accuse-reception` : accusé de réception de documents administratifs ("Service Suivi Qualité Logistique"). Preuve forte que la session a eu lieu.

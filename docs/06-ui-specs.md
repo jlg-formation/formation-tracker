@@ -34,10 +34,11 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 
 ## Page 1 : Dashboard
 
-### Règle de comptage (annulations)
+### Règles de comptage
 
 - Par défaut, les **statistiques globales** (KPI et graphiques) sont calculées **hors formations annulées**.
 - Les formations **annulées** sont **comptabilisées séparément** (KPI « Annulées »).
+- Par défaut, les **formations futures** (date de début postérieure à aujourd'hui, non encore réalisées) ne sont **pas affichées** dans les statistiques ni dans les vues (Dashboard, Carte, Liste).
 
 ### Layout
 

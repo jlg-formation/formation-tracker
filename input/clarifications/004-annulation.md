@@ -1,2 +1,3 @@
 - Par défaut, ne pas afficher les formations annulées dans les statistiques.
+- Par defaut, ne pas afficher les formations dans le futur (non encore realisee)
 - Ne pas inclure les formations annulées dans les statistiques globales ; les comptabiliser séparément (partout dans l’application).
