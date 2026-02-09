@@ -41,7 +41,7 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="bg-[#1a1a2e] border-b border-[#16213e]">
+    <header className="bg-orsys-dark border-b border-[#16213e]">
       <div className="flex justify-between items-center px-4 md:px-8 py-4">
         <div className="flex items-center gap-2">
           <span className="text-2xl">📊</span>
