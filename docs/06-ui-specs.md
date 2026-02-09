@@ -34,6 +34,11 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 
 ## Page 1 : Dashboard
 
+### Règle de comptage (annulations)
+
+- Par défaut, les **statistiques globales** (KPI et graphiques) sont calculées **hors formations annulées**.
+- Les formations **annulées** sont **comptabilisées séparément** (KPI « Annulées »).
+
 ### Layout
 
 ```
@@ -71,12 +76,12 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 
 ### Composants
 
-| Composant           | Description                       | Données                                                                        |
-| ------------------- | --------------------------------- | ------------------------------------------------------------------------------ |
-| **StatsCards**      | 4 cartes KPI en ligne             | `stats.total`, `stats.annulees`, `stats.totalJours`, `stats.totalParticipants` |
-| **YearlyChart**     | Bar chart horizontal par année    | `stats.parAnnee`                                                               |
-| **TopCoursesChart** | Bar chart horizontal top 10 codes | `stats.parCode` (top 10)                                                       |
-| **TypePieChart**    | Pie/donut chart inter vs intra    | `stats.inter`, `stats.intra`                                                   |
+| Composant           | Description                       | Données                                                                                                                        |
+| ------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **StatsCards**      | 4 cartes KPI en ligne             | `stats.total` (hors annulées), `stats.annulees`, `stats.totalJours` (hors annulées), `stats.totalParticipants` (hors annulées) |
+| **YearlyChart**     | Bar chart horizontal par année    | `stats.parAnnee`                                                                                                               |
+| **TopCoursesChart** | Bar chart horizontal top 10 codes | `stats.parCode` (top 10)                                                                                                       |
+| **TypePieChart**    | Pie/donut chart inter vs intra    | `stats.inter`, `stats.intra`                                                                                                   |
 
 ---
 
@@ -238,7 +243,7 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 │  │                                                                        │  │
 │  │  [🔄 Lancer une extraction]                                           │  │
 │  │  Dernière extraction : 08/02/2026 à 10:30                            │  │
-│  │  Emails traités : 1,247 | Formations : 156                           │  │
+│  │  Emails traités : 1,247 | Formations : 156 | Annulées : 12              │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
@@ -314,7 +319,7 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 │  │  ─────────────────                                                    │  │
 │  │  Cache emails : 1,247 emails (45 MB)         [🗑️ Vider le cache]     │  │
 │  │  Cache géocodage : 89 adresses               [🗑️ Vider]              │  │
-│  │  Formations : 156 entrées                    [🗑️ Tout supprimer]     │  │
+│  │  Formations : 168 entrées (dont 12 annulées) [🗑️ Tout supprimer]     │  │
 │  │                                                                        │  │
 │  │  [📥 Exporter toutes les données]  [📤 Importer des données]         │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │

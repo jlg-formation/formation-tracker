@@ -16,6 +16,11 @@ L'application permet d'exporter les données des formations dans 3 formats :
 
 ### Structure de sortie
 
+Règle métier (annulations) :
+
+- `metadata.totalFormations` correspond au nombre de formations **hors** statut `annulée`.
+- `metadata.formationsAnnulees` correspond au nombre de formations au statut `annulée`.
+
 ```json
 {
   "metadata": {
@@ -72,11 +77,13 @@ export async function exportToJson(
   filename = "orsys-formations.json"
 ): Promise<void> {
   const annulees = formations.filter((f) => f.statut === "annulée").length;
+  const horsAnnulees = formations.length - annulees;
 
   const exportData: ExportData = {
     metadata: {
       dateExtraction: new Date().toISOString(),
-      totalFormations: formations.length,
+      // Règle métier : les statistiques globales sont calculées hors annulées.
+      totalFormations: horsAnnulees,
       formationsAnnulees: annulees,
       emailsTraites: await db.emails.count(),
       version: "1.0.0"
@@ -220,7 +227,7 @@ function downloadFile(
 │  ┌───────────────────────────────────────────────────────────────────────┐ │
 │  │  RÉSUMÉ                                                                │ │
 │  │  ───────                                                               │ │
-│  │  • Total formations : 156                                              │ │
+│  │  • Total formations (hors annulées) : 156                              │ │
 │  │  • Formations annulées : 12                                            │ │
 │  │  • Total jours : 342                                                   │ │
 │  │  • Total participants : 1,847                                          │ │
@@ -277,7 +284,7 @@ export function exportToPdf(
 
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  doc.text(`• Total formations : ${stats.total}`, 20, 55);
+  doc.text(`• Total formations (hors annulées) : ${stats.total}`, 20, 55);
   doc.text(`• Formations annulées : ${stats.annulees}`, 20, 62);
   doc.text(`• Total jours : ${stats.totalJours}`, 20, 69);
   doc.text(`• Total participants : ${stats.totalParticipants}`, 20, 76);
@@ -443,7 +450,7 @@ export async function importFromJson(file: File): Promise<{
 
 ```typescript
 interface ExportOptions {
-  /** Inclure les formations annulées */
+  /** Inclure les formations annulées (par défaut : non) */
   includeAnnulees: boolean;
   /** Filtrer par période */
   dateRange?: { start: string; end: string };
