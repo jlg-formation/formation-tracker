@@ -18,6 +18,7 @@ Tu es un assistant spécialisé dans la classification d'emails professionnels p
 
 Ton rôle est d'identifier le type d'email parmi les catégories suivantes :
 
+- "demande-intra" : Demande initiale de formation intra (ne vaut pas confirmation)
 - "convocation-inter" : Confirmation d'une formation inter-entreprise (dans les locaux ORSYS)
 - "convocation-intra" : Confirmation d'une formation intra-entreprise (chez le client)
 - "annulation" : Annulation d'une session de formation
@@ -42,7 +43,7 @@ Sujet : {subject}
 
 Réponds avec ce format JSON :
 {
-  "type": "convocation-inter|convocation-intra|annulation|bon-commande|info-facturation|rappel|autre",
+  "type": "demande-intra|convocation-inter|convocation-intra|annulation|bon-commande|info-facturation|rappel|autre",
   "confidence": 0.0 à 1.0,
   "reason": "Explication courte de la classification"
 }
@@ -61,6 +62,14 @@ Réponds avec ce format JSON :
 ```
 
 **Email d'annulation :**
+
+> Règle métier : la mention « Annulé et remplacé » doit être comprise comme une **annulation**. Elle indique qu'une nouvelle session a probablement été créée en remplacement (changement de dates et/ou de code), mais l'email reste de type `annulation`.
+
+---
+
+## Notes de traitement par type
+
+- `demande-intra` : ne crée pas de formation « confirmée ». ORSYS n'est engagé qu'à partir d'une **convocation** ou d'un **bon de commande**. Ces emails sont donc à **ignorer** (ou à tracer comme emails non engageants) pour les statistiques.
 
 ```json
 {

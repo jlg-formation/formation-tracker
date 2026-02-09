@@ -28,6 +28,8 @@ export enum NiveauPersonnalisation {
 
 /** Type d'email ORSYS */
 export enum TypeEmail {
+  /** Demande initiale d'une formation intra (ne vaut pas confirmation) */
+  DEMANDE_INTRA = "demande-intra",
   CONVOCATION_INTER = "convocation-inter",
   CONVOCATION_INTRA = "convocation-intra",
   ANNULATION = "annulation",
