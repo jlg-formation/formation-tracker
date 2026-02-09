@@ -6,21 +6,63 @@ Tu es un développeur expert React/TypeScript. Ce prompt est **itératif et idem
 
 ### Principe de fonctionnement
 
-1. **Lis le fichier d'état** `project/.build-state.json` s'il existe
-2. **Détermine l'étape courante** selon le fichier d'état (ou vérifie les fichiers si absent)
-3. **Exécute UNIQUEMENT l'étape suivante** (pas plus)
-4. **Met à jour le fichier d'état** avec le résultat de l'étape
-5. **Termine** en indiquant clairement ce qui a été fait et quelle est la prochaine étape
+1. **Lis la TODO** `TODO.md` (source de vérité des tâches)
+2. **Lis le fichier d'état** `project/.build-state.json` s'il existe (pour l'idempotence et l'historique)
+3. **Détermine la prochaine tâche** à exécuter à partir de `TODO.md` (voir “Sélection de la prochaine tâche”) — ou utilise un `todoId` fourni par l'utilisateur
+4. **Exécute UNIQUEMENT cette tâche** (pas plus)
+5. **Valide** : build (`bun run build`) + tests (`bun run test`)
+6. **Si et seulement si la DoD est validée** : **Mets à jour** `TODO.md` (cocher la tâche) et `project/.build-state.json` (statut + horodatage)
+7. **Termine** en indiquant clairement ce qui a été fait et quelle est la prochaine tâche
 
 ### Règles impératives
 
-- **Une seule étape par exécution** - N'anticipe pas les étapes suivantes
+- **Une seule tâche TODO par exécution** - N'anticipe pas les tâches suivantes
 - **Vérifie avant de créer** - Ne recrée pas ce qui existe déjà
 - **Tests après chaque étape** - Vérifie que le build passe (`bun run build`) ET les tests passent (`bun run test`)
 - **Tests unitaires obligatoires** - Chaque service/utilitaire doit avoir son fichier `.test.ts`
 - **Commit mental** - Chaque étape doit laisser le projet dans un état fonctionnel
 - **Français** - Tous les textes UI en français
 - **Fichier d'état** - Toujours mettre à jour `project/.build-state.json` après chaque étape
+
+---
+
+## Source des tâches : `TODO.md`
+
+`TODO.md` est la **source de vérité**.
+
+### Sélection de la prochaine tâche
+
+0. **Optionnel : si l'utilisateur fournit un ID** au format `id###` (ex: `id034`), exécuter **cette tâche en priorité**.
+
+- Si la tâche est déjà cochée (ou marquée `completed`), l'indiquer clairement, puis choisir la prochaine tâche normale (règle 1).
+- Si l'ID n'existe pas dans `TODO.md`, l'indiquer clairement et retomber sur la règle 1.
+
+1. Sinon, prendre en priorité la **première case non cochée** dans `TODO.md` → section **“📋 Plan d'action recommandé”**, en respectant l'ordre : Sprint 1 → Sprint 2 → Sprint 3 → Sprint 4.
+2. Si toutes les cases sont cochées, sélectionner ensuite une entrée “Fonctionnalités manquantes” / “Incohérences” avec **priorité Haute puis Moyenne puis Basse**, en privilégiant le plus petit scope.
+3. Si une ligne de plan d'action référence plusieurs IDs (ex: `id033` + suppression d'un menu), traiter la ligne comme **une seule tâche atomique**.
+
+### Critère de complétion d'une tâche
+
+Une tâche est “faite” quand :
+
+- le comportement est implémenté,
+- les tests pertinents existent/ont été mis à jour si nécessaire,
+- `bun run build` + `bun run test` passent,
+- et la case correspondante est cochée dans `TODO.md` (si elle existe dans le plan).
+
+### Mise à jour de `TODO.md` (obligatoire)
+
+**Règle stricte :** ne coche **jamais** une tâche si la DoD ci-dessus n'est pas entièrement validée.
+
+Quand la tâche est terminée :
+
+1. Trouver la ligne exacte dans `TODO.md` → section **“📋 Plan d'action recommandé”** qui correspond à la tâche exécutée (souvent une ligne du type `- [ ] `id034` ...`).
+2. Remplacer `- [ ]` par `- [x]` sur **cette même ligne**.
+3. Si la tâche exécutée **n'existe pas** en tant que case à cocher dans le plan d'action :
+
+- ajouter une nouvelle ligne `- [x] `idXXX` ...` dans le sprint le plus pertinent, **ou**
+- (alternative minimale) ajouter une sous-ligne “Fait:” clairement datée sous le sprint.
+  Dans tous les cas, la TODO doit refléter explicitement que la tâche est réalisée.
 
 ---
 
@@ -60,18 +102,19 @@ Ce fichier JSON persiste l'état du projet entre les exécutions.
 ```json
 {
   "version": "1.0",
-  "currentStep": 3,
+  "currentTodoId": "id012",
   "lastUpdated": "2026-02-08T10:30:00.000Z",
-  "steps": {
-    "0": { "status": "completed", "completedAt": "2026-02-08T09:00:00.000Z" },
-    "1": { "status": "completed", "completedAt": "2026-02-08T09:15:00.000Z" },
-    "2": { "status": "completed", "completedAt": "2026-02-08T09:45:00.000Z" },
-    "3": { "status": "in-progress", "startedAt": "2026-02-08T10:00:00.000Z" },
-    "4": { "status": "not-started" }
+  "todos": {
+    "id001": { "status": "not-started" },
+    "id012": {
+      "status": "in-progress",
+      "startedAt": "2026-02-08T10:00:00.000Z"
+    },
+    "id033": { "status": "not-started" }
   },
   "errors": [
     {
-      "step": 2,
+      "todoId": "id012",
       "timestamp": "2026-02-08T09:40:00.000Z",
       "message": "Test failed: formationsStore.test.ts",
       "resolved": true
@@ -83,27 +126,24 @@ Ce fichier JSON persiste l'état du projet entre les exécutions.
 
 ### Champs
 
-| Champ             | Description                                               |
-| ----------------- | --------------------------------------------------------- |
-| `version`         | Version du schéma (pour migrations futures)               |
-| `currentStep`     | Numéro de l'étape en cours ou à exécuter                  |
-| `lastUpdated`     | Timestamp ISO de la dernière mise à jour                  |
-| `steps`           | État de chaque étape (0-17)                               |
-| `steps[n].status` | `not-started` \| `in-progress` \| `completed` \| `failed` |
-| `errors`          | Historique des erreurs rencontrées                        |
-| `filesCreated`    | Liste des fichiers créés (pour rollback éventuel)         |
+| Champ              | Description                                               |
+| ------------------ | --------------------------------------------------------- |
+| `version`          | Version du schéma (pour migrations futures)               |
+| `currentTodoId`    | ID TODO en cours (ex: `id012`)                            |
+| `lastUpdated`      | Timestamp ISO de la dernière mise à jour                  |
+| `todos`            | État par ID TODO (clés = `idXXX`)                         |
+| `todos[id].status` | `not-started` \| `in-progress` \| `completed` \| `failed` |
+| `errors`           | Historique des erreurs rencontrées                        |
+| `filesCreated`     | Liste des fichiers créés (pour rollback éventuel)         |
 
 ### Workflow du fichier d'état
 
-1. **Au début** : Lire `project/.build-state.json`
-   - Si absent → Créer avec `currentStep: 0`
-   - Si présent → Reprendre à `currentStep`
+1. **Au début** : Lire `project/.build-state.json` (si absent, le créer avec `currentTodoId: null`)
+2. **Avant la tâche** : Marquer le `todoId` sélectionné comme `in-progress`
+3. **Après la tâche** :
 
-2. **Avant l'étape** : Marquer l'étape comme `in-progress`
-
-3. **Après l'étape** :
-   - Si succès → Marquer `completed`, incrémenter `currentStep`
-   - Si échec → Marquer `failed`, ajouter l'erreur dans `errors`
+- Si succès → Marquer `completed`, définir `completedAt`, mettre à jour `currentTodoId` vers la prochaine tâche (ou `null`)
+- Si échec → Marquer `failed`, ajouter l'erreur dans `errors`
 
 4. **Toujours** : Mettre à jour `lastUpdated` et `filesCreated`
 
@@ -736,40 +776,19 @@ Finaliser l'application et préparer le déploiement.
 
 ## Commande d'analyse
 
-### 1. Vérifier le fichier d'état (prioritaire)
+### 1. Lire la TODO (prioritaire)
+
+- Ouvrir `TODO.md`
+- Identifier la **prochaine case non cochée** dans “📋 Plan d'action recommandé”
+- Si l'utilisateur a demandé explicitement `id###`, vérifier d'abord que cet ID existe dans `TODO.md` et qu'il n'est pas déjà complété
+
+### 2. Vérifier le fichier d'état
 
 ```bash
 cat project/.build-state.json
 ```
 
-Si le fichier existe, lire `currentStep` et reprendre à cette étape.
-
-### 2. Fallback : Analyse du système de fichiers
-
-Si le fichier d'état n'existe pas, déterminer l'étape par inspection :
-
-| Étape | Fichier à vérifier                                            |
-| ----- | ------------------------------------------------------------- |
-| 0     | `project/package.json`                                        |
-| 1     | `project/vitest.config.ts`                                    |
-| 2     | `project/src/types/index.ts`                                  |
-| 3     | `project/src/stores/db.ts`                                    |
-| 4     | `tailwindcss` + `hidden md:flex` dans Header.tsx (responsive) |
-| 5     | `project/src/components/settings/SettingsPage.tsx`            |
-| 6     | `project/src/services/gmail/auth.ts`                          |
-| 7     | `project/src/components/extraction/ExtractionPanel.tsx`       |
-| 8     | `project/src/services/llm/parser.ts`                          |
-| 9     | `project/src/services/llm/prompts.ts` (extraction)            |
-| 10    | `project/src/services/geocoding/nominatim.ts`                 |
-| 11    | `project/src/utils/fusion.ts`                                 |
-| 12    | `project/src/components/dashboard/Dashboard.tsx`              |
-| 13    | `project/src/components/dashboard/YearlyChart.tsx`            |
-| 14    | `project/src/components/map/MapView.tsx`                      |
-| 15    | `project/src/components/formations/FormationList.tsx`         |
-| 16    | `project/src/services/export/pdf.ts`                          |
-| 17    | Tous les critères de finition                                 |
-
-Après détermination, **créer le fichier d'état** avec l'étape trouvée.
+Si le fichier existe, s'assurer que `currentTodoId` est cohérent (ou `null`).
 
 ### 3. Vérifier les tests
 
@@ -784,18 +803,15 @@ Vérifie aussi que les **tests correspondants existent** pour chaque module.
 ### 1. Mettre à jour le fichier d'état
 
 ```bash
-# Exemple après complétion de l'étape 3
+# Exemple après complétion de la tâche id012
 cat > project/.build-state.json << 'EOF'
 {
   "version": "1.0",
-  "currentStep": 4,
+  "currentTodoId": "id013",
   "lastUpdated": "TIMESTAMP_ISO",
-  "steps": {
-    "0": { "status": "completed", "completedAt": "..." },
-    "1": { "status": "completed", "completedAt": "..." },
-    "2": { "status": "completed", "completedAt": "..." },
-    "3": { "status": "completed", "completedAt": "TIMESTAMP_ISO" },
-    "4": { "status": "not-started" }
+  "todos": {
+    "id012": { "status": "completed", "completedAt": "TIMESTAMP_ISO" },
+    "id013": { "status": "not-started" }
   },
   "filesCreated": [...]
 }
@@ -805,19 +821,20 @@ EOF
 ### 2. Afficher le rapport
 
 ```
-## ✅ Étape [N] terminée : [Nom de l'étape]
+## ✅ Tâche [idXXX] terminée : [Titre court]
 
 ### Fichier d'état mis à jour :
-`project/.build-state.json` → currentStep: [N+1]
+`project/.build-state.json` → currentTodoId: [idSuivant ou null]
 
 ### Ce qui a été fait :
 - [Liste des fichiers créés/modifiés]
+- `TODO.md` : case cochée pour la tâche terminée (uniquement si DoD validée)
 
 ### 🎯 Ce que vous pouvez montrer à votre chef :
 [Copier la section "Démo possible" de l'étape complétée]
 
 ### Prochaine étape :
-Étape [N+1] : [Nom de l'étape suivante]
+Prochaine tâche : [idYYY] : [Titre court]
 
 ### Pour continuer :
 Relance ce prompt pour exécuter l'étape suivante.
@@ -826,13 +843,13 @@ Relance ce prompt pour exécuter l'étape suivante.
 ### 3. En cas d'échec
 
 ```
-## ❌ Étape [N] échouée : [Nom de l'étape]
+## ❌ Tâche [idXXX] échouée : [Titre court]
 
 ### Erreur :
 [Description de l'erreur]
 
 ### Fichier d'état :
-`project/.build-state.json` → status: "failed"
+`project/.build-state.json` → todos[idXXX].status: "failed"
 
 ### Pour reprendre :
 Corrige l'erreur puis relance ce prompt.
@@ -848,13 +865,13 @@ Corrige l'erreur puis relance ce prompt.
 rm project/.build-state.json
 ```
 
-### Forcer une étape spécifique
+### Forcer une tâche spécifique
 
-Modifier manuellement `currentStep` dans le fichier JSON :
+Modifier manuellement `currentTodoId` dans le fichier JSON :
 
 ```bash
-# Exemple : reprendre à l'étape 5
-jq '.currentStep = 5' project/.build-state.json > tmp.json && mv tmp.json project/.build-state.json
+# Exemple : forcer la prochaine tâche à id034
+jq '.currentTodoId = "id034"' project/.build-state.json > tmp.json && mv tmp.json project/.build-state.json
 ```
 
 ### Ignorer le fichier d'état dans Git (optionnel)
@@ -868,7 +885,7 @@ echo ".build-state.json" >> project/.gitignore
 ### Vérifier l'état actuel
 
 ```bash
-cat project/.build-state.json | jq '.currentStep, .steps[.currentStep | tostring].status'
+cat project/.build-state.json | jq '.currentTodoId, (.todos[.currentTodoId].status // "unknown")'
 ```
 
 ---

@@ -1,7 +1,14 @@
 {
   "version": "1.0",
   "currentStep": 18,
-  "lastUpdated": "2026-02-09T14:20:00.000Z",
+  "lastUpdated": "2026-02-09T16:15:30.000Z",
+  "todos": {
+    "id036": {
+      "status": "completed",
+      "completedAt": "2026-02-09T16:15:30.000Z",
+      "note": "Favicon SVG présent dans public/ et <title> défini dans index.html; script test basculé sur vitest run pour éviter le mode watch"
+    }
+  },
   "steps": {
     "0": { "status": "completed", "completedAt": "2026-02-08T12:00:00.000Z" },
     "1": { "status": "completed", "completedAt": "2026-02-08T12:30:00.000Z" },

@@ -39,13 +39,15 @@
 
 ### Important
 
-| ID    | Fonctionnalité               | Spécification                                                                              | État                               | Priorité |
-| ----- | ---------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------- | -------- |
-| id012 | Filtres sur carte            | [06-ui-specs.md](docs/06-ui-specs.md#L100-L110) - Filtres année/type/statut sur page Carte | Absents                            | Moyenne  |
-| id013 | Tri tableau                  | [06-ui-specs.md](docs/06-ui-specs.md#L175) - "Clic sur en-tête de colonne pour trier"      | Tri uniquement par date (hardcodé) | Moyenne  |
-| id014 | Export dans liste            | UI specs montrent boutons export dans FormationsPage                                       | Export uniquement dans Dashboard   | Basse    |
-| id015 | Date extraction Footer       | Footer devrait afficher "Dernière extraction"                                              | Absent du Footer                   | Basse    |
-| id016 | Version dans metadata export | `ExtractionMetadata.version` défini dans types                                             | Non utilisé dans l'export JSON     | Basse    |
+| ID    | Fonctionnalité               | Spécification                                                                                            | État                               | Priorité |
+| ----- | ---------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------- |
+| id012 | Filtres sur carte            | [06-ui-specs.md](docs/06-ui-specs.md#L100-L110) - Filtres année/type/statut sur page Carte               | Absents                            | Moyenne  |
+| id013 | Tri tableau                  | [06-ui-specs.md](docs/06-ui-specs.md#L175) - "Clic sur en-tête de colonne pour trier"                    | Tri uniquement par date (hardcodé) | Moyenne  |
+| id035 | Debug emails par formation   | Au clic sur une formation, aller sur une page dédiée affichant tous les détails + emails bruts rattachés | Absent (modal/liste)               | Haute    |
+| id033 | Navigation `site-id`         | `site-id` doit rediriger vers la page Dashboard                                                          | Non implémenté                     | Moyenne  |
+| id014 | Export dans liste            | UI specs montrent boutons export dans FormationsPage                                                     | Export uniquement dans Dashboard   | Basse    |
+| id015 | Date extraction Footer       | Footer devrait afficher "Dernière extraction"                                                            | Absent du Footer                   | Basse    |
+| id016 | Version dans metadata export | `ExtractionMetadata.version` défini dans types                                                           | Non utilisé dans l'export JSON     | Basse    |
 
 ### Mineur
 
@@ -53,6 +55,7 @@
 | ----- | ------------------- | -------------------------------------------------------------------------- | -------------------------------------- | -------- |
 | id017 | Dark mode explicite | [08-deployment.md](docs/08-deployment.md#L186) - "Classes `dark:` natives" | Non exploité (thème sombre par défaut) | Basse    |
 | id018 | Recherche full-text | Brief mentionne recherche sur titre, code, lieu                            | Implémenté mais basique                | Basse    |
+| id036 | Favicon + titre     | Le site doit avoir un favicon et un titre (metadata HTML)                  | À faire                                | Basse    |
 
 ---
 
@@ -102,9 +105,10 @@
 
 ### Mineur
 
-| ID    | Erreur           | Description                                 | Solution                     |
-| ----- | ---------------- | ------------------------------------------- | ---------------------------- |
-| id032 | Typo potentielle | `z-1000` au lieu de `z-[1000]` dans MapView | Corriger la syntaxe Tailwind |
+| ID    | Erreur           | Description                                       | Solution                                   |
+| ----- | ---------------- | ------------------------------------------------- | ------------------------------------------ |
+| id032 | Typo potentielle | `z-1000` au lieu de `z-[1000]` dans MapView       | Corriger la syntaxe Tailwind               |
+| id034 | UI boutons       | Tous les boutons devraient avoir `cursor-pointer` | Appliquer `cursor-pointer` sur les boutons |
 
 ---
 
@@ -143,11 +147,13 @@ Global:        73.43% (objectif: > 70%) ✅
 - [x] `id029` Ajouter les dépendances de test manquantes
 - [x] `id009` `id010` `id011` Implémenter import/export/purge de données dans Settings
 - [ ] `id001` Ajouter le clustering Leaflet sur la carte
+- [ ] `id033` `site-id` redirige vers Dashboard + retirer "Dashboard" du menu primaire
 
 ### Sprint 2 - Fonctionnalités manquantes
 
 - [ ] `id012` Implémenter les filtres sur la page Carte
 - [ ] `id013` Ajouter le tri par colonnes dans la liste
+- [ ] `id035` Page détail formation + affichage des emails bruts rattachés (debug)
 - [ ] `id002` Créer les adapters Google et Mapbox pour le géocodage
 
 ### Sprint 3 - Amélioration qualité
@@ -155,6 +161,8 @@ Global:        73.43% (objectif: > 70%) ✅
 - [ ] `id006` `id022` Extraire les composants (FormationModal, ExportPanel, etc.)
 - [ ] `id023` Ajouter des tests pour les composants React
 - [ ] `id025` Améliorer la couverture du service export
+- [ ] `id034` Appliquer `cursor-pointer` sur tous les boutons
+- [x] `id036` Ajouter un favicon et définir le titre du site
 
 ### Sprint 4 - Documentation
 
