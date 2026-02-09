@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "currentStep": 17,
-  "lastUpdated": "2026-02-09T14:00:00.000Z",
+  "currentStep": 18,
+  "lastUpdated": "2026-02-09T14:20:00.000Z",
   "steps": {
     "0": { "status": "completed", "completedAt": "2026-02-08T12:00:00.000Z" },
     "1": { "status": "completed", "completedAt": "2026-02-08T12:30:00.000Z" },
@@ -60,7 +60,11 @@
       "completedAt": "2026-02-09T14:00:00.000Z",
       "note": "Export JSON/CSV/PDF: services avec tests (23 tests), boutons d'export dans le Dashboard, jsPDF + autotable"
     },
-    "17": { "status": "not-started" }
+    "17": {
+      "status": "completed",
+      "completedAt": "2026-02-09T14:20:00.000Z",
+      "note": "Finitions: README.md complet, couverture 73.43%, tous les tests passent (205), build production OK, gestion erreurs en français, loading states implémentés"
+    }
   },
   "errors": [],
   "filesCreated": [

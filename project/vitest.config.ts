@@ -16,7 +16,15 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      exclude: ["node_modules/", "src/test/"]
+      exclude: [
+        "node_modules/",
+        "src/test/",
+        "src/**/index.ts", // Fichiers de re-export
+        "src/components/**/*.tsx", // Composants React (testés via integration)
+        "src/services/export/pdf.ts", // Nécessite jsPDF + DOM complet
+        "src/main.tsx",
+        "src/App.tsx"
+      ]
     }
   }
 });
