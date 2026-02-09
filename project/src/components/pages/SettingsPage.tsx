@@ -166,9 +166,14 @@ export function SettingsPage() {
 
   // État pour la gestion des données locales
   const [formationsCount, setFormationsCount] = useState(0);
+  const [emailsCount, setEmailsCount] = useState(0);
+  const [llmCacheCount, setLlmCacheCount] = useState(0);
   const [dataOperationStatus, setDataOperationStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
+  const [currentDataOperation, setCurrentDataOperation] = useState<
+    "export" | "import" | null
+  >(null);
   const [dataOperationMessage, setDataOperationMessage] = useState<
     string | null
   >(null);
@@ -198,6 +203,10 @@ export function SettingsPage() {
         setFormationsCount(formations.length);
         const stats = await getGeocacheStats();
         setGeocacheStats(stats);
+        const emails = await db.emails.count();
+        setEmailsCount(emails);
+        const llmCache = await db.llmCache.count();
+        setLlmCacheCount(llmCache);
       } catch (err) {
         console.error("Erreur lors du chargement des stats:", err);
       }
@@ -229,29 +238,35 @@ export function SettingsPage() {
   };
 
   /**
-   * Exporte toutes les formations au format JSON
+   * Exporte TOUTES les données de la base IndexedDB au format JSON
+   * Inclut: formations, emails, geocache, llmCache
    */
   const handleExportData = async () => {
     setDataOperationStatus("loading");
+    setCurrentDataOperation("export");
     setDataOperationMessage(null);
     try {
+      // L'export complet est géré par exportToJson sans argument
+      await exportToJson();
+
+      // Compter les données exportées pour le message
       const formations = await getAllFormations();
-      if (formations.length === 0) {
-        setDataOperationStatus("error");
-        setDataOperationMessage("Aucune formation à exporter.");
-        return;
-      }
-      await exportToJson(formations);
+      const emailsCount = await db.emails.count();
+      const geocacheCount = await db.geocache.count();
+      const llmCacheCount = await db.llmCache.count();
+
       setDataOperationStatus("success");
       setDataOperationMessage(
-        `${formations.length} formation(s) exportée(s) avec succès.`
+        `Export complet : ${formations.length} formation(s), ${emailsCount} email(s), ${geocacheCount} geocache, ${llmCacheCount} cache LLM.`
       );
       setTimeout(() => {
         setDataOperationStatus("idle");
+        setCurrentDataOperation(null);
         setDataOperationMessage(null);
-      }, 3000);
+      }, 5000);
     } catch (err) {
       setDataOperationStatus("error");
+      setCurrentDataOperation(null);
       setDataOperationMessage(
         err instanceof Error ? err.message : "Erreur lors de l'export"
       );
@@ -266,7 +281,8 @@ export function SettingsPage() {
   };
 
   /**
-   * Importe des formations depuis un fichier JSON
+   * Importe TOUTES les données depuis un fichier JSON d'export complet
+   * Inclut: formations, emails, geocache, llmCache
    */
   const handleImportData = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -275,18 +291,24 @@ export function SettingsPage() {
     if (!file) return;
 
     setDataOperationStatus("loading");
-    setDataOperationMessage(null);
+    setCurrentDataOperation("import");
+    setDataOperationMessage("Import en cours...");
 
     try {
       const content = await file.text();
       const exportData = parseExportJson(content);
 
-      // Importer les formations
-      let imported = 0;
-      let updated = 0;
+      // Statistiques d'import
+      const stats = {
+        formationsImported: 0,
+        formationsUpdated: 0,
+        emailsImported: 0,
+        geocacheImported: 0,
+        llmCacheImported: 0
+      };
 
+      // 1. Importer les formations
       for (const formation of exportData.formations) {
-        // Vérifier si la formation existe déjà (par codeEtendu + dateDebut)
         const existing = await db.formations
           .where("codeEtendu")
           .equals(formation.codeEtendu)
@@ -294,39 +316,97 @@ export function SettingsPage() {
           .first();
 
         if (existing) {
-          // Mettre à jour la formation existante
           await db.formations.put({
             ...formation,
             id: existing.id,
             updatedAt: new Date().toISOString()
           });
-          updated++;
+          stats.formationsUpdated++;
         } else {
-          // Ajouter une nouvelle formation
           await db.formations.add({
             ...formation,
             id: formation.id || crypto.randomUUID(),
             createdAt: formation.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
-          imported++;
+          stats.formationsImported++;
         }
       }
 
-      // Rafraîchir le compteur
+      // 2. Importer les emails (si présents)
+      if (exportData.emails && exportData.emails.length > 0) {
+        for (const email of exportData.emails) {
+          const existing = await db.emails.get(email.id);
+          if (!existing) {
+            await db.emails.add(email);
+            stats.emailsImported++;
+          }
+        }
+      }
+
+      // 3. Importer le geocache (si présent)
+      if (exportData.geocache && exportData.geocache.length > 0) {
+        for (const entry of exportData.geocache) {
+          const existing = await db.geocache.get(entry.adresse);
+          if (!existing) {
+            await db.geocache.add(entry);
+            stats.geocacheImported++;
+          }
+        }
+      }
+
+      // 4. Importer le cache LLM (si présent)
+      if (exportData.llmCache && exportData.llmCache.length > 0) {
+        for (const entry of exportData.llmCache) {
+          const existing = await db.llmCache.get(entry.emailId);
+          if (!existing) {
+            await db.llmCache.add(entry);
+            stats.llmCacheImported++;
+          }
+        }
+      }
+
+      // Rafraîchir les compteurs
       const formations = await getAllFormations();
       setFormationsCount(formations.length);
+      const geoStats = await getGeocacheStats();
+      setGeocacheStats(geoStats);
+      const emailsTotal = await db.emails.count();
+      setEmailsCount(emailsTotal);
+      const llmCacheTotal = await db.llmCache.count();
+      setLlmCacheCount(llmCacheTotal);
+
+      // Générer le message de résumé
+      const messageParts: string[] = [];
+      if (stats.formationsImported > 0 || stats.formationsUpdated > 0) {
+        messageParts.push(
+          `${stats.formationsImported} formation(s) ajoutée(s), ${stats.formationsUpdated} mise(s) à jour`
+        );
+      }
+      if (stats.emailsImported > 0) {
+        messageParts.push(`${stats.emailsImported} email(s)`);
+      }
+      if (stats.geocacheImported > 0) {
+        messageParts.push(`${stats.geocacheImported} entrée(s) geocache`);
+      }
+      if (stats.llmCacheImported > 0) {
+        messageParts.push(`${stats.llmCacheImported} entrée(s) cache LLM`);
+      }
 
       setDataOperationStatus("success");
       setDataOperationMessage(
-        `Import terminé : ${imported} nouvelle(s) formation(s), ${updated} mise(s) à jour.`
+        messageParts.length > 0
+          ? `Import terminé : ${messageParts.join(", ")}.`
+          : "Import terminé : aucune nouvelle donnée à importer."
       );
       setTimeout(() => {
         setDataOperationStatus("idle");
+        setCurrentDataOperation(null);
         setDataOperationMessage(null);
-      }, 5000);
+      }, 7000);
     } catch (err) {
       setDataOperationStatus("error");
+      setCurrentDataOperation(null);
       setDataOperationMessage(
         err instanceof Error ? err.message : "Erreur lors de l'import"
       );
@@ -356,6 +436,66 @@ export function SettingsPage() {
       setFormationsCount(0);
       setDataOperationStatus("success");
       setDataOperationMessage("Toutes les formations ont été supprimées.");
+      setTimeout(() => {
+        setDataOperationStatus("idle");
+        setDataOperationMessage(null);
+      }, 3000);
+    } catch (err) {
+      setDataOperationStatus("error");
+      setDataOperationMessage(
+        err instanceof Error ? err.message : "Erreur lors de la suppression"
+      );
+    }
+  };
+
+  /**
+   * Supprime tous les emails du cache
+   */
+  const handleClearEmails = async () => {
+    if (
+      !confirm(
+        "Êtes-vous sûr de vouloir supprimer tous les emails en cache ? Les données pourront être récupérées via Gmail."
+      )
+    ) {
+      return;
+    }
+
+    setDataOperationStatus("loading");
+    try {
+      await db.emails.clear();
+      setEmailsCount(0);
+      setDataOperationStatus("success");
+      setDataOperationMessage("Cache emails vidé.");
+      setTimeout(() => {
+        setDataOperationStatus("idle");
+        setDataOperationMessage(null);
+      }, 3000);
+    } catch (err) {
+      setDataOperationStatus("error");
+      setDataOperationMessage(
+        err instanceof Error ? err.message : "Erreur lors de la suppression"
+      );
+    }
+  };
+
+  /**
+   * Supprime le cache LLM
+   */
+  const handleClearLlmCache = async () => {
+    if (
+      !confirm(
+        "Êtes-vous sûr de vouloir supprimer le cache LLM ? Les emails devront être reclassifiés."
+      )
+    ) {
+      return;
+    }
+
+    setDataOperationStatus("loading");
+    try {
+      await db.llmCache.clear();
+      setLlmCacheCount(0);
+      setDataOperationStatus("success");
+      setDataOperationMessage("Cache LLM vidé.");
       setTimeout(() => {
         setDataOperationStatus("idle");
         setDataOperationMessage(null);
@@ -1323,6 +1463,42 @@ export function SettingsPage() {
               </button>
             </div>
           </div>
+
+          <div className="flex justify-between items-center p-3 bg-gray-900/50 rounded">
+            <span className="text-gray-300">Emails en cache</span>
+            <div className="flex items-center gap-3">
+              <span className="text-white font-medium">
+                {emailsCount} email(s)
+              </span>
+              <button
+                onClick={handleClearEmails}
+                disabled={
+                  emailsCount === 0 || dataOperationStatus === "loading"
+                }
+                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
+              >
+                🗑️ Vider
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center p-3 bg-gray-900/50 rounded">
+            <span className="text-gray-300">Cache LLM (classification)</span>
+            <div className="flex items-center gap-3">
+              <span className="text-white font-medium">
+                {llmCacheCount} entrée(s)
+              </span>
+              <button
+                onClick={handleClearLlmCache}
+                disabled={
+                  llmCacheCount === 0 || dataOperationStatus === "loading"
+                }
+                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
+              >
+                🗑️ Vider
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Boutons export/import */}
@@ -1330,11 +1506,16 @@ export function SettingsPage() {
           <button
             onClick={handleExportData}
             disabled={
-              formationsCount === 0 || dataOperationStatus === "loading"
+              (formationsCount === 0 &&
+                emailsCount === 0 &&
+                (geocacheStats?.total ?? 0) === 0 &&
+                llmCacheCount === 0) ||
+              dataOperationStatus === "loading"
             }
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-2"
           >
-            {dataOperationStatus === "loading" ? (
+            {dataOperationStatus === "loading" &&
+            currentDataOperation === "export" ? (
               <span className="animate-spin">⏳</span>
             ) : (
               <span>📥</span>
@@ -1347,7 +1528,12 @@ export function SettingsPage() {
             disabled={dataOperationStatus === "loading"}
             className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-2"
           >
-            <span>📤</span>
+            {dataOperationStatus === "loading" &&
+            currentDataOperation === "import" ? (
+              <span className="animate-spin">⏳</span>
+            ) : (
+              <span>📤</span>
+            )}
             Importer des données
           </button>
 

@@ -243,12 +243,23 @@ export interface ExtractionMetadata {
   emailsTraites: number;
   /** Nombre d'emails ignorés */
   emailsIgnores: number;
+  /** Nombre d'entrées geocache */
+  geocacheEntries?: number;
+  /** Nombre d'entrées LLM cache */
+  llmCacheEntries?: number;
 }
 
-/** Structure export JSON */
+/** Structure export JSON - Export complet de toute la base IndexedDB */
 export interface ExportData {
   metadata: ExtractionMetadata;
   formations: Formation[];
+  /** Emails bruts (optionnel pour rétrocompatibilité) */
+  emails?: EmailRaw[];
+  /** Cache géocodage (optionnel pour rétrocompatibilité) */
+  geocache?: GeocacheEntry[];
+  /** Cache LLM (optionnel pour rétrocompatibilité) - typage souple pour éviter conflits */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  llmCache?: any[];
 }
 
 /** Entrée du cache de géocodage */

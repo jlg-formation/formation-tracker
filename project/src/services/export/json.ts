@@ -1,6 +1,6 @@
 /**
  * Export JSON service
- * Exporte les formations au format JSON pour sauvegarde/réimport
+ * Exporte la totalité de la base IndexedDB pour sauvegarde/réimport
  */
 
 import type { Formation, ExportData, ExtractionMetadata } from "../../types";
@@ -10,42 +10,72 @@ import { downloadFile } from "./utils";
 /**
  * Génère les métadonnées d'export
  */
-export async function generateExportMetadata(
-  formations: Formation[]
-): Promise<ExtractionMetadata> {
-  const annulees = formations.filter((f) => f.statut === "annulée").length;
-  let emailsTraites = 0;
+export async function generateExportMetadata(): Promise<ExtractionMetadata> {
+  let formations: Formation[] = [];
+  let emailsCount = 0;
+  let geocacheCount = 0;
+  let llmCacheCount = 0;
 
   try {
-    emailsTraites = await db.emails.count();
+    formations = await db.formations.toArray();
   } catch {
-    // Si la table n'existe pas encore
-    emailsTraites = 0;
+    formations = [];
   }
+
+  try {
+    emailsCount = await db.emails.count();
+  } catch {
+    emailsCount = 0;
+  }
+
+  try {
+    geocacheCount = await db.geocache.count();
+  } catch {
+    geocacheCount = 0;
+  }
+
+  try {
+    llmCacheCount = await db.llmCache.count();
+  } catch {
+    llmCacheCount = 0;
+  }
+
+  const annulees = formations.filter((f) => f.statut === "annulée").length;
 
   return {
     dateExtraction: new Date().toISOString(),
     totalFormations: formations.length,
     formationsAnnulees: annulees,
-    emailsTraites,
-    emailsIgnores: 0
+    emailsTraites: emailsCount,
+    emailsIgnores: 0,
+    geocacheEntries: geocacheCount,
+    llmCacheEntries: llmCacheCount
   };
 }
 
 /**
- * Exporte les formations au format JSON
- * @param formations Liste des formations à exporter
- * @param filename Nom du fichier (défaut: orsys-formations.json)
+ * Exporte TOUTES les données de la base IndexedDB au format JSON
+ * Inclut: formations, emails, geocache, llmCache
+ * @param filename Nom du fichier (défaut: orsys-backup.json)
  */
 export async function exportToJson(
-  formations: Formation[],
-  filename = "orsys-formations.json"
+  formations?: Formation[],
+  filename = "orsys-backup.json"
 ): Promise<void> {
-  const metadata = await generateExportMetadata(formations);
+  // Récupérer toutes les données
+  const allFormations = formations || (await db.formations.toArray());
+  const allEmails = await db.emails.toArray();
+  const allGeocache = await db.geocache.toArray();
+  const allLlmCache = await db.llmCache.toArray();
+
+  const metadata = await generateExportMetadata();
 
   const exportData: ExportData = {
     metadata,
-    formations
+    formations: allFormations,
+    emails: allEmails,
+    geocache: allGeocache,
+    llmCache: allLlmCache
   };
 
   const json = JSON.stringify(exportData, null, 2);
@@ -56,13 +86,21 @@ export async function exportToJson(
  * Génère le contenu JSON sans téléchargement (pour tests)
  */
 export async function generateJsonContent(
-  formations: Formation[]
+  formations?: Formation[]
 ): Promise<string> {
-  const metadata = await generateExportMetadata(formations);
+  const allFormations = formations || (await db.formations.toArray());
+  const allEmails = await db.emails.toArray();
+  const allGeocache = await db.geocache.toArray();
+  const allLlmCache = await db.llmCache.toArray();
+
+  const metadata = await generateExportMetadata();
 
   const exportData: ExportData = {
     metadata,
-    formations
+    formations: allFormations,
+    emails: allEmails,
+    geocache: allGeocache,
+    llmCache: allLlmCache
   };
 
   return JSON.stringify(exportData, null, 2);
@@ -70,6 +108,7 @@ export async function generateJsonContent(
 
 /**
  * Parse un fichier JSON d'export et valide sa structure
+ * Supporte l'ancien format (formations uniquement) et le nouveau (complet)
  */
 export function parseExportJson(content: string): ExportData {
   const data = JSON.parse(content);
@@ -81,6 +120,19 @@ export function parseExportJson(content: string): ExportData {
 
   if (typeof data.metadata.totalFormations !== "number") {
     throw new Error("Format JSON invalide: totalFormations manquant");
+  }
+
+  // Valider les tableaux optionnels s'ils sont présents
+  if (data.emails && !Array.isArray(data.emails)) {
+    throw new Error("Format JSON invalide: emails doit être un tableau");
+  }
+
+  if (data.geocache && !Array.isArray(data.geocache)) {
+    throw new Error("Format JSON invalide: geocache doit être un tableau");
+  }
+
+  if (data.llmCache && !Array.isArray(data.llmCache)) {
+    throw new Error("Format JSON invalide: llmCache doit être un tableau");
   }
 
   return data as ExportData;
