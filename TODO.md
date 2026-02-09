@@ -89,9 +89,9 @@
 
 ### Critique
 
-| ID    | Erreur                 | Description                                                                                                            | Solution                                                                                         |
-| ----- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| id029 | Dépendances manquantes | `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event` absents de package.json | `bun add -d vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event` |
+| ID        | Erreur                     | Description                                                                                                                | Solution                          |
+| --------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| ~~id029~~ | ~~Dépendances manquantes~~ | ~~`vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event` absents de package.json~~ | ✅ Corrigé - Dépendances ajoutées |
 
 ### Important
 
@@ -140,7 +140,7 @@ Global:        73.43% (objectif: > 70%) ✅
 
 ### Sprint 1 - Corrections critiques
 
-- [ ] `id029` Ajouter les dépendances de test manquantes
+- [x] `id029` Ajouter les dépendances de test manquantes
 - [ ] `id009` `id010` Implémenter import/export de données dans Settings
 - [ ] `id001` Ajouter le clustering Leaflet sur la carte
 
