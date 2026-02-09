@@ -38,3 +38,27 @@ body {
 .leaflet-popup-content {
   margin: 8px 12px;
 }
+
+/* Leaflet.markercluster - icône de cluster personnalisée (compteur) */
+.orsys-marker-cluster-icon {
+  background: transparent;
+  border: none;
+}
+
+.orsys-marker-cluster-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: var(--color-orsys-primary);
+  border: 2px solid var(--color-orsys-dark);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orsys-marker-cluster-count {
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+}

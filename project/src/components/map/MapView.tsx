@@ -5,10 +5,13 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import type { Formation } from "../../types";
 import { StatutFormation, TypeSession } from "../../types";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 // Fix pour les icônes Leaflet avec bundler
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -39,6 +42,26 @@ interface MapViewProps {
 /** Centre par défaut : France métropolitaine */
 const DEFAULT_CENTER: L.LatLngExpression = [46.603354, 1.888334];
 const DEFAULT_ZOOM = 6;
+
+type ClusterLike = {
+  getAllChildMarkers: () => Array<{ formationCount?: number }>;
+};
+
+function createClusterCustomIcon(cluster: ClusterLike) {
+  const totalFormations = cluster.getAllChildMarkers().reduce((sum, marker) => {
+    return sum + (marker.formationCount ?? 1);
+  }, 0);
+
+  return L.divIcon({
+    html: `
+      <div class="orsys-marker-cluster-badge">
+        <span class="orsys-marker-cluster-count">${totalFormations}</span>
+      </div>
+    `,
+    className: "orsys-marker-cluster-icon",
+    iconSize: L.point(40, 40, true)
+  });
+}
 
 /** Icône personnalisée pour les formations inter */
 const interIcon = new L.Icon({
@@ -277,96 +300,106 @@ export function MapView({
 
         <FitBounds formations={formationsWithGPS} />
 
-        {groupedFormations.map((group) => (
-          <Marker
-            key={group.key}
-            position={[group.lat, group.lng]}
-            icon={
-              group.formations[0].typeSession === TypeSession.INTRA
-                ? intraIcon
-                : interIcon
-            }
-            eventHandlers={{
-              click: () => handleMarkerClick(group.formations[0])
-            }}
-          >
-            <Popup className="formation-popup" maxWidth={350} minWidth={280}>
-              <div className="p-1">
-                {/* Lieu */}
-                <div className="font-semibold text-gray-900 text-base mb-2">
-                  📍 {group.lieu.nom || group.lieu.adresse}
-                </div>
+        <MarkerClusterGroup
+          chunkedLoading
+          iconCreateFunction={createClusterCustomIcon}
+        >
+          {groupedFormations.map((group) => (
+            <Marker
+              key={group.key}
+              position={[group.lat, group.lng]}
+              icon={
+                group.formations[0].typeSession === TypeSession.INTRA
+                  ? intraIcon
+                  : interIcon
+              }
+              eventHandlers={{
+                add: (e) => {
+                  (
+                    e.target as unknown as { formationCount?: number }
+                  ).formationCount = group.formations.length;
+                },
+                click: () => handleMarkerClick(group.formations[0])
+              }}
+            >
+              <Popup className="formation-popup" maxWidth={350} minWidth={280}>
+                <div className="p-1">
+                  {/* Lieu */}
+                  <div className="font-semibold text-gray-900 text-base mb-2">
+                    📍 {group.lieu.nom || group.lieu.adresse}
+                  </div>
 
-                {/* Liste des formations à ce lieu */}
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {group.formations.slice(0, 5).map((formation) => {
-                    const statutBadge = getStatutBadge(formation.statut);
-                    const typeBadge = getTypeBadge(formation.typeSession);
+                  {/* Liste des formations à ce lieu */}
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {group.formations.slice(0, 5).map((formation) => {
+                      const statutBadge = getStatutBadge(formation.statut);
+                      const typeBadge = getTypeBadge(formation.typeSession);
 
-                    return (
-                      <div
-                        key={formation.id}
-                        className="p-2 bg-gray-50 rounded border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => handleMarkerClick(formation)}
-                      >
-                        {/* Titre */}
-                        <div className="font-medium text-gray-800 text-sm leading-tight">
-                          {formation.titre}
-                        </div>
-
-                        {/* Code */}
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          {formation.codeEtendu}
-                          {formation.codeFormation &&
-                            ` (${formation.codeFormation})`}
-                        </div>
-
-                        {/* Dates */}
-                        <div className="text-xs text-gray-600 mt-1">
-                          📅 {formatDate(formation.dateDebut)}
-                          {formation.dateDebut !== formation.dateFin && (
-                            <> → {formatDate(formation.dateFin)}</>
-                          )}
-                          <span className="ml-1 text-gray-400">
-                            ({formation.nombreJours}j)
-                          </span>
-                        </div>
-
-                        {/* Badges */}
-                        <div className="flex gap-1.5 mt-1.5">
-                          <span
-                            className={`text-xs px-1.5 py-0.5 rounded border ${typeBadge.className}`}
-                          >
-                            {typeBadge.text}
-                          </span>
-                          <span
-                            className={`text-xs px-1.5 py-0.5 rounded border ${statutBadge.className}`}
-                          >
-                            {statutBadge.text}
-                          </span>
-                        </div>
-
-                        {/* Client (intra) */}
-                        {formation.client && (
-                          <div className="text-xs text-purple-600 mt-1">
-                            🏢 {formation.client}
+                      return (
+                        <div
+                          key={formation.id}
+                          className="p-2 bg-gray-50 rounded border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                          onClick={() => handleMarkerClick(formation)}
+                        >
+                          {/* Titre */}
+                          <div className="font-medium text-gray-800 text-sm leading-tight">
+                            {formation.titre}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
 
-                  {/* Message si plus de 5 formations */}
-                  {group.formations.length > 5 && (
-                    <div className="text-center text-xs text-gray-500 py-1">
-                      + {group.formations.length - 5} autre(s) formation(s)
-                    </div>
-                  )}
+                          {/* Code */}
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {formation.codeEtendu}
+                            {formation.codeFormation &&
+                              ` (${formation.codeFormation})`}
+                          </div>
+
+                          {/* Dates */}
+                          <div className="text-xs text-gray-600 mt-1">
+                            📅 {formatDate(formation.dateDebut)}
+                            {formation.dateDebut !== formation.dateFin && (
+                              <> → {formatDate(formation.dateFin)}</>
+                            )}
+                            <span className="ml-1 text-gray-400">
+                              ({formation.nombreJours}j)
+                            </span>
+                          </div>
+
+                          {/* Badges */}
+                          <div className="flex gap-1.5 mt-1.5">
+                            <span
+                              className={`text-xs px-1.5 py-0.5 rounded border ${typeBadge.className}`}
+                            >
+                              {typeBadge.text}
+                            </span>
+                            <span
+                              className={`text-xs px-1.5 py-0.5 rounded border ${statutBadge.className}`}
+                            >
+                              {statutBadge.text}
+                            </span>
+                          </div>
+
+                          {/* Client (intra) */}
+                          {formation.client && (
+                            <div className="text-xs text-purple-600 mt-1">
+                              🏢 {formation.client}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Message si plus de 5 formations */}
+                    {group.formations.length > 5 && (
+                      <div className="text-center text-xs text-gray-500 py-1">
+                        + {group.formations.length - 5} autre(s) formation(s)
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+              </Popup>
+            </Marker>
+          ))}
+        </MarkerClusterGroup>
       </MapContainer>
 
       {/* Légende */}

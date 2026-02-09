@@ -1,8 +1,14 @@
 {
   "version": "1.0",
   "currentStep": 18,
-  "lastUpdated": "2026-02-09T15:23:19.2607963Z",
+  "lastUpdated": "2026-02-09T15:28:36.6636372Z",
   "todos": {
+    "id001": {
+      "status": "completed",
+      "startedAt": "2026-02-09T15:27:28.0366143Z",
+      "completedAt": "2026-02-09T15:28:36.6636372Z",
+      "note": "Ajout du clustering Leaflet.markercluster sur la carte + compteur visible sur l'icône de cluster (affiche le total de formations)"
+    },
     "id033": {
       "status": "completed",
       "completedAt": "2026-02-09T15:23:19.2607963Z",

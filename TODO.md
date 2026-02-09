@@ -146,7 +146,7 @@ Global:        73.43% (objectif: > 70%) ✅
 
 - [x] `id029` Ajouter les dépendances de test manquantes
 - [x] `id009` `id010` `id011` Implémenter import/export/purge de données dans Settings
-- [ ] `id001` Ajouter le clustering Leaflet sur la carte
+- [x] `id001` Ajouter le clustering Leaflet sur la carte
 - [x] `id033` `site-id` redirige vers Dashboard + retirer "Dashboard" du menu primaire
 
 ### Sprint 2 - Fonctionnalités manquantes
