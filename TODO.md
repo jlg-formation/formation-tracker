@@ -1,181 +1,95 @@
-# TODO - Audit ORSYS Training Tracker
+# TODO — Audit ORSYS Training Tracker
 
-> **Date de l'audit** : 9 février 2026  
-> **État global** : L'application est fonctionnelle avec les fonctionnalités principales implémentées. Plusieurs écarts avec la documentation et des fonctionnalités manquantes identifiés.
+Audit “Spécifs/Docs vs Code” (inputs: `input/*`, docs: `docs/*`, code: `project/*`).
 
----
+## Critique
 
-## 🔴 Incohérences (Écarts doc ↔ implémentation)
+### Incohérences
 
-### Critique
+- [ ] id001 (Stats) Les KPI + graphiques du Dashboard doivent être calculés **hors formations annulées** (les annulées comptées séparément), mais le calcul actuel inclut les annulées dans `total`, `parAnnee`, `parCode`, `inter/intra`, `totalParticipants`.
+  - Source: `docs/06-ui-specs.md` (règle annulations Dashboard), `input/clarifications/004-annulation.md`
+  - Code: `project/src/utils/stats.ts` (fonction `calculateStats`), `project/src/components/dashboard/StatsCards.tsx`, `project/src/components/dashboard/YearlyChart.tsx`, `project/src/components/dashboard/TopCoursesChart.tsx`, `project/src/components/dashboard/TypePieChart.tsx`
+  - Action: refactorer `calculateStats()` pour ne compter que `StatutFormation.CONFIRMEE` dans les totaux/graphes, garder `annulees` séparé, puis adapter les composants.
 
-| ID    | Élément            | Documentation                                                                                                                                            | Implémentation                                          | Action requise                         |
-| ----- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------- |
-| id001 | Clustering carte   | [01-architecture.md](docs/01-architecture.md) mentionne `MarkerCluster.tsx` et [06-ui-specs.md](docs/06-ui-specs.md#L118) spécifie Leaflet.markercluster | Non implémenté - marqueurs simples groupés manuellement | Ajouter `leaflet.markercluster`        |
-| id002 | Adapters géocodage | [05-geocoding.md](docs/05-geocoding.md) définit 3 adapters (Nominatim, Google, Mapbox)                                                                   | Seul `nominatim.ts` existe                              | Implémenter `google.ts` et `mapbox.ts` |
-| id003 | Testing Library    | [08-deployment.md](docs/08-deployment.md#L126) et `setup.ts` utilisent `@testing-library/*`                                                              | Packages absents de `package.json`                      | Ajouter les dépendances                |
+- [ ] id002 (Export JSON) `metadata.totalFormations` doit représenter le nombre de formations **hors** statut `annulée` (les annulées dans `metadata.formationsAnnulees`), mais l’export actuel met `totalFormations = formations.length`.
+  - Source: `docs/07-export.md`
+  - Code: `project/src/services/export/json.ts` (fonction `generateExportMetadata`)
+  - Action: calculer `totalFormations = formations.length - annulees` et ajouter/mettre à jour les tests associés dans `project/src/services/export/export.test.ts`.
 
-### Important
+### Fonctionnalités manquantes
 
-| ID    | Élément               | Documentation                                                 | Implémentation                                     | Action requise                 |
-| ----- | --------------------- | ------------------------------------------------------------- | -------------------------------------------------- | ------------------------------ |
-| id004 | Composants extraction | Architecture définit `ProgressBar.tsx` et `ExtractionLog.tsx` | Intégrés directement dans `ExtractionPanel.tsx`    | Documenter ou refactoriser     |
-| id005 | Composants export     | Architecture définit `ExportPanel.tsx` et `ExportButton.tsx`  | Export intégré dans `Dashboard.tsx`                | Documenter ou créer composants |
-| id006 | `FormationDetail.tsx` | Composant modal séparé dans architecture                      | `FormationModal` inline dans `FormationList.tsx`   | Extraire en composant          |
-| id007 | Hooks manquants       | Architecture définit `useExtraction.ts` et `useFilters.ts`    | Non implémentés (logique dans composants)          | Créer ou supprimer de la doc   |
-| id008 | Enums → Const objects | [02-data-model.ts](docs/02-data-model.ts) utilise `enum`      | Code utilise `const objects` pour compatibilité TS | Mettre à jour la documentation |
+- [ ] id003 (Carte/GPS) La **correction manuelle des coordonnées GPS** “un clic pour positionner l’endroit exact” n’est pas implémentée.
+  - Source: `docs/05-geocoding.md`, `docs/01-architecture.md` (correction GPS), `docs/06-ui-specs.md` ("Correction GPS"), `input/clarifications/005-gps.md`
+  - Code: `project/src/components/map/MapView.tsx`, `project/src/components/pages/MapPage.tsx`, `project/src/components/pages/FormationDetailPage.tsx`, `project/src/stores/formationsStore.ts`
+  - Action: ajouter un mode “corriger GPS” (sélection formation → clic carte → `updateFormation(id, { lieu: { ...lieu, gps }})`) + persister dans IndexedDB.
 
----
+- [ ] id004 (Cohérence données) Le contrôle de **recouvrement de dates** (deux formations ne peuvent pas se chevaucher) et l’affichage dans une section **ERREURS** des Paramètres ne sont pas présents.
+  - Source: `docs/01-architecture.md` (contrôles de cohérence), `docs/06-ui-specs.md` (section Paramètres), `input/clarifications/003-recouvrement-de-date.md`
+  - Code: `project/src/components/pages/SettingsPage.tsx` (pas de section), aucun util dédié trouvé dans `project/src/utils/*`
+  - Action: créer un util (ex: `project/src/utils/coherence.ts`) pour détecter les overlaps sur `dates[]` ou `[dateDebut,dateFin]`, puis afficher une liste des conflits dans `SettingsPage`.
 
-## 🟡 Fonctionnalités manquantes
+## Important
 
-### Critique
+### Fonctionnalités manquantes
 
-| ID        | Fonctionnalité           | Spécification                                                                    | État          | Priorité  |
-| --------- | ------------------------ | -------------------------------------------------------------------------------- | ------------- | --------- |
-| ~~id009~~ | ~~Import de données~~    | ~~[06-ui-specs.md](docs/06-ui-specs.md) - "Importer des données" dans Settings~~ | ✅ Implémenté | ~~Haute~~ |
-| ~~id010~~ | ~~Export dans Settings~~ | ~~"Exporter toutes les données" dans Settings~~                                  | ✅ Implémenté | ~~Haute~~ |
-| ~~id011~~ | ~~Purge des données~~    | ~~"Vider le cache emails/formations" dans Settings~~                             | ✅ Implémenté | ~~Haute~~ |
+- [ ] id005 (Carte) La page Carte est spécifiée avec des **filtres** (Année/Type/Statut) + bouton Réinitialiser + option “Voir toutes →” dans la popup. L’implémentation actuelle n’a ni filtres ni CTA “Voir toutes”.
+  - Source: `docs/06-ui-specs.md`
+  - Code: `project/src/components/pages/MapPage.tsx`, `project/src/components/map/MapView.tsx`
+  - Action: ajouter des filtres (state + UI) et filtrer `formations` avant rendu; dans la popup, ajouter un lien/bouton “Voir toutes” qui navigue vers `/formations` avec filtres pré-remplis (ou au minimum vers la liste).
 
-### Important
+- [ ] id006 (Liste) La page Liste doit proposer les boutons **Export JSON/CSV/PDF** en bas. Actuellement, les exports sont présents sur le Dashboard uniquement.
+  - Source: `input/brief.md` (Export), `docs/06-ui-specs.md` (Liste → boutons export)
+  - Code: `project/src/components/formations/FormationList.tsx`, `project/src/components/dashboard/Dashboard.tsx`
+  - Action: déplacer ou dupliquer les boutons d’export dans la page Liste (en réutilisant `services/export/*`).
 
-| ID    | Fonctionnalité               | Spécification                                                                                            | État                               | Priorité |
-| ----- | ---------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------- |
-| id012 | Filtres sur carte            | [06-ui-specs.md](docs/06-ui-specs.md#L100-L110) - Filtres année/type/statut sur page Carte               | Absents                            | Moyenne  |
-| id013 | Tri tableau                  | [06-ui-specs.md](docs/06-ui-specs.md#L175) - "Clic sur en-tête de colonne pour trier"                    | Tri uniquement par date (hardcodé) | Moyenne  |
-| id035 | Debug emails par formation   | Au clic sur une formation, aller sur une page dédiée affichant tous les détails + emails bruts rattachés | Absent (modal/liste)               | Haute    |
-| id033 | Navigation `site-id`         | `site-id` doit rediriger vers la page Dashboard                                                          | Non implémenté                     | Moyenne  |
-| id014 | Export dans liste            | UI specs montrent boutons export dans FormationsPage                                                     | Export uniquement dans Dashboard   | Basse    |
-| id015 | Date extraction Footer       | Footer devrait afficher "Dernière extraction"                                                            | Absent du Footer                   | Basse    |
-| id016 | Version dans metadata export | `ExtractionMetadata.version` défini dans types                                                           | Non utilisé dans l'export JSON     | Basse    |
+- [ ] id007 (Liste) Les filtres attendus incluent au moins Code et Lieu (spec: multi-filtres), et la présentation est spécifiée en **table triable** + pagination. L’implémentation actuelle est une grille de cartes avec filtres partiels (année/type/statut + recherche).
+  - Source: `docs/06-ui-specs.md`
+  - Code: `project/src/components/formations/Filters.tsx`, `project/src/components/formations/FormationList.tsx`
+  - Action: compléter les filtres (code/lieu) et aligner la UI (table + tri) ou mettre à jour la doc si le choix “cards” est assumé.
 
-### Mineur
+### Incohérences
 
-| ID    | Fonctionnalité      | Spécification                                                              | État                                   | Priorité |
-| ----- | ------------------- | -------------------------------------------------------------------------- | -------------------------------------- | -------- |
-| id017 | Dark mode explicite | [08-deployment.md](docs/08-deployment.md#L186) - "Classes `dark:` natives" | Non exploité (thème sombre par défaut) | Basse    |
-| id018 | Recherche full-text | Brief mentionne recherche sur titre, code, lieu                            | Implémenté mais basique                | Basse    |
-| id036 | Favicon + titre     | Le site doit avoir un favicon et un titre (metadata HTML)                  | À faire                                | Basse    |
+- [ ] id008 (Footer) Le footer est spécifié avec “Dernière extraction : …” + version. Le footer actuel n’affiche pas la date de dernière extraction.
+  - Source: `docs/06-ui-specs.md`
+  - Code: `project/src/components/layout/Footer.tsx`
+  - Action: stocker et afficher une date “dernière extraction” (ex: via IndexedDB/settings ou via un enregistrement metadata), puis l’afficher dans le footer.
 
----
+- [ ] id009 (Dashboard) Les 4 KPI attendus sont: Formations (hors annulées), Annulées, Jours total (hors annulées), Participants (hors annulées). L’UI actuelle affiche “Taux de réussite” au lieu de “Annulées” et la valeur “Formations” inclut les annulées.
+  - Source: `docs/06-ui-specs.md`
+  - Code: `project/src/components/dashboard/StatsCards.tsx`, `project/src/utils/stats.ts`
+  - Action: modifier `StatsCards` pour afficher le KPI “Annulées” et prendre les valeurs hors annulées.
 
-## 🟢 Suggestions d'amélioration
+### Erreurs techniques
 
-### Performance
+- [ ] id010 (Export JSON) `exportToJson(formations?)` accepte un tableau optionnel, mais exporte toujours `emails/geocache/llmCache` depuis la DB et calcule `metadata` depuis la DB: incohérent si on exporte un sous-ensemble de formations.
+  - Source: `docs/07-export.md` (export des données)
+  - Code: `project/src/services/export/json.ts`, `project/src/components/dashboard/Dashboard.tsx`, `project/src/components/pages/SettingsPage.tsx`
+  - Action: clarifier l’intention (export “backup complet” vs export “formations uniquement”) et harmoniser la signature + métadonnées + noms de fichiers.
 
-| ID    | Suggestion                 | Justification                                   | Effort |
-| ----- | -------------------------- | ----------------------------------------------- | ------ |
-| id019 | Lazy loading des charts D3 | Réduire le bundle initial                       | Moyen  |
-| id020 | Virtualisation de la liste | Améliorer les perfs avec beaucoup de formations | Moyen  |
-| id021 | Service Worker / PWA       | Fonctionnement hors-ligne                       | Élevé  |
+- [ ] id011 (Export CSV) L’export CSV ne contient pas certains champs attendus côté facturation (ex: `referenceCommande`).
+  - Source: `input/brief.md` (référence commande), `docs/07-export.md`
+  - Code: `project/src/services/export/csv.ts`
+  - Action: ajouter les colonnes manquantes (ex: `Reference Commande`) + tests d’export.
 
-### Qualité de code
+## Mineur
 
-| ID    | Suggestion                | Justification                             | Effort |
-| ----- | ------------------------- | ----------------------------------------- | ------ |
-| id022 | Extraire `FormationModal` | Améliorer la modularité                   | Faible |
-| id023 | Tests composants React    | Couverture actuelle exclut les composants | Moyen  |
-| id024 | Tests E2E Playwright      | Valider les flux utilisateur complets     | Élevé  |
-| id025 | Améliorer coverage export | Service export à 37.83% de couverture     | Faible |
+### Incohérences
 
-### UX/UI
+- [ ] id012 (Langue UI) La spec demande une UI en français uniquement, mais certains libellés restent en anglais (“Dashboard”).
+  - Source: `input/brief.md`, `docs/06-ui-specs.md`
+  - Code: `project/src/components/pages/DashboardPage.tsx`
+  - Action: renommer en “Tableau de bord” dans les titres/labels.
 
-| ID    | Suggestion          | Justification                                     | Effort |
-| ----- | ------------------- | ------------------------------------------------- | ------ |
-| id026 | Skeleton loaders    | Meilleur feedback pendant chargement              | Faible |
-| id027 | Notifications toast | Feedback utilisateur amélioré                     | Faible |
-| id028 | Raccourcis clavier  | Navigation rapide (ex: Escape pour fermer modals) | Faible |
+- [ ] id013 (Carte) Le contrôle “📍 Ma position” est mentionné dans la spec, mais n’est pas implémenté.
+  - Source: `docs/06-ui-specs.md`
+  - Code: `project/src/components/map/MapView.tsx`
+  - Action: ajouter un bouton qui centre la carte sur la géolocalisation navigateur (avec gestion d’erreurs).
 
----
+### Suggestions d’amélioration
 
-## ⚠️ Erreurs techniques
+- [ ] id014 (UX/Perf) Éviter de recalculer/filtrer intégralement côté client pour de gros volumes: exploiter davantage les indexes Dexie (`formations: dateDebut/statut/typeSession`) via `formationsStore.getFormations(filters)`.
+  - Code: `project/src/components/formations/FormationList.tsx`, `project/src/hooks/useFormations.ts`, `project/src/stores/formationsStore.ts`
+  - Action: faire passer les filtres “liste” par le store (requêtes IndexedDB) au lieu du filtrage en mémoire.
 
-### Critique
-
-| ID        | Erreur                     | Description                                                                                                                | Solution                          |
-| --------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| ~~id029~~ | ~~Dépendances manquantes~~ | ~~`vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event` absents de package.json~~ | ✅ Corrigé - Dépendances ajoutées |
-
-### Important
-
-| ID    | Erreur                | Description                                               | Solution                                  |
-| ----- | --------------------- | --------------------------------------------------------- | ----------------------------------------- |
-| id030 | `generateFormationId` | Fonction utilisée dans parser mais importée depuis types  | Vérifier l'export correct                 |
-| id031 | CSS z-index           | `.z-1000` utilisé dans MapView mais non standard Tailwind | Utiliser `z-[1000]` ou définir dans theme |
-
-### Mineur
-
-| ID    | Erreur           | Description                                       | Solution                                   |
-| ----- | ---------------- | ------------------------------------------------- | ------------------------------------------ |
-| id032 | Typo potentielle | `z-1000` au lieu de `z-[1000]` dans MapView       | Corriger la syntaxe Tailwind               |
-| id034 | UI boutons       | Tous les boutons devraient avoir `cursor-pointer` | Appliquer `cursor-pointer` sur les boutons |
-
----
-
-## 📊 Métriques actuelles
-
-### Couverture de tests
-
-```
-Global:        73.43% (objectif: > 70%) ✅
-- hooks:       88%
-- stores:      92.85%
-- utils:       96.47%
-- llm:         63.15%
-- export:      37.83% ⚠️
-- geocoding:   92.59%
-```
-
-### Composants documentés vs implémentés
-
-| Catégorie  | Documentés | Implémentés | Écart  |
-| ---------- | ---------- | ----------- | ------ |
-| Layout     | 3          | 3           | ✅     |
-| Dashboard  | 4          | 4           | ✅     |
-| Map        | 3          | 1           | ⚠️ -2  |
-| Formations | 4          | 3           | ⚠️ -1  |
-| Extraction | 3          | 1           | ⚠️ -2  |
-| Export     | 2          | 0           | ⚠️ -2  |
-| **Total**  | **19**     | **12**      | **-7** |
-
----
-
-## 📋 Plan d'action recommandé
-
-### Sprint 1 - Corrections critiques
-
-- [x] `id029` Ajouter les dépendances de test manquantes
-- [x] `id009` `id010` `id011` Implémenter import/export/purge de données dans Settings
-- [x] `id001` Ajouter le clustering Leaflet sur la carte
-- [x] `id033` `site-id` redirige vers Dashboard + retirer "Dashboard" du menu primaire
-
-### Sprint 2 - Fonctionnalités manquantes
-
-- [ ] `id012` Implémenter les filtres sur la page Carte
-- [ ] `id013` Ajouter le tri par colonnes dans la liste
-- [x] `id035` Page détail formation + affichage des emails bruts rattachés (debug)
-- [ ] `id002` Créer les adapters Google et Mapbox pour le géocodage
-
-### Sprint 3 - Amélioration qualité
-
-- [ ] `id006` `id022` Extraire les composants (FormationModal, ExportPanel, etc.)
-- [ ] `id023` Ajouter des tests pour les composants React
-- [ ] `id025` Améliorer la couverture du service export
-- [x] `id034` Appliquer `cursor-pointer` sur tous les boutons
-- [x] `id036` Ajouter un favicon et définir le titre du site
-
-### Sprint 4 - Documentation
-
-- [ ] `id004` `id005` `id007` Mettre à jour la documentation d'architecture
-- [ ] `id008` Synchroniser les enums de la doc avec le code
-- [ ] Documenter les décisions d'implémentation divergentes
-
----
-
-## 🔗 Références
-
-- [Brief original](input/brief.md)
-- [Architecture](docs/01-architecture.md)
-- [Data Model](docs/02-data-model.ts)
-- [UI Specs](docs/06-ui-specs.md)
-- [Deployment](docs/08-deployment.md)
+- [ ] id015 (Tests) Après correction de `calculateStats`, ajouter/ajuster les tests pour garantir l’exclusion des annulées dans les KPI/graphes.
+  - Code: `project/src/utils/stats.test.ts`
