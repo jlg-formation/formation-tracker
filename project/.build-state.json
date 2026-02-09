@@ -1,8 +1,13 @@
 {
   "version": "1.0",
   "currentStep": 18,
-  "lastUpdated": "2026-02-09T16:20:40.000Z",
+  "lastUpdated": "2026-02-09T15:23:19.2607963Z",
   "todos": {
+    "id033": {
+      "status": "completed",
+      "completedAt": "2026-02-09T15:23:19.2607963Z",
+      "note": "Ajout d'une redirection de route /site-id vers / (Dashboard) et retrait de l'entrée 'Dashboard' du menu primaire; accès Dashboard via le titre du header."
+    },
     "id034": {
       "status": "completed",
       "completedAt": "2026-02-09T16:20:40.000Z",

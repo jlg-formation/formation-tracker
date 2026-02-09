@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 const navLinks = [
-  { to: "/", label: "Dashboard", end: true },
   { to: "/carte", label: "Carte" },
   { to: "/formations", label: "Formations" },
   { to: "/parametres", label: "⚙️ Paramètres" }
@@ -43,12 +42,12 @@ export function Header() {
   return (
     <header className="bg-orsys-dark border-b border-[#16213e]">
       <div className="flex justify-between items-center px-4 md:px-8 py-4">
-        <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2 no-underline">
           <span className="text-2xl">📊</span>
           <span className="text-lg md:text-xl font-semibold text-white">
             ORSYS Training Tracker
           </span>
-        </div>
+        </Link>
 
         {/* Navigation desktop */}
         <nav className="hidden md:flex gap-2">
