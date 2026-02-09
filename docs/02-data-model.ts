@@ -32,6 +32,10 @@ export enum TypeEmail {
   DEMANDE_INTRA = "demande-intra",
   CONVOCATION_INTER = "convocation-inter",
   CONVOCATION_INTRA = "convocation-intra",
+  /** Suivi des émargements / signatures (preuve forte qu'une session a eu lieu) */
+  EMARGEMENTS = "emargements",
+  /** Accusé de réception de documents administratifs (preuve forte qu'une session a eu lieu) */
+  ACCUSE_RECEPTION = "accuse-reception",
   ANNULATION = "annulation",
   BON_COMMANDE = "bon-commande",
   INFO_FACTURATION = "info-facturation",

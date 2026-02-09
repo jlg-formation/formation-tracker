@@ -34,8 +34,11 @@ export type NiveauPersonnalisation =
 
 /** Type d'email ORSYS */
 export const TypeEmail = {
+  DEMANDE_INTRA: "demande-intra",
   CONVOCATION_INTER: "convocation-inter",
   CONVOCATION_INTRA: "convocation-intra",
+  EMARGEMENTS: "emargements",
+  ACCUSE_RECEPTION: "accuse-reception",
   ANNULATION: "annulation",
   BON_COMMANDE: "bon-commande",
   INFO_FACTURATION: "info-facturation",

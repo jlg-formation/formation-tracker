@@ -7,6 +7,22 @@ Le parsing des emails ORSYS se fait en **deux étapes** via l'API OpenAI (GPT-4o
 1. **Classification** : Identifier le type d'email
 2. **Extraction** : Extraire les données structurées selon le type
 
+Les emails ORSYS n'emploient pas toujours les mêmes mots : un email de **convocation** peut être libellé "confirmation" (ex. "Confirmation animation inter").
+Dans tous les cas, on classe selon le **sens** de l'email (convocation/commande/annulation...) et non selon le mot exact.
+
+### Exemples d'emails (dossier `input/emails-samples/`)
+
+| Fichier                                            | Type attendu        |
+| -------------------------------------------------- | ------------------- |
+| `convocation-inter.txt` / `confirmation-inter.txt` | `convocation-inter` |
+| `convocation-intra.txt` / `confirmation-intra.txt` | `convocation-intra` |
+| `bon-commande.txt`                                 | `bon-commande`      |
+| `annulation.txt`                                   | `annulation`        |
+| `info-facturation.txt`                             | `info-facturation`  |
+| `demande-intra.txt`                                | `demande-intra`     |
+| `emargements.txt`                                  | `emargements`       |
+| `accuse-reception.txt`                             | `accuse-reception`  |
+
 ---
 
 ## Étape 1 : Classification
@@ -21,11 +37,17 @@ Ton rôle est d'identifier le type d'email parmi les catégories suivantes :
 - "demande-intra" : Demande initiale de formation intra (ne vaut pas confirmation)
 - "convocation-inter" : Confirmation d'une formation inter-entreprise (dans les locaux ORSYS)
 - "convocation-intra" : Confirmation d'une formation intra-entreprise (chez le client)
+- "emargements" : Suivi des émargements / signatures (preuve forte qu'une session a eu lieu)
+- "accuse-reception" : Accusé de réception de documents administratifs (preuve forte qu'une session a eu lieu)
 - "annulation" : Annulation d'une session de formation
 - "bon-commande" : Confirmation anticipée d'une commande de formation (avant la convocation)
 - "info-facturation" : Informations pour établir la facture après la formation
 - "rappel" : Rappel concernant une formation à venir
 - "autre" : Email non pertinent pour le suivi des formations
+
+Important : certains emails ORSYS sont des relances ou messages administratifs.
+Si l'email parle de **feuille d'émargement / signatures**, classer en "emargements".
+Si l'email est un **accusé de réception** de documents administratifs ("Service Suivi Qualité"), classer en "accuse-reception".
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après.
 ```
@@ -43,7 +65,7 @@ Sujet : {subject}
 
 Réponds avec ce format JSON :
 {
-  "type": "demande-intra|convocation-inter|convocation-intra|annulation|bon-commande|info-facturation|rappel|autre",
+  "type": "demande-intra|convocation-inter|convocation-intra|emargements|accuse-reception|annulation|bon-commande|info-facturation|rappel|autre",
   "confidence": 0.0 à 1.0,
   "reason": "Explication courte de la classification"
 }
@@ -65,11 +87,33 @@ Réponds avec ce format JSON :
 
 > Règle métier : la mention « Annulé et remplacé » doit être comprise comme une **annulation**. Elle indique qu'une nouvelle session a probablement été créée en remplacement (changement de dates et/ou de code), mais l'email reste de type `annulation`.
 
+**Email de suivi des émargements (signatures) :**
+
+```json
+{
+  "type": "emargements",
+  "confidence": 0.9,
+  "reason": "Relance administrative sur la feuille d'émargement/signatures (service suivi qualité), preuve forte que la session a lieu"
+}
+```
+
+**Email d'accusé de réception (documents administratifs) :**
+
+```json
+{
+  "type": "accuse-reception",
+  "confidence": 0.85,
+  "reason": "Accusé de réception / suivi qualité logistique, preuve forte que la session a eu lieu"
+}
+```
+
 ---
 
 ## Notes de traitement par type
 
 - `demande-intra` : ne crée pas de formation « confirmée ». ORSYS n'est engagé qu'à partir d'une **convocation** ou d'un **bon de commande**. Ces emails sont donc à **ignorer** (ou à tracer comme emails non engageants) pour les statistiques.
+
+- `emargements` / `accuse-reception` : emails administratifs de suivi qualité. Ils ne contiennent pas toujours tous les champs (titre, lieu, durée), mais constituent une **preuve forte** que la session a eu lieu.
 
 ```json
 {

@@ -54,8 +54,11 @@ describe("Enums", () => {
 
   describe("TypeEmail", () => {
     it("doit avoir les valeurs correctes", () => {
+      expect(TypeEmail.DEMANDE_INTRA).toBe("demande-intra");
       expect(TypeEmail.CONVOCATION_INTER).toBe("convocation-inter");
       expect(TypeEmail.CONVOCATION_INTRA).toBe("convocation-intra");
+      expect(TypeEmail.EMARGEMENTS).toBe("emargements");
+      expect(TypeEmail.ACCUSE_RECEPTION).toBe("accuse-reception");
       expect(TypeEmail.ANNULATION).toBe("annulation");
       expect(TypeEmail.BON_COMMANDE).toBe("bon-commande");
       expect(TypeEmail.INFO_FACTURATION).toBe("info-facturation");
@@ -63,9 +66,9 @@ describe("Enums", () => {
       expect(TypeEmail.AUTRE).toBe("autre");
     });
 
-    it("doit avoir exactement 7 valeurs", () => {
+    it("doit avoir exactement 10 valeurs", () => {
       const values = Object.values(TypeEmail);
-      expect(values).toHaveLength(7);
+      expect(values).toHaveLength(10);
     });
   });
 

@@ -79,6 +79,10 @@ ORSYS Training Tracker est une **Single Page Application (SPA)** React qui perme
 - **Engagement ORSYS** : une formation ne doit être considérée « confirmée » qu'à partir d'un email de **convocation** (`convocation-inter`/`convocation-intra`) ou d'un **bon de commande** (`bon-commande`).
 - **Demande intra** (`demande-intra`) : une demande de formation intra par email **n'engage pas ORSYS** et ne doit pas être comptabilisée comme une formation confirmée (emails à ignorer côté création/statistiques, éventuellement tracés dans le cache emails).
 - **Annulations** : un email `annulation` marque la session comme **annulée** et elle doit être exclue des statistiques de formations dispensées.
+- **Preuves de réalisation** :
+  - `emargements` : suivi des signatures / feuille d'émargement (ex. "Service suivi qualité inter"). Preuve forte que la session a eu lieu.
+  - `accuse-reception` : accusé de réception de documents administratifs ("Service Suivi Qualité Logistique"). Preuve forte que la session a eu lieu.
+    Ces emails peuvent contenir des informations partielles : on peut créer/mettre à jour une formation **incomplète** si nécessaire.
 - Mention **« Annulé et remplacé »** : à traiter comme une **annulation** ; indique qu'une nouvelle session est probablement créée en remplacement (ex. changement de dates et/ou de code formation). La session de remplacement est gérée par les emails ultérieurs (nouvelle convocation / bon de commande).
 
 ---

@@ -89,6 +89,7 @@ export function fusionnerEmails(
 
     // Ignorer les emails sans extraction valide ou de type ignoré
     if (
+      classification.type === TypeEmail.DEMANDE_INTRA ||
       classification.type === TypeEmail.RAPPEL ||
       classification.type === TypeEmail.AUTRE
     ) {

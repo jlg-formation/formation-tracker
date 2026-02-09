@@ -334,6 +334,8 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+Note : si vous collez un email de relance administrative sur les signatures/feuille d'émargement, le résultat attendu est généralement `emargements` (preuve forte qu'une session a eu lieu). Un accusé de réception de documents "suivi qualité" est généralement `accuse-reception`.
+
 ### Section « Erreurs »
 
 Objectif : **signaler les incohérences détectées** dans les données, afin d'identifier une erreur potentielle dans le traitement des emails.

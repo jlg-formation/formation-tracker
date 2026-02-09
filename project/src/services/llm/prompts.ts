@@ -10,13 +10,18 @@ export const CLASSIFICATION_SYSTEM_PROMPT = `Tu es un assistant spécialisé dan
 
 Ton rôle est d'identifier le type d'email parmi les catégories suivantes :
 
+- "demande-intra" : Demande initiale de formation intra (ne vaut pas confirmation)
 - "convocation-inter" : Confirmation d'une formation inter-entreprise (dans les locaux ORSYS)
 - "convocation-intra" : Confirmation d'une formation intra-entreprise (chez le client)
+- "emargements" : Suivi des émargements / signatures (preuve forte qu'une session a eu lieu)
+- "accuse-reception" : Accusé de réception de documents administratifs (preuve forte qu'une session a eu lieu)
 - "annulation" : Annulation d'une session de formation
 - "bon-commande" : Confirmation anticipée d'une commande de formation (avant la convocation)
 - "info-facturation" : Informations pour établir la facture après la formation
 - "rappel" : Rappel concernant une formation à venir
 - "autre" : Email non pertinent pour le suivi des formations
+
+Important : certains emails ORSYS sont des relances ou messages administratifs. Si l'email parle de feuille d'émargement / signatures ou d'accusé de réception de documents, classer en "emargements" ou "accuse-reception" (pas en "autre").
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après.`;
 
@@ -39,7 +44,7 @@ ${body}
 
 Réponds avec ce format JSON :
 {
-  "type": "convocation-inter|convocation-intra|annulation|bon-commande|info-facturation|rappel|autre",
+  "type": "demande-intra|convocation-inter|convocation-intra|emargements|accuse-reception|annulation|bon-commande|info-facturation|rappel|autre",
   "confidence": 0.0 à 1.0,
   "reason": "Explication courte de la classification"
 }`;
@@ -49,8 +54,11 @@ Réponds avec ce format JSON :
  * Types d'emails valides pour la classification
  */
 export const VALID_EMAIL_TYPES = [
+  "demande-intra",
   "convocation-inter",
   "convocation-intra",
+  "emargements",
+  "accuse-reception",
   "annulation",
   "bon-commande",
   "info-facturation",

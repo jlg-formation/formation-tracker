@@ -464,11 +464,127 @@ function getExtractionPrompt(type: TypeEmail, body: string): string | null {
       return buildExtractionPromptBonCommande(body);
     case TypeEmail.INFO_FACTURATION:
       return buildExtractionPromptFacturation(body);
+    case TypeEmail.EMARGEMENTS:
+    case TypeEmail.ACCUSE_RECEPTION:
+    case TypeEmail.DEMANDE_INTRA:
     case TypeEmail.RAPPEL:
     case TypeEmail.AUTRE:
     default:
       return null;
   }
+}
+
+function parseFrenchDateToIso(input: string): string | null {
+  // Accepte dd/mm/yyyy ou dd/mm/yy
+  const match = input.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})\b/);
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const yearRaw = match[3];
+  const year = yearRaw.length === 2 ? 2000 + Number(yearRaw) : Number(yearRaw);
+
+  if (
+    !Number.isFinite(day) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(year) ||
+    day < 1 ||
+    day > 31 ||
+    month < 1 ||
+    month > 12 ||
+    year < 2000 ||
+    year > 2100
+  ) {
+    return null;
+  }
+
+  const dd = String(day).padStart(2, "0");
+  const mm = String(month).padStart(2, "0");
+  return `${year}-${mm}-${dd}`;
+}
+
+function extractCodeEtenduFromBody(body: string): string | null {
+  // Cas le plus fréquent dans les samples : "session GIAPA1" / "session GIAZZ1"
+  const sessionMatch = body.match(/\bsession\s+([A-Z0-9]{6})\b/i);
+  if (sessionMatch?.[1]) return sessionMatch[1].toUpperCase();
+
+  // Fallback: premier code 6 chars (peut être bruité, mais utile pour "code cours")
+  const genericMatch = body.match(/\b([A-Z0-9]{6})\b/);
+  return genericMatch?.[1] ? genericMatch[1].toUpperCase() : null;
+}
+
+function inferTypeSessionFromBody(body: string): TypeSession {
+  // Heuristique simple basée sur les samples
+  if (
+    /\bqualit[eé]\s+inter\b/i.test(body) ||
+    /\banimation\s+inter\b/i.test(body)
+  ) {
+    return TypeSession.INTER;
+  }
+  if (/\bintra\b/i.test(body)) {
+    return TypeSession.INTRA;
+  }
+  return TypeSession.INTER;
+}
+
+function buildAdministrativeProofExtraction(
+  emailId: string,
+  body: string,
+  proofType: "emargements" | "accuse-reception"
+): ExtractionResult {
+  const codeEtendu = extractCodeEtenduFromBody(body);
+  const dateDebut = parseFrenchDateToIso(body);
+  const now = new Date().toISOString();
+  const warnings: string[] = [];
+
+  if (!codeEtendu)
+    warnings.push(
+      "Code session introuvable (attendu un code 6 caractères, ex: GIAPA1)."
+    );
+  if (!dateDebut)
+    warnings.push(
+      "Date introuvable (attendu un format jj/mm/aa ou jj/mm/aaaa)."
+    );
+
+  // Formation incomplète (placeholders explicites) : on préfère créer plutôt que de perdre la preuve.
+  // On ne devine pas les champs absents.
+  const formation: Partial<Formation> = {
+    statut: StatutFormation.CONFIRMEE,
+    typeSession: inferTypeSessionFromBody(body),
+    niveauPersonnalisation: NiveauPersonnalisation.STANDARD,
+    emailIds: [emailId],
+    createdAt: now,
+    updatedAt: now
+  };
+
+  if (codeEtendu) formation.codeEtendu = codeEtendu;
+  if (dateDebut) {
+    formation.dateDebut = dateDebut;
+    formation.dateFin = dateDebut;
+    formation.dates = [dateDebut];
+    formation.nombreJours = 1;
+  }
+
+  formation.titre =
+    proofType === "emargements"
+      ? "(Formation inconnue) — preuve: émargements"
+      : "(Formation inconnue) — preuve: accusé de réception";
+  formation.lieu = { nom: "(Lieu inconnu)", adresse: "", gps: null };
+  formation.nombreParticipants = 0;
+  formation.participants = [];
+
+  return {
+    formation,
+    fieldsExtracted: [
+      ...(codeEtendu ? ["codeEtendu"] : []),
+      ...(dateDebut ? ["dateDebut", "dateFin", "dates", "nombreJours"] : [])
+    ],
+    fieldsMissing: [
+      ...(codeEtendu ? [] : ["codeEtendu"]),
+      ...(dateDebut ? [] : ["dateDebut"])
+    ],
+    warnings
+  };
 }
 
 /**
@@ -1051,6 +1167,22 @@ export async function extractFormation(
   type: TypeEmail,
   apiKey?: string
 ): Promise<ExtractionResult> {
+  // Extraction locale pour preuves administratives (pas de coût LLM)
+  if (type === TypeEmail.EMARGEMENTS) {
+    return buildAdministrativeProofExtraction(
+      email.id,
+      email.body,
+      "emargements"
+    );
+  }
+  if (type === TypeEmail.ACCUSE_RECEPTION) {
+    return buildAdministrativeProofExtraction(
+      email.id,
+      email.body,
+      "accuse-reception"
+    );
+  }
+
   // Vérifier si le type est extractible
   const userPrompt = getExtractionPrompt(type, email.body);
   if (!userPrompt) {

@@ -88,17 +88,22 @@ Avant de modifier le code, **consulter obligatoirement** :
 
 ### Types d'emails ORSYS
 
-Les emails sont classifiés en 7 catégories :
+Les emails sont classifiés en 10 catégories :
 
 | Type                | Action                                    |
 | ------------------- | ----------------------------------------- |
+| `demande-intra`     | Ignorer (demande non engageante)          |
 | `convocation-inter` | Créer formation inter-entreprise          |
 | `convocation-intra` | Créer formation intra-entreprise          |
+| `emargements`       | Preuve forte que la session a eu lieu     |
+| `accuse-reception`  | Preuve forte que la session a eu lieu     |
 | `annulation`        | Créer/modifier formation → statut annulée |
 | `bon-commande`      | Créer formation préliminaire              |
 | `info-facturation`  | Enrichir données de facturation           |
 | `rappel`            | Ignorer ou fusionner                      |
 | `autre`             | Ignorer                                   |
+
+Note : les emails de relance administrative sur la feuille d'**émargement / signatures** (ex. "Service suivi qualité inter") doivent être classés `emargements`.
 
 ### Flux de traitement
 
