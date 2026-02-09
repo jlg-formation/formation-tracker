@@ -112,6 +112,23 @@ describe("formationsStore", () => {
       expect(updated?.createdAt).toBe(created.createdAt);
     });
 
+    it("devrait mettre à jour les coordonnées GPS du lieu", async () => {
+      const created = await addFormation(createTestFormation());
+
+      const updated = await updateFormation(created.id, {
+        lieu: {
+          ...created.lieu,
+          gps: { lat: 48.90001, lng: 2.20002 }
+        }
+      });
+
+      expect(updated).toBeDefined();
+      expect(updated?.lieu.gps).toEqual({ lat: 48.90001, lng: 2.20002 });
+
+      const stored = await db.formations.get(created.id);
+      expect(stored?.lieu.gps).toEqual({ lat: 48.90001, lng: 2.20002 });
+    });
+
     it("devrait retourner undefined si la formation n'existe pas", async () => {
       const result = await updateFormation("inexistant", { titre: "Test" });
       expect(result).toBeUndefined();

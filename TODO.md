@@ -18,7 +18,7 @@ Audit “Spécifs/Docs vs Code” (inputs: `input/*`, docs: `docs/*`, code: `pro
 
 ### Fonctionnalités manquantes
 
-- [ ] id003 (Carte/GPS) La **correction manuelle des coordonnées GPS** “un clic pour positionner l’endroit exact” n’est pas implémentée.
+- [x] id003 (Carte/GPS) La **correction manuelle des coordonnées GPS** “un clic pour positionner l’endroit exact” n’est pas implémentée.
   - Source: `docs/05-geocoding.md`, `docs/01-architecture.md` (correction GPS), `docs/06-ui-specs.md` ("Correction GPS"), `input/clarifications/005-gps.md`
   - Code: `project/src/components/map/MapView.tsx`, `project/src/components/pages/MapPage.tsx`, `project/src/components/pages/FormationDetailPage.tsx`, `project/src/stores/formationsStore.ts`
   - Action: ajouter un mode “corriger GPS” (sélection formation → clic carte → `updateFormation(id, { lieu: { ...lieu, gps }})`) + persister dans IndexedDB.

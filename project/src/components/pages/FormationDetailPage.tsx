@@ -1,13 +1,52 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { EmailRaw, Formation } from "../../types";
+import type { CoordonneesGPS, EmailRaw, Formation } from "../../types";
 import {
   NiveauPersonnalisation,
   StatutFormation,
   TypeSession
 } from "../../types";
-import { getFormation } from "../../stores/formationsStore";
+import { getFormation, updateFormation } from "../../stores/formationsStore";
 import { db } from "../../stores/db";
+
+import L from "leaflet";
+import {
+  MapContainer,
+  Marker,
+  Popup,
+  TileLayer,
+  useMapEvents
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Fix pour les icônes Leaflet avec bundler (page détail)
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })
+  ._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow
+});
+
+function MapClickPicker({
+  enabled,
+  onPick
+}: {
+  enabled: boolean;
+  onPick: (gps: CoordonneesGPS) => void;
+}) {
+  useMapEvents({
+    click: (e) => {
+      if (!enabled) return;
+      onPick({ lat: e.latlng.lat, lng: e.latlng.lng });
+    }
+  });
+  return null;
+}
 
 function formatDate(isoDate: string): string {
   try {
@@ -43,6 +82,11 @@ export function FormationDetailPage() {
   const [emails, setEmails] = useState<EmailRaw[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [gpsCorrectionMode, setGpsCorrectionMode] = useState(false);
+  const [candidateGps, setCandidateGps] = useState<CoordonneesGPS | null>(null);
+  const [savingGps, setSavingGps] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,6 +125,9 @@ export function FormationDetailPage() {
         if (!cancelled) {
           setFormation(f);
           setEmails(existingEmails);
+          setGpsCorrectionMode(false);
+          setCandidateGps(null);
+          setGpsError(null);
           setLoading(false);
         }
       } catch (err) {
@@ -151,6 +198,45 @@ export function FormationDetailPage() {
       </div>
     );
   }
+
+  const currentGps = formation.lieu?.gps ?? null;
+  const mapCenter: L.LatLngExpression = currentGps
+    ? [currentGps.lat, currentGps.lng]
+    : [46.603354, 1.888334];
+  const mapZoom = currentGps ? 14 : 6;
+
+  const handleValidateGps = async () => {
+    if (!candidateGps) return;
+
+    try {
+      setSavingGps(true);
+      setGpsError(null);
+
+      const updated = await updateFormation(formation.id, {
+        lieu: {
+          ...(formation.lieu ?? { nom: "", adresse: "" }),
+          gps: candidateGps
+        }
+      });
+
+      if (!updated) {
+        setGpsError("Impossible de mettre à jour la formation (introuvable). ");
+        return;
+      }
+
+      setFormation(updated);
+      setGpsCorrectionMode(false);
+      setCandidateGps(null);
+    } catch (err) {
+      setGpsError(
+        err instanceof Error
+          ? err.message
+          : "Erreur inconnue lors de la mise à jour GPS."
+      );
+    } finally {
+      setSavingGps(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -344,6 +430,115 @@ export function FormationDetailPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Correction GPS */}
+      <div className="bg-gray-800 rounded-lg p-5 border border-gray-700">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-white">Carte</h2>
+          <div className="flex items-center gap-2">
+            {gpsCorrectionMode ? (
+              <>
+                <button
+                  type="button"
+                  className="btn px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-md transition-colors text-sm font-medium"
+                  disabled={!candidateGps || savingGps}
+                  onClick={handleValidateGps}
+                  title={
+                    !candidateGps
+                      ? "Cliquez sur la carte pour choisir la nouvelle position"
+                      : "Enregistrer la nouvelle position"
+                  }
+                >
+                  {savingGps
+                    ? "Validation…"
+                    : candidateGps
+                      ? "✓ Valider la position"
+                      : "Cliquez sur la carte…"}
+                </button>
+                <button
+                  type="button"
+                  className="btn px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors text-sm"
+                  onClick={() => {
+                    setGpsCorrectionMode(false);
+                    setCandidateGps(null);
+                    setGpsError(null);
+                  }}
+                  title="Annuler la correction"
+                >
+                  Annuler
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="btn px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors text-sm font-medium"
+                onClick={() => {
+                  setGpsCorrectionMode(true);
+                  setCandidateGps(null);
+                  setGpsError(null);
+                }}
+                title="Choisir une nouvelle position sur la carte"
+              >
+                ✏️ Corriger la position
+              </button>
+            )}
+          </div>
+        </div>
+
+        {gpsCorrectionMode && (
+          <div className="text-sm text-amber-300/80 mb-3 flex items-center gap-2">
+            <span>📍</span>
+            <span>
+              Cliquez sur la carte pour choisir la nouvelle position, puis
+              validez.
+            </span>
+          </div>
+        )}
+
+        {gpsError && (
+          <div className="mb-3 bg-red-900/20 border border-red-500/40 rounded-lg p-3 text-sm text-red-300">
+            {gpsError}
+          </div>
+        )}
+
+        <div className="rounded-lg overflow-hidden border border-gray-700 bg-gray-900/20 h-72">
+          <MapContainer
+            center={mapCenter}
+            zoom={mapZoom}
+            style={{ height: "100%", width: "100%" }}
+            scrollWheelZoom
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+
+            <MapClickPicker
+              enabled={gpsCorrectionMode}
+              onPick={setCandidateGps}
+            />
+
+            {currentGps && (
+              <Marker position={[currentGps.lat, currentGps.lng]}>
+                <Popup>Position actuelle</Popup>
+              </Marker>
+            )}
+
+            {candidateGps && (
+              <Marker position={[candidateGps.lat, candidateGps.lng]}>
+                <Popup>Nouvelle position</Popup>
+              </Marker>
+            )}
+          </MapContainer>
+        </div>
+
+        {candidateGps && (
+          <div className="text-xs text-gray-400 mt-3">
+            Nouvelle position sélectionnée : {candidateGps.lat.toFixed(5)},{" "}
+            {candidateGps.lng.toFixed(5)}
           </div>
         )}
       </div>

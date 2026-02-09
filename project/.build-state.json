@@ -1,8 +1,14 @@
 {
   "version": "1.0",
   "currentStep": 18,
-  "lastUpdated": "2026-02-09T15:44:31.345Z",
+  "lastUpdated": "2026-02-09T18:07:03.4589514Z",
   "todos": {
+    "id003": {
+      "status": "completed",
+      "startedAt": "2026-02-09T18:04:59.6421903Z",
+      "completedAt": "2026-02-09T18:07:03.4589514Z",
+      "note": "Ajout du mode de correction manuelle GPS sur la page détail formation (corriger position via clic carte + validation, persistance IndexedDB)"
+    },
     "id001": {
       "status": "completed",
       "startedAt": "2026-02-09T15:27:28.0366143Z",
