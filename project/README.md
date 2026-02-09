@@ -76,6 +76,7 @@ Au premier lancement, accédez à la page **Paramètres** pour configurer :
 ### 4. Export
 
 Depuis le tableau de bord, exportez vos données en :
+
 - **JSON** : Sauvegarde complète avec métadonnées
 - **CSV** : Import dans Excel/Google Sheets
 - **PDF** : Rapport imprimable
