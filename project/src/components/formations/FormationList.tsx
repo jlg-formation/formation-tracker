@@ -104,7 +104,7 @@ function Pagination({
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-3 py-1.5 rounded bg-gray-700 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
+          className="btn px-3 py-1.5 rounded bg-gray-700 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
         >
           ◀
         </button>
@@ -119,7 +119,7 @@ function Pagination({
             <button
               key={page}
               onClick={() => onPageChange(page)}
-              className={`px-3 py-1.5 rounded transition-colors ${
+              className={`btn px-3 py-1.5 rounded transition-colors ${
                 currentPage === page
                   ? "bg-blue-600 text-white"
                   : "bg-gray-700 text-gray-300 hover:bg-gray-600"
@@ -134,7 +134,7 @@ function Pagination({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="px-3 py-1.5 rounded bg-gray-700 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
+          className="btn px-3 py-1.5 rounded bg-gray-700 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
         >
           ▶
         </button>
@@ -235,7 +235,7 @@ function FormationModal({ formation, onClose }: FormationModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white p-1 text-xl"
+            className="btn text-gray-400 hover:text-white p-1 text-xl"
             aria-label="Fermer"
           >
             ✕
@@ -359,7 +359,7 @@ function FormationModal({ formation, onClose }: FormationModalProps) {
               </div>
               <button
                 onClick={handleCopyPassword}
-                className="text-gray-400 hover:text-white px-2 py-1"
+                className="btn text-gray-400 hover:text-white px-2 py-1"
                 title="Copier"
               >
                 📋

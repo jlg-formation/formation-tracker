@@ -131,7 +131,7 @@ export function MapPage() {
               geocodingStatus !== "running" && (
                 <button
                   onClick={handleGeocodeFormations}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors text-sm font-medium flex items-center gap-2"
+                  className="btn px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors text-sm font-medium flex items-center gap-2"
                 >
                   <span>🌍</span>
                   Géocoder {formationsWithoutGPS.length} formation

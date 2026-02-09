@@ -1,8 +1,13 @@
 {
   "version": "1.0",
   "currentStep": 18,
-  "lastUpdated": "2026-02-09T16:15:30.000Z",
+  "lastUpdated": "2026-02-09T16:20:40.000Z",
   "todos": {
+    "id034": {
+      "status": "completed",
+      "completedAt": "2026-02-09T16:20:40.000Z",
+      "note": "Ajout d'une classe Tailwind .btn (enabled:cursor-pointer / disabled:cursor-not-allowed) et application sur tous les <button> de l'UI"
+    },
     "id036": {
       "status": "completed",
       "completedAt": "2026-02-09T16:15:30.000Z",

@@ -107,7 +107,7 @@ export function Filters({
 
         {/* Bouton pour développer les filtres sur mobile */}
         <button
-          className="md:hidden flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-600"
+          className="btn md:hidden flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-600"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <span>Filtres</span>
@@ -165,7 +165,7 @@ export function Filters({
           {hasActiveFilters && (
             <button
               onClick={handleReset}
-              className="px-3 py-2.5 text-gray-400 hover:text-white transition-colors"
+              className="btn px-3 py-2.5 text-gray-400 hover:text-white transition-colors"
               title="Réinitialiser les filtres"
             >
               ✕
@@ -226,7 +226,7 @@ export function Filters({
           {hasActiveFilters && (
             <button
               onClick={handleReset}
-              className="w-full py-2.5 text-gray-400 hover:text-white bg-gray-700 rounded-lg transition-colors"
+              className="btn w-full py-2.5 text-gray-400 hover:text-white bg-gray-700 rounded-lg transition-colors"
             >
               Réinitialiser les filtres
             </button>

@@ -827,7 +827,7 @@ export function ExtractionPanel() {
         <button
           onClick={startExtraction}
           disabled={!isConnected || isExtracting || isAnalyzing}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center gap-2"
+          className="btn px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center gap-2"
         >
           {isExtracting ? (
             <>
@@ -850,7 +850,7 @@ export function ExtractionPanel() {
             disabled={
               isExtracting || isAnalyzing || isPaused || unprocessedCount === 0
             }
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center gap-2"
+            className="btn px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center gap-2"
           >
             {isAnalyzing ? (
               <>
@@ -870,7 +870,7 @@ export function ExtractionPanel() {
         {isAnalyzing && (
           <button
             onClick={pauseAnalysis}
-            className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md transition-colors flex items-center gap-2"
+            className="btn px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md transition-colors flex items-center gap-2"
           >
             <span>⏸️</span>
             Pause
@@ -881,7 +881,7 @@ export function ExtractionPanel() {
         {isPaused && (
           <button
             onClick={resumeAnalysis}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors flex items-center gap-2"
+            className="btn px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors flex items-center gap-2"
           >
             <span>▶️</span>
             Reprendre
@@ -895,7 +895,7 @@ export function ExtractionPanel() {
           isPaused) && (
           <button
             onClick={resetState}
-            className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md transition-colors"
+            className="btn px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md transition-colors"
           >
             Réinitialiser
           </button>
@@ -907,7 +907,7 @@ export function ExtractionPanel() {
           !isAnalyzing && (
             <button
               onClick={clearEmails}
-              className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-md transition-colors"
+              className="btn px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-md transition-colors"
             >
               Tout supprimer
             </button>

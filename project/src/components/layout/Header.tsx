@@ -59,7 +59,7 @@ export function Header() {
 
         {/* Bouton hamburger mobile */}
         <button
-          className="md:hidden p-2 text-gray-400 hover:text-white"
+          className="btn md:hidden p-2 text-gray-400 hover:text-white"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label="Menu"
           aria-expanded={isMenuOpen}

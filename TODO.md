@@ -161,7 +161,7 @@ Global:        73.43% (objectif: > 70%) ✅
 - [ ] `id006` `id022` Extraire les composants (FormationModal, ExportPanel, etc.)
 - [ ] `id023` Ajouter des tests pour les composants React
 - [ ] `id025` Améliorer la couverture du service export
-- [ ] `id034` Appliquer `cursor-pointer` sur tous les boutons
+- [x] `id034` Appliquer `cursor-pointer` sur tous les boutons
 - [x] `id036` Ajouter un favicon et définir le titre du site
 
 ### Sprint 4 - Documentation

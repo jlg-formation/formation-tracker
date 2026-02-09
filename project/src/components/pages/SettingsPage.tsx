@@ -750,7 +750,7 @@ export function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setShowOpenAIKey(!showOpenAIKey)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1"
+                  className="btn absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1"
                   aria-label={showOpenAIKey ? "Masquer" : "Afficher"}
                 >
                   {showOpenAIKey ? "👁️" : "👁️‍🗨️"}
@@ -759,7 +759,7 @@ export function SettingsPage() {
               <button
                 onClick={handleSaveOpenAIKey}
                 disabled={saving}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
+                className="btn px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
               >
                 {saving ? "..." : "Sauvegarder"}
               </button>
@@ -793,7 +793,7 @@ export function SettingsPage() {
               disabled={
                 openAITestStatus === "testing" || !settings.openaiApiKey
               }
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-md transition-colors text-sm"
+              className="btn px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-md transition-colors text-sm"
             >
               {openAITestStatus === "testing" ? (
                 <span className="flex items-center gap-2">
@@ -1000,7 +1000,7 @@ export function SettingsPage() {
               disabled={
                 classificationTestStatus === "testing" || !settings.openaiApiKey
               }
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-md transition-colors"
+              className="btn px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-md transition-colors"
             >
               {classificationTestStatus === "testing" ? (
                 <span className="flex items-center gap-2">
@@ -1114,7 +1114,7 @@ export function SettingsPage() {
                 <button
                   onClick={handleSaveGeocodingKeys}
                   disabled={saving}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
+                  className="btn px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
                 >
                   Sauvegarder
                 </button>
@@ -1142,7 +1142,7 @@ export function SettingsPage() {
                 <button
                   onClick={handleSaveGeocodingKeys}
                   disabled={saving}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
+                  className="btn px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
                 >
                   Sauvegarder
                 </button>
@@ -1220,7 +1220,7 @@ export function SettingsPage() {
                 geocodingTestStatus === "testing" ||
                 !geocodingTestAddress.trim()
               }
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-md transition-colors"
+              className="btn px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-md transition-colors"
             >
               {geocodingTestStatus === "testing" ? (
                 <span className="flex items-center gap-2">
@@ -1232,14 +1232,14 @@ export function SettingsPage() {
             </button>
             <button
               onClick={handlePreloadKnownLocations}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors text-sm"
+              className="btn px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors text-sm"
             >
               📥 Précharger adresses ORSYS
             </button>
             <button
               onClick={handleClearGeocache}
               disabled={!geocacheStats || geocacheStats.total === 0}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-md transition-colors text-sm"
+              className="btn px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-md transition-colors text-sm"
             >
               🗑️ Vider le cache
             </button>
@@ -1324,7 +1324,7 @@ export function SettingsPage() {
               <button
                 onClick={handleSaveGoogleClientId}
                 disabled={saving || !localGoogleClientId.trim()}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
+                className="btn px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
               >
                 Sauvegarder
               </button>
@@ -1365,7 +1365,7 @@ export function SettingsPage() {
                 <button
                   onClick={disconnect}
                   disabled={gmailLoading}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
+                  className="btn px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
                 >
                   {gmailLoading ? "..." : "Se déconnecter"}
                 </button>
@@ -1373,7 +1373,7 @@ export function SettingsPage() {
                 <button
                   onClick={connect}
                   disabled={gmailLoading || !clientId}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-md transition-colors flex items-center gap-2"
+                  className="btn px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-md transition-colors flex items-center gap-2"
                 >
                   {gmailLoading ? (
                     "Connexion..."
@@ -1437,7 +1437,7 @@ export function SettingsPage() {
                 disabled={
                   formationsCount === 0 || dataOperationStatus === "loading"
                 }
-                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
+                className="btn px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
               >
                 🗑️ Tout supprimer
               </button>
@@ -1457,7 +1457,7 @@ export function SettingsPage() {
                   geocacheStats.total === 0 ||
                   dataOperationStatus === "loading"
                 }
-                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
+                className="btn px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
               >
                 🗑️ Vider
               </button>
@@ -1475,7 +1475,7 @@ export function SettingsPage() {
                 disabled={
                   emailsCount === 0 || dataOperationStatus === "loading"
                 }
-                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
+                className="btn px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
               >
                 🗑️ Vider
               </button>
@@ -1493,7 +1493,7 @@ export function SettingsPage() {
                 disabled={
                   llmCacheCount === 0 || dataOperationStatus === "loading"
                 }
-                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
+                className="btn px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-1"
               >
                 🗑️ Vider
               </button>
@@ -1512,7 +1512,7 @@ export function SettingsPage() {
                 llmCacheCount === 0) ||
               dataOperationStatus === "loading"
             }
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-2"
+            className="btn px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-2"
           >
             {dataOperationStatus === "loading" &&
             currentDataOperation === "export" ? (
@@ -1526,7 +1526,7 @@ export function SettingsPage() {
           <button
             onClick={handleImportClick}
             disabled={dataOperationStatus === "loading"}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-2"
+            className="btn px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded flex items-center gap-2"
           >
             {dataOperationStatus === "loading" &&
             currentDataOperation === "import" ? (

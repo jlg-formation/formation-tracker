@@ -83,7 +83,7 @@ export function Dashboard() {
             <button
               onClick={handleExportJson}
               disabled={exporting !== null}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+              className="btn px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
             >
               {exporting === "json" ? (
                 <span className="animate-spin">⏳</span>
@@ -95,7 +95,7 @@ export function Dashboard() {
             <button
               onClick={handleExportCsv}
               disabled={exporting !== null}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+              className="btn px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
             >
               {exporting === "csv" ? (
                 <span className="animate-spin">⏳</span>
@@ -107,7 +107,7 @@ export function Dashboard() {
             <button
               onClick={handleExportPdf}
               disabled={exporting !== null}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+              className="btn px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
             >
               {exporting === "pdf" ? (
                 <span className="animate-spin">⏳</span>
