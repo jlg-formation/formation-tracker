@@ -72,6 +72,8 @@ ORSYS Training Tracker est une **Single Page Application (SPA)** React qui perme
 8. **Contrôles de cohérence** : Détection d'incohérences (ex. recouvrement de dates entre formations) et signalement dans l'interface (section « Erreurs » des paramètres)
 9. **Stockage** : Les formations sont persistées dans IndexedDB
 
+Après extraction, si le géocodage est absent ou imprécis, l'utilisateur peut **corriger manuellement** les coordonnées GPS via la carte (un clic pour positionner l'endroit exact).
+
 ---
 
 ## Règles métier (emails)

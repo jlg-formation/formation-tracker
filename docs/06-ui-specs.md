@@ -118,13 +118,14 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 
 ### Fonctionnalités carte
 
-| Fonctionnalité      | Description                                                  |
-| ------------------- | ------------------------------------------------------------ |
-| **Clustering**      | Regroupement des marqueurs proches (Leaflet.markercluster)   |
-| **Popup**           | Au clic sur marqueur : nom lieu, nb formations, liste courte |
-| **Zoom**            | Contrôles zoom + molette souris                              |
-| **Filtres**         | Filtre dynamique des marqueurs                               |
-| **Centrage France** | Vue initiale centrée sur la France                           |
+| Fonctionnalité      | Description                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Clustering**      | Regroupement des marqueurs proches (Leaflet.markercluster)                                                  |
+| **Popup**           | Au clic sur marqueur : nom lieu, nb formations, liste courte                                                |
+| **Zoom**            | Contrôles zoom + molette souris                                                                             |
+| **Filtres**         | Filtre dynamique des marqueurs                                                                              |
+| **Centrage France** | Vue initiale centrée sur la France                                                                          |
+| **Correction GPS**  | Permet de corriger les coordonnées GPS en cliquant sur la carte lorsque le géocodage est absent ou imprécis |
 
 ### Popup marqueur
 
@@ -198,6 +199,7 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 │  📅 Dates          04/02/2026 → 06/02/2026 (3 jours)                    │
 │  📍 Lieu           ORSYS Paris La Défense                                │
 │                    Paroi Nord Grande Arche, 1 parvis de la Défense       │
+│  🧭 GPS            48.8925, 2.2356                     [Corriger sur carte]│
 │  🏢 Type           Inter-entreprise                                      │
 │  📊 Niveau         Standard                                              │
 │  👥 Participants   5                                                     │

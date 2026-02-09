@@ -4,11 +4,31 @@
 
 Le géocodage convertit les adresses textuelles en coordonnées GPS pour affichage sur la carte Leaflet.
 
+Dans certains cas :
+
+- aucune coordonnée n'est trouvée par le service de géocodage ;
+- les coordonnées renvoyées sont incorrectes.
+
+L'application doit donc permettre une **correction manuelle** des coordonnées GPS (voir section dédiée).
+
 L'application utilise un **Adapter Pattern** permettant de switcher facilement entre :
 
 - **Nominatim** (OpenStreetMap) - Gratuit, limité
 - **Google Geocoding API** - Fiable, payant
 - **Mapbox Geocoding** - Bon compromis
+
+---
+
+## Correction manuelle des coordonnées GPS
+
+Objectif : permettre de **mettre à jour facilement** les coordonnées GPS lorsque le géocodage automatique échoue ou manque de précision.
+
+Principe :
+
+- depuis l'interface, l'utilisateur peut ouvrir une carte et **définir d'un clic** l'endroit exact où la formation a eu lieu ;
+- la correction met à jour les coordonnées GPS persistées (IndexedDB) pour que :
+  - le marqueur sur la carte reflète la position corrigée ;
+  - les exports (JSON/CSV/PDF) utilisent les coordonnées corrigées.
 
 ---
 
