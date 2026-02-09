@@ -96,7 +96,7 @@ export function MapPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="text-left">
       {/* En-tête */}
       <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -183,7 +183,7 @@ export function MapPage() {
 
       {/* État de chargement */}
       {loading && (
-        <div className="flex-1 flex items-center justify-center bg-[#16213e] rounded-lg">
+        <div className="h-[60vh] flex items-center justify-center bg-[#16213e] rounded-lg">
           <div className="text-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-3"></div>
             <p className="text-gray-400">Chargement des formations...</p>
@@ -193,7 +193,7 @@ export function MapPage() {
 
       {/* Erreur */}
       {error && !loading && (
-        <div className="flex-1 flex items-center justify-center bg-[#16213e] rounded-lg">
+        <div className="h-[60vh] flex items-center justify-center bg-[#16213e] rounded-lg">
           <div className="text-center text-red-400">
             <svg
               className="w-12 h-12 mx-auto mb-3"
@@ -216,7 +216,7 @@ export function MapPage() {
 
       {/* Carte */}
       {!loading && !error && (
-        <div className="h-100 md:h-125 lg:h-150">
+        <div className="h-[60vh] md:h-[65vh] lg:h-[70vh]">
           <MapView
             formations={formations}
             height="100%"
