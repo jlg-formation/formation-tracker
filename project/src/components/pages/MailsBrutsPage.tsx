@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { db } from "../../stores/db";
 import { getEmailsPage } from "../../stores/emailsStore";
 import type { EmailRaw } from "../../types";
@@ -117,15 +118,6 @@ function Pagination({
   );
 }
 
-function renderJson(value: unknown): string {
-  if (value === undefined) return "";
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
-
 export function MailsBrutsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -186,7 +178,7 @@ export function MailsBrutsPage() {
   return (
     <div className="text-left space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-white mb-2">Mails bruts</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">Mails</h1>
         <p className="text-gray-400">
           Liste des emails en cache et analyse associée (classification +
           extraction)
@@ -230,11 +222,12 @@ export function MailsBrutsPage() {
                 analysis?.classification?.type || email.type || null;
 
               return (
-                <details
+                <Link
                   key={email.id}
-                  className="bg-gray-900/30 rounded-lg border border-gray-700"
+                  to={`/mails/${encodeURIComponent(email.id)}`}
+                  className="block bg-gray-900/30 rounded-lg border border-gray-700 hover:border-indigo-500/50 hover:bg-gray-800/50 transition-all duration-200 no-underline"
                 >
-                  <summary className="cursor-pointer select-none px-4 py-3">
+                  <div className="px-4 py-3">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                       <div className="min-w-0">
                         <div className="text-sm font-medium text-white truncate">
@@ -245,56 +238,20 @@ export function MailsBrutsPage() {
                           {email.id}
                         </div>
                         {classificationType && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            Type: {classificationType}
+                          <div className="text-xs mt-1">
+                            <span className="inline-block px-2 py-0.5 rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-500/50">
+                              {classificationType}
+                            </span>
                           </div>
                         )}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Cliquer pour afficher
+                      <div className="text-xs text-gray-400 flex items-center gap-1">
+                        Voir détail
+                        <span className="text-indigo-400">→</span>
                       </div>
-                    </div>
-                  </summary>
-
-                  <div className="px-4 pb-4 space-y-3">
-                    <div>
-                      <div className="text-sm font-semibold text-white mb-2">
-                        Email brut
-                      </div>
-                      <pre className="whitespace-pre-wrap text-xs text-gray-200 bg-black/30 p-3 rounded border border-gray-700 overflow-x-auto">
-                        {`From: ${email.from}\nSubject: ${email.subject}\nDate: ${email.date}\nThreadId: ${email.threadId}\nProcessed: ${email.processed}\nType (EmailRaw): ${email.type ?? "(non défini)"}\n\n${email.body}`}
-                      </pre>
-
-                      {email.bodyHtml && (
-                        <pre className="whitespace-pre-wrap text-xs text-gray-200 bg-black/30 p-3 rounded border border-gray-700 overflow-x-auto mt-3">
-                          {email.bodyHtml}
-                        </pre>
-                      )}
-                    </div>
-
-                    <div>
-                      <div className="text-sm font-semibold text-white mb-2">
-                        Analyse
-                      </div>
-                      {analysis ? (
-                        <pre className="whitespace-pre-wrap text-xs text-gray-200 bg-black/30 p-3 rounded border border-gray-700 overflow-x-auto">
-                          {renderJson({
-                            emailId: analysis.emailId,
-                            cachedAt: analysis.cachedAt,
-                            modelVersion: analysis.modelVersion,
-                            classification: analysis.classification,
-                            extraction: analysis.extraction
-                          })}
-                        </pre>
-                      ) : (
-                        <div className="text-sm text-gray-400">
-                          Aucune analyse disponible pour cet email (cache LLM
-                          manquant).
-                        </div>
-                      )}
                     </div>
                   </div>
-                </details>
+                </Link>
               );
             })}
           </div>

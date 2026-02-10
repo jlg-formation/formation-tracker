@@ -6,6 +6,7 @@ import {
   MapPage,
   FormationsPage,
   MailsBrutsPage,
+  MailDetailPage,
   SettingsPage
 } from "./components/pages";
 
@@ -19,6 +20,7 @@ function App() {
           <Route path="carte" element={<MapPage />} />
           <Route path="formations" element={<FormationsPage />} />
           <Route path="mails" element={<MailsBrutsPage />} />
+          <Route path="mails/:emailId" element={<MailDetailPage />} />
           <Route
             path="formations/:formationId"
             element={<FormationDetailPage />}
