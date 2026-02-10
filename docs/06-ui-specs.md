@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-L'interface est une **Single Page Application** en français, composée de 5 pages principales accessibles via une barre de navigation.
+L'interface est une **Single Page Application** en français, composée de 6 pages principales accessibles via une barre de navigation.
 
 ---
 
@@ -12,7 +12,7 @@ L'interface est une **Single Page Application** en français, composée de 5 pag
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                          HEADER                                      │   │
-│  │  [Logo] ORSYS Training Tracker    [Dashboard] [Carte] [Liste] [Mails] [⚙️]  │   │
+│  │  [Logo] ORSYS Training Tracker    [Dashboard] [Carte] [Liste] [Mails] [Geocache] [⚙️]  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -464,6 +464,34 @@ Objectifs :
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Page 6 : Geocache
+
+Référence : clarification `013-geocodage-cache`.
+
+Objectif : consulter et corriger les entrées du **cache de géocodage** (adresses → coordonnées GPS).
+
+### Contenu
+
+- La page liste le cache de géocodage (appels effectués au service de géocodage) et affiche, pour chaque entrée :
+  - le payload (l’adresse textuelle)
+  - les coordonnées GPS
+
+### Édition d’une entrée
+
+Chaque enregistrement du cache de géocodage doit être éditable :
+
+1. Cliquer sur « éditer » :
+  - une carte s’affiche avec un pin aux coordonnées GPS (si déjà existantes)
+  - l’utilisateur repositionne manuellement les coordonnées GPS
+2. Cliquer sur le bouton « valider les nouvelles coordonnées GPS » :
+  - la carte n’est alors plus affichée
+
+### Action globale
+
+- Un bouton général permet de réappliquer les données du cache à toutes les formations.
 
 Note : si vous collez un email de relance administrative sur les signatures/feuille d'émargement, le résultat attendu est généralement `emargements` (preuve forte qu'une session a eu lieu). Un accusé de réception de documents "suivi qualité" est généralement `accuse-reception`.
 

@@ -369,6 +369,20 @@ export async function geocodeBatch(
 
 ---
 
+## Gestion du cache de géocodage (UI)
+
+Référence : clarification `013-geocodage-cache`.
+
+L'application propose une page dédiée **Geocache** pour :
+
+- lister les entrées du cache (payload adresse textuelle + coordonnées GPS) ;
+- éditer une entrée du cache en repositionnant manuellement les coordonnées GPS sur une carte, puis en validant ;
+- déclencher une action globale permettant de **réappliquer les données du cache à toutes les formations**.
+
+Cette fonctionnalité complète la « correction manuelle des coordonnées GPS » au niveau d'une formation : elle agit directement sur les **entrées de cache** utilisées par le service de géocodage.
+
+---
+
 ## Relancer le géocodage (retry des échecs)
 
 Référence : clarification `012-geocodage`.
