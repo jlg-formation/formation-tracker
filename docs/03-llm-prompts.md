@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Le parsing des emails ORSYS se fait en **deux étapes** via l'API OpenAI (GPT-4o) :
+Le parsing des emails ORSYS se fait en **deux étapes** via l'API OpenAI (modèle configurable, défaut : GPT-5 Nano) :
 
 1. **Classification** : Identifier le type d'email
 2. **Extraction** : Extraire les données structurées selon le type

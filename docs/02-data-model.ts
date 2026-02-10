@@ -194,7 +194,7 @@ export interface EmailRaw {
   body: string;
   /** Corps HTML (optionnel) */
   bodyHtml?: string;
-  /** Analyse associée (pour la page « Mails bruts ») */
+  /** Analyse associée (pour la page « Mails ») */
   analysis?: {
     /** Résultat de classification (si disponible) */
     classification?: ClassificationResult;
@@ -313,7 +313,7 @@ export type OpenAIModelId = (typeof OPENAI_MODELS)[number]["id"];
 export interface AppSettings {
   /** Clé API OpenAI */
   openaiApiKey?: string;
-  /** Modèle OpenAI à utiliser (défaut: gpt-4o-mini) */
+  /** Modèle OpenAI à utiliser (défaut: gpt-5-nano) */
   openaiModel?: OpenAIModelId;
   /** Délai entre les appels LLM en ms (défaut: 500, pour éviter les rate limits 429) */
   llmDelayMs?: number;
