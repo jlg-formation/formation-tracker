@@ -290,14 +290,60 @@ Format de réponse :
 ```typescript
 // Modèles disponibles (configurable dans Paramètres)
 const OPENAI_MODELS = [
-  { id: "gpt-4o", name: "GPT-4o" },
-  { id: "gpt-4o-mini", name: "GPT-4o Mini" }
+  {
+    id: "gpt-5-nano",
+    name: "GPT-5 Nano",
+    description: "Ultra rapide et très économique",
+    pricing: "~0.10$/1M tokens"
+  },
+  {
+    id: "gpt-5-mini",
+    name: "GPT-5 Mini",
+    description: "Nouvelle génération, rapide et performant",
+    pricing: "~0.20$/1M tokens"
+  },
+  {
+    id: "gpt-4.1-nano",
+    name: "GPT-4.1 Nano",
+    description: "Version optimisée de GPT-4.1, très économique",
+    pricing: "~0.10$/1M tokens"
+  },
+  {
+    id: "gpt-4o-mini",
+    name: "GPT-4o Mini",
+    description: "Rapide et économique",
+    pricing: "~0.15$/1M tokens"
+  },
+  {
+    id: "gpt-4o",
+    name: "GPT-4o",
+    description: "Plus puissant, plus cher",
+    pricing: "~2.50$/1M tokens"
+  },
+  {
+    id: "gpt-4-turbo",
+    name: "GPT-4 Turbo",
+    description: "Version turbo de GPT-4",
+    pricing: "~10$/1M tokens"
+  },
+  {
+    id: "gpt-3.5-turbo",
+    name: "GPT-3.5 Turbo",
+    description: "Ancien modèle, très économique",
+    pricing: "~0.50$/1M tokens"
+  },
+  {
+    id: "o3-mini",
+    name: "O3 Mini",
+    description: "Modèle de raisonnement économique",
+    pricing: "~1.10$/1M tokens"
+  }
 ];
 
 const OPENAI_CONFIG = {
-  // Conformément au brief : GPT-4o est le modèle de référence.
-  // Le modèle reste configurable dans les Paramètres.
-  model: settings.openaiModel || "gpt-4o",
+  // Conformément aux clarifications : le modèle est OpenAI et orienté coût.
+  // Le modèle reste configurable dans les Paramètres, avec affichage indicatif des prix.
+  model: settings.openaiModel || "gpt-5-nano",
   temperature: 0.1, // Faible pour extraction précise
   max_tokens: 2000,
   response_format: { type: "json_object" }

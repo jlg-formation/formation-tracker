@@ -20,9 +20,10 @@ function makeFormation(partial: Partial<Formation>): Formation {
     dateFin: "2024-01-01",
     dates: ["2024-01-01"],
     nombreJours: 1,
-    lieu: { nom: "Paris" },
+    lieu: { nom: "Paris", adresse: "", gps: null },
     nombreParticipants: 0,
     participants: [],
+    emailIds: [],
     ...partial
   };
 }

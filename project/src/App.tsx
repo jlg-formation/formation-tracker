@@ -5,6 +5,7 @@ import {
   FormationDetailPage,
   MapPage,
   FormationsPage,
+  MailsBrutsPage,
   SettingsPage
 } from "./components/pages";
 
@@ -17,6 +18,7 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="carte" element={<MapPage />} />
           <Route path="formations" element={<FormationsPage />} />
+          <Route path="mails" element={<MailsBrutsPage />} />
           <Route
             path="formations/:formationId"
             element={<FormationDetailPage />}

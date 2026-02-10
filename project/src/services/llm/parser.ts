@@ -17,7 +17,8 @@ import {
   getLLMCacheEntry,
   cacheClassification,
   cacheExtraction,
-  cacheLLMResult
+  cacheLLMResult,
+  CURRENT_MODEL_VERSION
 } from "../../stores/llmCacheStore";
 import {
   DEFAULT_OPENAI_CONFIG,
@@ -1324,7 +1325,10 @@ export async function classifyEmailWithCache(
   // Vérifier le cache d'abord
   if (useCache) {
     const cached = await getLLMCacheEntry(email.id);
-    if (cached?.classification) {
+    if (
+      cached?.classification &&
+      cached.modelVersion === CURRENT_MODEL_VERSION
+    ) {
       return { result: cached.classification, fromCache: true };
     }
   }
@@ -1355,7 +1359,7 @@ export async function extractFormationWithCache(
   // Vérifier le cache d'abord
   if (useCache) {
     const cached = await getLLMCacheEntry(email.id);
-    if (cached?.extraction) {
+    if (cached?.extraction && cached.modelVersion === CURRENT_MODEL_VERSION) {
       return { result: cached.extraction, fromCache: true };
     }
   }
@@ -1406,7 +1410,9 @@ export async function analyzeEmailWithCache(
 
   if (useCache) {
     const cached = await getLLMCacheEntry(email.id);
-    if (cached?.classification) {
+    const isCacheValid = cached?.modelVersion === CURRENT_MODEL_VERSION;
+
+    if (cached?.classification && isCacheValid) {
       classification = cached.classification;
       classificationFromCache = true;
 

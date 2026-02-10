@@ -8,6 +8,7 @@ import "fake-indexeddb/auto";
 import {
   classifyEmail,
   classifyEmailBatch,
+  classifyEmailWithCache,
   isLLMError,
   extractFormation,
   extractFormationBatch,
@@ -26,6 +27,9 @@ import {
   NiveauPersonnalisation
 } from "../../types";
 import type { EmailInput } from "./types";
+import { CURRENT_MODEL_VERSION } from "../../stores/llmCacheStore";
+import * as llmCacheStore from "../../stores/llmCacheStore";
+import { getSettings } from "../../stores/settingsStore";
 
 // Mock du settingsStore pour fournir une clé API
 vi.mock("../../stores/settingsStore", () => ({
@@ -252,16 +256,22 @@ describe("LLM Parser", () => {
 
     it("lance une erreur si pas de clé API", async () => {
       // Override le mock pour retourner pas de clé
-      vi.mocked(
-        await import("../../stores/settingsStore")
-      ).getSettings.mockResolvedValueOnce({
+      (
+        getSettings as unknown as {
+          mockResolvedValueOnce: (v: unknown) => void;
+        }
+      ).mockResolvedValueOnce({
         openaiApiKey: undefined,
         geocodingProvider: "nominatim"
       });
 
-      await expect(classifyEmail(SAMPLE_EMAILS.inter)).rejects.toSatisfy(
-        isLLMError
-      );
+      let caught: unknown;
+      try {
+        await classifyEmail(SAMPLE_EMAILS.inter);
+      } catch (e) {
+        caught = e;
+      }
+      expect(isLLMError(caught)).toBe(true);
     });
 
     it("lance une erreur API si la requête échoue", async () => {
@@ -271,9 +281,13 @@ describe("LLM Parser", () => {
         text: () => Promise.resolve("Unauthorized")
       });
 
-      await expect(
-        classifyEmail(SAMPLE_EMAILS.inter, "invalid-key")
-      ).rejects.toSatisfy(isLLMError);
+      let caught: unknown;
+      try {
+        await classifyEmail(SAMPLE_EMAILS.inter, "invalid-key");
+      } catch (e) {
+        caught = e;
+      }
+      expect(isLLMError(caught)).toBe(true);
     });
 
     it("lance une erreur de parsing si JSON invalide", async () => {
@@ -291,9 +305,13 @@ describe("LLM Parser", () => {
           })
       });
 
-      await expect(
-        classifyEmail(SAMPLE_EMAILS.inter, "test-key")
-      ).rejects.toSatisfy(isLLMError);
+      let caught: unknown;
+      try {
+        await classifyEmail(SAMPLE_EMAILS.inter, "test-key");
+      } catch (e) {
+        caught = e;
+      }
+      expect(isLLMError(caught)).toBe(true);
     });
 
     it("lance une erreur si type invalide dans la réponse", async () => {
@@ -315,9 +333,13 @@ describe("LLM Parser", () => {
           })
       });
 
-      await expect(
-        classifyEmail(SAMPLE_EMAILS.inter, "test-key")
-      ).rejects.toSatisfy(isLLMError);
+      let caught: unknown;
+      try {
+        await classifyEmail(SAMPLE_EMAILS.inter, "test-key");
+      } catch (e) {
+        caught = e;
+      }
+      expect(isLLMError(caught)).toBe(true);
     });
   });
 
@@ -375,6 +397,72 @@ describe("LLM Parser", () => {
       expect(results.get("email-1")?.type).toBe(TypeEmail.AUTRE); // Erreur → autre
       expect(results.get("email-1")?.confidence).toBe(0);
       expect(results.get("email-3")?.type).toBe(TypeEmail.ANNULATION);
+    });
+  });
+
+  describe("classifyEmailWithCache", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("ignore une entrée de cache si modelVersion ne correspond pas", async () => {
+      vi.spyOn(llmCacheStore, "getLLMCacheEntry").mockResolvedValueOnce({
+        emailId: SAMPLE_EMAILS.inter.id,
+        classification: {
+          type: TypeEmail.DEMANDE_INTRA,
+          confidence: 0.99,
+          reason: "Ancienne classification erronée"
+        },
+        extraction: null,
+        cachedAt: new Date().toISOString(),
+        modelVersion: "old-model-v0"
+      });
+
+      const cacheClassificationSpy = vi
+        .spyOn(llmCacheStore, "cacheClassification")
+        .mockResolvedValue();
+
+      mockFetch.mockResolvedValueOnce(
+        mockOpenAIResponse(
+          "convocation-inter",
+          0.95,
+          "Contient 'animation inter' et lieu ORSYS"
+        )
+      );
+
+      const { result, fromCache } = await classifyEmailWithCache(
+        SAMPLE_EMAILS.inter,
+        "test-key",
+        true
+      );
+
+      expect(fromCache).toBe(false);
+      expect(result.type).toBe(TypeEmail.CONVOCATION_INTER);
+      expect(cacheClassificationSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("utilise le cache si modelVersion correspond", async () => {
+      vi.spyOn(llmCacheStore, "getLLMCacheEntry").mockResolvedValueOnce({
+        emailId: SAMPLE_EMAILS.inter.id,
+        classification: {
+          type: TypeEmail.CONVOCATION_INTER,
+          confidence: 0.93,
+          reason: "En cache"
+        },
+        extraction: null,
+        cachedAt: new Date().toISOString(),
+        modelVersion: CURRENT_MODEL_VERSION
+      });
+
+      const { result, fromCache } = await classifyEmailWithCache(
+        SAMPLE_EMAILS.inter,
+        "test-key",
+        true
+      );
+
+      expect(fromCache).toBe(true);
+      expect(result.type).toBe(TypeEmail.CONVOCATION_INTER);
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 });
@@ -723,16 +811,25 @@ describe("LLM Extraction", () => {
 
   describe("extractFormation - Erreurs", () => {
     it("lance une erreur si pas de clé API", async () => {
-      vi.mocked(
-        await import("../../stores/settingsStore")
-      ).getSettings.mockResolvedValueOnce({
+      (
+        getSettings as unknown as {
+          mockResolvedValueOnce: (v: unknown) => void;
+        }
+      ).mockResolvedValueOnce({
         openaiApiKey: undefined,
         geocodingProvider: "nominatim"
       });
 
-      await expect(
-        extractFormation(SAMPLE_EMAILS.inter, TypeEmail.CONVOCATION_INTER)
-      ).rejects.toSatisfy(isLLMError);
+      let caught: unknown;
+      try {
+        await extractFormation(
+          SAMPLE_EMAILS.inter,
+          TypeEmail.CONVOCATION_INTER
+        );
+      } catch (e) {
+        caught = e;
+      }
+      expect(isLLMError(caught)).toBe(true);
     });
 
     it("lance une erreur si JSON invalide", async () => {
@@ -750,13 +847,17 @@ describe("LLM Extraction", () => {
           })
       });
 
-      await expect(
-        extractFormation(
+      let caught: unknown;
+      try {
+        await extractFormation(
           SAMPLE_EMAILS.inter,
           TypeEmail.CONVOCATION_INTER,
           "test-key"
-        )
-      ).rejects.toSatisfy(isLLMError);
+        );
+      } catch (e) {
+        caught = e;
+      }
+      expect(isLLMError(caught)).toBe(true);
     });
   });
 
