@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { db } from "../../stores/db";
 import type { EmailRaw } from "../../types";
 import type { LLMCacheEntry } from "../../stores/llmCacheStore";
+import { analyzeEmailWithCache } from "../../services/llm/parser";
+import { useSettings } from "../../hooks/useSettings";
 
 function formatDateTime(isoDate: string): string {
   try {
@@ -24,10 +26,13 @@ function renderJson(value: unknown): string {
 
 export function MailDetailPage() {
   const { emailId } = useParams<{ emailId: string }>();
+  const { settings } = useSettings();
   const [email, setEmail] = useState<EmailRaw | null>(null);
   const [analysis, setAnalysis] = useState<LLMCacheEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [reanalysisError, setReanalysisError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +119,49 @@ export function MailDetailPage() {
     return null;
   }
 
+  const llmLabel = analysis?.modelVersion ?? settings.openaiModel ?? "N/A";
+
+  async function handleReanalyze(): Promise<void> {
+    if (!emailId || !email) return;
+
+    setReanalyzing(true);
+    setReanalysisError(null);
+
+    try {
+      const result = await analyzeEmailWithCache(
+        {
+          id: email.id,
+          subject: email.subject,
+          body: email.body
+        },
+        settings.openaiApiKey,
+        false,
+        0
+      );
+
+      // Mettre à jour le cache local affiché
+      const updatedAnalysis = await db.llmCache.get(email.id);
+      setAnalysis(updatedAnalysis ?? null);
+
+      // Mettre à jour le type sur l'email (utile pour certaines vues)
+      const existingEmail = await db.emails.get(email.id);
+      if (existingEmail) {
+        const updatedEmail: EmailRaw = {
+          ...existingEmail,
+          processed: true,
+          type: result.classification.type
+        };
+        await db.emails.put(updatedEmail);
+        setEmail(updatedEmail);
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Erreur inconnue";
+      setReanalysisError(message);
+    } finally {
+      setReanalyzing(false);
+    }
+  }
+
   const classificationType =
     analysis?.classification?.type || email.type || null;
 
@@ -153,12 +201,32 @@ export function MailDetailPage() {
       {/* Section Analyse */}
       <div className="bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden">
         <div className="px-4 py-3 bg-gray-800 border-b border-gray-700">
-          <h2 className="text-lg font-semibold text-white">Analyse</h2>
-          <p className="text-sm text-gray-400">
-            Classification et extraction par le LLM
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white">Analyse</h2>
+              <p className="text-sm text-gray-400">
+                Classification et extraction par le LLM
+              </p>
+              <p className="text-xs text-gray-500 mt-1">LLM : {llmLabel}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleReanalyze}
+              disabled={reanalyzing}
+              className="btn px-3 py-1.5 rounded bg-gray-700 text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
+              title="Relancer la classification et l'extraction de cet email"
+            >
+              {reanalyzing ? "Analyse..." : "Relancer l'analyse"}
+            </button>
+          </div>
         </div>
         <div className="p-4">
+          {reanalysisError && (
+            <div className="mb-4 bg-red-900/20 border border-red-500/50 rounded-lg p-3 text-red-300">
+              <p className="font-semibold">Relance impossible</p>
+              <p className="text-sm">{reanalysisError}</p>
+            </div>
+          )}
           {analysis ? (
             <div className="space-y-4">
               {/* Classification */}
@@ -183,7 +251,7 @@ export function MailDetailPage() {
 
               {/* Métadonnées */}
               <div className="text-xs text-gray-500 pt-2 border-t border-gray-700">
-                <span>Modèle : {analysis.modelVersion || "N/A"}</span>
+                <span>LLM utilisé : {analysis.modelVersion || "N/A"}</span>
                 <span className="mx-2">•</span>
                 <span>
                   Mis en cache :{" "}

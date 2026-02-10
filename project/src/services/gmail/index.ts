@@ -10,7 +10,9 @@ export {
   GMAIL_TOKEN_EXPIRY_KEY,
   getGoogleClientId,
   setGoogleClientId,
-  clearGoogleClientId
+  clearGoogleClientId,
+  EXCLUDED_SUBJECT_PATTERNS,
+  shouldExcludeEmail
 } from "./config";
 
 // Authentification

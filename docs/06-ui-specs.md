@@ -213,6 +213,8 @@ Cette page est accessible en cliquant sur un email depuis la page **Mails**.
 Objectifs :
 
 - afficher en haut l'**analyse** réalisée pour cet email (classification et données extraites) ;
+- permettre de **relancer l'analyse** afin de régénérer les deux objets d'analyse (**Classification** et **Extraction**) ;
+- afficher un label indiquant le **LLM utilisé** pour la dernière analyse ;
 - afficher en bas l'**email brut** dans un accordéon replié par défaut.
 
 ### Layout (conceptuel)
@@ -227,8 +229,9 @@ Objectifs :
 │  Sujet : Confirmation animation inter - GIAPA1                              │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │  🎯 Analyse                                                           │   │
+│  │  🎯 Analyse                                        [↻ Relancer l'analyse]│   │
 │  │  ─────────                                                            │   │
+│  │  LLM utilisé : GPT-5 Nano                                              │   │
 │  │  Type détecté : convocation-inter                                     │   │
 │  │  Confiance : 95%  ████████████████████░░░░                            │   │
 │  │  Raison : Contient 'animation inter', lieu ORSYS La Défense          │   │
@@ -267,13 +270,15 @@ Objectifs :
 
 ### Fonctionnalités
 
-| Fonctionnalité      | Description                                                    |
-| ------------------- | -------------------------------------------------------------- |
-| **Retour liste**    | Lien pour revenir à la page Mails                              |
-| **Section Analyse** | Affiche classification (type, confiance, raison) et extraction |
-| **Lien formation**  | Si une formation est associée, lien vers sa page détail        |
-| **Accordéon email** | Email brut replié par défaut, dépliable au clic                |
-| **Copie email**     | Bouton pour copier le contenu brut de l'email                  |
+| Fonctionnalité       | Description                                                             |
+| -------------------- | ----------------------------------------------------------------------- |
+| **Retour liste**     | Lien pour revenir à la page Mails                                       |
+| **Section Analyse**  | Affiche classification (type, confiance, raison) et extraction          |
+| **Relancer analyse** | Bouton pour relancer l'analyse et régénérer Classification + Extraction |
+| **LLM utilisé**      | Label affichant le modèle LLM utilisé pour la dernière analyse          |
+| **Lien formation**   | Si une formation est associée, lien vers sa page détail                 |
+| **Accordéon email**  | Email brut replié par défaut, dépliable au clic                         |
+| **Copie email**      | Bouton pour copier le contenu brut de l'email                           |
 
 ---
 

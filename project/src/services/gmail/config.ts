@@ -2,6 +2,10 @@
  * Configuration du service Gmail OAuth
  */
 
+// =============================================================================
+// Configuration principale
+// =============================================================================
+
 /** Configuration Gmail par défaut */
 export const GMAIL_CONFIG = {
   /** Scopes nécessaires (lecture seule) */
@@ -19,6 +23,33 @@ export const GMAIL_CONFIG = {
   /** Délai entre les requêtes (ms) pour rate limiting */
   requestDelay: 100
 };
+
+// =============================================================================
+// Filtrage des emails par sujet (optimisation coûts LLM)
+// Clarification 010 : éviter les appels LLM inutiles
+// =============================================================================
+
+/**
+ * Patterns regex pour exclure certains emails avant l'analyse LLM.
+ * Ces emails sont stockés en cache mais marqués comme traités avec type "autre".
+ */
+export const EXCLUDED_SUBJECT_PATTERNS: RegExp[] = [
+  /Planning ORSYS Réactualisé/i,
+  /Demande Intra /i
+];
+
+/**
+ * Vérifie si un email doit être exclu de l'analyse LLM en fonction de son sujet.
+ * @param subject Sujet de l'email
+ * @returns true si l'email doit être exclu (ne pas envoyer au LLM)
+ */
+export function shouldExcludeEmail(subject: string): boolean {
+  return EXCLUDED_SUBJECT_PATTERNS.some((pattern) => pattern.test(subject));
+}
+
+// =============================================================================
+// Clés localStorage
+// =============================================================================
 
 /** Clé localStorage pour le Client ID Google */
 export const GOOGLE_CLIENT_ID_KEY = "google_client_id";

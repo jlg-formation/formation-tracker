@@ -11,8 +11,9 @@ import {
   fetchAllMessageIds,
   getMessage,
   extractEmailHeaders,
-  extractEmailBody
-} from "../../services/gmail/api";
+  extractEmailBody,
+  shouldExcludeEmail
+} from "../../services/gmail";
 import {
   analyzeEmailBatchWithCache,
   isLLMError,
@@ -37,6 +38,8 @@ interface ExtractionState {
   message: string;
   newEmails: number;
   skippedEmails: number;
+  /** Emails exclus par filtrage regex (économie LLM) */
+  filteredEmails: number;
   errorMessage?: string;
 }
 
@@ -63,7 +66,8 @@ const initialState: ExtractionState = {
   totalCount: 0,
   message: "",
   newEmails: 0,
-  skippedEmails: 0
+  skippedEmails: 0,
+  filteredEmails: 0
 };
 
 const initialAnalysisState: AnalysisState = {
@@ -188,6 +192,7 @@ export function ExtractionPanel() {
 
       let newEmails = 0;
       let skippedEmails = 0;
+      let filteredEmails = 0;
 
       for (let i = 0; i < messageIds.length; i++) {
         const messageId = messageIds[i];
@@ -211,6 +216,11 @@ export function ExtractionPanel() {
           const headers = extractEmailHeaders(fullMessage);
           const body = extractEmailBody(fullMessage);
 
+          // Vérifier si l'email doit être exclu (filtrage par sujet)
+          // Optimisation coûts LLM : certains emails sont marqués comme traités
+          // sans passer par le LLM (clarification 010)
+          const isExcluded = shouldExcludeEmail(headers.subject);
+
           // Créer l'objet EmailRaw
           const emailRaw: EmailRaw = {
             id: fullMessage.id,
@@ -220,17 +230,26 @@ export function ExtractionPanel() {
             date: headers.date,
             body: body.text,
             bodyHtml: body.html,
-            processed: false
+            // Si exclu, marquer comme traité pour éviter l'analyse LLM
+            processed: isExcluded,
+            // Si exclu, définir le type comme AUTRE
+            type: isExcluded ? TypeEmail.AUTRE : undefined
           };
 
           // Stocker dans IndexedDB
           await db.emails.add(emailRaw);
-          newEmails++;
+
+          if (isExcluded) {
+            filteredEmails++;
+          } else {
+            newEmails++;
+          }
 
           setState((prev) => ({
             ...prev,
             currentCount: i + 1,
             newEmails,
+            filteredEmails,
             message: `Téléchargement des emails... (${i + 1}/${messageIds.length})`
           }));
         } catch (fetchError) {
@@ -250,13 +269,27 @@ export function ExtractionPanel() {
       // Extraction terminée
       await refreshCounts();
 
+      // Construire le message de fin
+      const messageParts: string[] = [];
+      if (newEmails > 0) {
+        messageParts.push(`${newEmails} nouveaux emails à analyser`);
+      }
+      if (filteredEmails > 0) {
+        messageParts.push(`${filteredEmails} emails filtrés (économie LLM)`);
+      }
+      const finalMessage =
+        messageParts.length > 0
+          ? `Extraction terminée : ${messageParts.join(", ")}.`
+          : "Extraction terminée : aucun nouvel email.";
+
       setState({
         status: "done",
         currentCount: messageIds.length,
         totalCount: messageIds.length,
         newEmails,
         skippedEmails,
-        message: `Extraction terminée : ${newEmails} nouveaux emails ajoutés.`
+        filteredEmails,
+        message: finalMessage
       });
     } catch (error) {
       const errorMessage =
@@ -691,6 +724,10 @@ export function ExtractionPanel() {
               <span className="text-green-400">{state.newEmails}</span>
             </span>
             <span>
+              Filtrés :{" "}
+              <span className="text-yellow-400">{state.filteredEmails}</span>
+            </span>
+            <span>
               Ignorés :{" "}
               <span className="text-gray-400">{state.skippedEmails}</span>
             </span>
@@ -704,7 +741,9 @@ export function ExtractionPanel() {
           <p className="font-medium">{state.message}</p>
           <p className="text-sm mt-1">
             {state.skippedEmails > 0 &&
-              `${state.skippedEmails} emails déjà présents ont été ignorés.`}
+              `${state.skippedEmails} emails déjà présents ignorés. `}
+            {state.filteredEmails > 0 &&
+              `${state.filteredEmails} emails filtrés par regex (économie LLM).`}
           </p>
         </div>
       )}

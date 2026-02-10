@@ -276,9 +276,27 @@ export interface GeocacheEntry {
 /** Modèles OpenAI supportés */
 export const OPENAI_MODELS = [
   {
+    id: "gpt-5-nano",
+    name: "GPT-5 Nano",
+    description: "Ultra rapide et très économique (recommandé)",
+    pricing: "~0.10$/1M tokens"
+  },
+  {
+    id: "gpt-5-mini",
+    name: "GPT-5 Mini",
+    description: "Nouvelle génération, rapide et performant",
+    pricing: "~0.20$/1M tokens"
+  },
+  {
+    id: "gpt-4.1-nano",
+    name: "GPT-4.1 Nano",
+    description: "Version optimisée de GPT-4.1, très économique",
+    pricing: "~0.10$/1M tokens"
+  },
+  {
     id: "gpt-4o-mini",
     name: "GPT-4o Mini",
-    description: "Rapide et économique (recommandé)",
+    description: "Rapide et économique",
     pricing: "~0.15$/1M tokens"
   },
   {
@@ -313,7 +331,7 @@ export type OpenAIModelId = (typeof OPENAI_MODELS)[number]["id"];
 export interface AppSettings {
   /** Clé API OpenAI */
   openaiApiKey?: string;
-  /** Modèle OpenAI à utiliser (défaut: gpt-5-nano) */
+  /** Modèle OpenAI à utiliser (défaut: gpt-5-nano, privilégier < 0.50$/1M tokens) */
   openaiModel?: OpenAIModelId;
   /** Délai entre les appels LLM en ms (défaut: 500, pour éviter les rate limits 429) */
   llmDelayMs?: number;
