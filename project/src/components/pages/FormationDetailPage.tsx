@@ -565,8 +565,10 @@ export function FormationDetailPage() {
               Emails bruts manquants dans le cache : {missingEmailIds.length}
             </div>
             <div className="text-xs text-amber-200/80 mt-1">
-              La formation référence ces IDs dans <span className="font-mono">emailIds</span>, mais ils ne sont pas présents dans IndexedDB.
-              Cela arrive typiquement après un import partiel ou un nettoyage du cache des emails.
+              La formation référence ces IDs dans{" "}
+              <span className="font-mono">emailIds</span>, mais ils ne sont pas
+              présents dans IndexedDB. Cela arrive typiquement après un import
+              partiel ou un nettoyage du cache des emails.
             </div>
             <div className="text-xs text-amber-100/80 mt-2 font-mono break-all">
               {missingEmailIds.join(", ")}
