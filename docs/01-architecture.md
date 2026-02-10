@@ -54,33 +54,65 @@ ORSYS Training Tracker est une **Single Page Application (SPA)** React qui perme
 
 ### Flux d'extraction
 
+Le traitement des emails est découpé en **deux étapes indépendantes** :
+
+1. **Analyse LLM** : Classification + Extraction des données JSON → stockage dans `emails_raw`
+2. **Fusion** : Génération/mise à jour des formations → stockage dans `formations`
+
+Cette séparation permet de **relancer la fusion sans refaire l'analyse** (économie de tokens LLM) ou d'**analyser de nouveaux emails sans fusionner immédiatement**.
+
 ```
-┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
-│  Bouton  │────▶│  Gmail   │────▶│   LLM    │────▶│ Geocoding│────▶│ IndexedDB│
-│ Extraire │     │   API    │     │  Parser  │     │  Service │     │  Store   │
-└──────────┘     └──────────┘     └──────────┘     └──────────┘     └──────────┘
-                      │                │                │
-                      ▼                ▼                ▼
-                 emails_raw      Classification     geocache
-                   cache         + Extraction
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                           ÉTAPE 1 : EXTRACTION + ANALYSE                               │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│  ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐                       │
+│  │  Bouton  │────▶│  Gmail   │────▶│   LLM    │────▶│ IndexedDB│                       │
+│  │ Extraire │     │   API    │     │  Parser  │     │  emails  │                       │
+│  └──────────┘     └──────────┘     └──────────┘     └──────────┘                       │
+│                        │                │                                              │
+│                        ▼                ▼                                              │
+│                   emails_raw      Classification                                       │
+│                     cache         + Extraction                                         │
+│                                   (JSON stocké)                                        │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              ÉTAPE 2 : FUSION                                          │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│  ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐                       │
+│  │  Bouton  │────▶│  Emails  │────▶│ Geocoding│────▶│ IndexedDB│                       │
+│  │ Fusionner│     │ analysés │     │  Service │     │formations│                       │
+│  └──────────┘     └──────────┘     └──────────┘     └──────────┘                       │
+│                        │                │                                              │
+│                        ▼                ▼                                              │
+│                   Regroupement     geocache                                            │
+│                   par formation                                                        │
+└────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Détail du flux
 
+#### Étape 1 : Extraction + Analyse
+
 1. **Authentification Gmail** : OAuth 2.0 popup → token stocké
 2. **Requête Gmail** : `from:orsys.fr after:2014/01/01` → récupération des emails
-3. **Cache IndexedDB** : Les emails déjà traités sont ignorés (économie API)
+3. **Cache IndexedDB** : Les emails déjà téléchargés sont ignorés (économie API)
 4. **Classification LLM** : Chaque email est classifié (convocation, annulation, etc.)
 5. **Extraction LLM** : Les données structurées sont extraites en JSON
+6. **Stockage analyse** : Les résultats (classification + extraction JSON) sont stockés dans la table `emails` avec le flag `processed = true`
 
-- Les résultats d'analyse (classification + extraction) sont conservés pour affichage dans la page « Mails ».
+Les résultats d'analyse sont conservés pour affichage dans la page « Mails ».
 
-- **Règles métier (post-traitement)** : certaines règles sont appliquées après l'extraction (ex. formations virtuelles, voir plus bas).
+**Règles métier (post-traitement)** : certaines règles sont appliquées après l'extraction (ex. formations virtuelles, voir plus bas).
 
-6. **Géocodage** : Les adresses sont converties en coordonnées GPS (sauf formations annulées)
-7. **Fusion** : Les emails relatifs à la même session sont fusionnés
-8. **Contrôles de cohérence** : Détection d'incohérences (ex. recouvrement de dates entre formations) et signalement dans l'interface (section « Erreurs » des paramètres)
-9. **Stockage** : Les formations sont persistées dans IndexedDB
+#### Étape 2 : Fusion (déclenchable séparément)
+
+7. **Fusion** : Les emails analysés relatifs à la même session sont fusionnés (clé : `codeEtendu + dateDebut`)
+8. **Géocodage** : Les adresses sont converties en coordonnées GPS (sauf formations annulées)
+9. **Contrôles de cohérence** : Détection d'incohérences (ex. recouvrement de dates entre formations) et signalement dans l'interface (section « Erreurs » des paramètres)
+10. **Stockage formations** : Les formations sont persistées dans IndexedDB
 
 Après extraction, si le géocodage est absent ou imprécis, l'utilisateur peut **corriger manuellement** les coordonnées GPS depuis la **page détail** d'une formation : bouton « Corriger la position », clic sur la carte, puis « Valider la nouvelle position ».
 

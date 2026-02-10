@@ -84,6 +84,33 @@ L'interface est une **Single Page Application** en français, composée de 6 pag
 | **TopCoursesChart** | Bar chart horizontal top 10 codes | `stats.parCode` (top 10)                                                                                                       |
 | **TypePieChart**    | Pie/donut chart inter vs intra    | `stats.inter`, `stats.intra`                                                                                                   |
 
+### Section Fusion
+
+Le Dashboard affiche une section permettant de **lancer la fusion séparément de l'analyse** :
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  🔄 Fusion des emails analysés                                               │
+│                                                                              │
+│  245 emails analysés prêts à fusionner                                       │
+│  156 formations existantes                                                   │
+│                                                                              │
+│  [🔀 Lancer la fusion]                                                       │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+| Élément                 | Description                                                               |
+| ----------------------- | ------------------------------------------------------------------------- |
+| **Compteur analysés**   | Nombre d'emails avec `processed = true` et résultats d'extraction valides |
+| **Compteur formations** | Nombre de formations existantes en base                                   |
+| **Bouton Fusionner**    | Lance la fusion sans refaire l'analyse LLM (économie de tokens)           |
+
+**Cas d'usage** :
+
+- Relancer la fusion après correction d'un bug dans la logique de fusion
+- Recréer les formations à partir des analyses existantes sans coût LLM supplémentaire
+- Fusionner après avoir analysé de nouveaux emails sans fusion automatique
+
 ---
 
 ## Page 2 : Carte

@@ -17,10 +17,8 @@ import {
 import {
   analyzeEmailBatchWithCache,
   isLLMError,
-  type AnalysisAbortSignal,
-  type ExtractionResult
+  type AnalysisAbortSignal
 } from "../../services/llm";
-import { fusionnerEmails, type FusionInput } from "../../utils/fusion";
 import { db } from "../../stores/db";
 import { getSettings } from "../../stores/settingsStore";
 import {
@@ -49,8 +47,8 @@ interface AnalysisState {
   currentCount: number;
   totalCount: number;
   message: string;
-  formationsCreees: number;
-  formationsMisesAJour: number;
+  /** Emails analysés avec succès */
+  emailsAnalyses: number;
   emailsIgnores: number;
   emailsEnErreur: number;
   /** Emails analysés depuis le cache (économie LLM) */
@@ -75,8 +73,7 @@ const initialAnalysisState: AnalysisState = {
   currentCount: 0,
   totalCount: 0,
   message: "",
-  formationsCreees: 0,
-  formationsMisesAJour: 0,
+  emailsAnalyses: 0,
   emailsIgnores: 0,
   emailsEnErreur: 0,
   fromCache: 0,
@@ -361,35 +358,10 @@ export function ExtractionPanel() {
       });
 
       const BATCH_SIZE = 5;
-      let fusionInputs: FusionInput[] = [];
-      let totalCreated = resumeFromPause ? previousState.formationsCreees : 0;
-      let totalUpdated = resumeFromPause
-        ? previousState.formationsMisesAJour
-        : 0;
+      let analyzedCount = resumeFromPause ? previousState.emailsAnalyses : 0;
       let ignoredCount = resumeFromPause ? previousState.emailsIgnores : 0;
       let fromCacheCount = resumeFromPause ? previousState.fromCache : 0;
       let fromLLMCount = resumeFromPause ? previousState.fromLLM : 0;
-
-      /**
-       * Sauvegarde incrémentale des formations
-       */
-      const saveFormationsBatch = async () => {
-        if (fusionInputs.length === 0) return;
-
-        const existingFormations = await db.formations.toArray();
-        const fusionResult = fusionnerEmails(fusionInputs, existingFormations);
-
-        for (const formation of fusionResult.created) {
-          await db.formations.add(formation);
-        }
-        for (const formation of fusionResult.updated) {
-          await db.formations.put(formation);
-        }
-
-        totalCreated += fusionResult.stats.formationsCreees;
-        totalUpdated += fusionResult.stats.formationsMisesAJour;
-        fusionInputs = [];
-      };
 
       try {
         // Convertir les emails en format EmailInput
@@ -398,16 +370,6 @@ export function ExtractionPanel() {
           subject: email.subject,
           body: email.body
         }));
-
-        // Map pour stocker les résultats d'extraction pour le batch de fusion
-        const extractionResults = new Map<
-          string,
-          {
-            email: EmailRaw;
-            classification: { type: TypeEmail; confidence: number };
-            extraction: ExtractionResult;
-          }
-        >();
 
         // Analyser les emails avec cache et support d'interruption
         const { results, stats } = await analyzeEmailBatchWithCache(
@@ -461,26 +423,15 @@ export function ExtractionPanel() {
                 await refreshUnprocessedCount();
               }
 
-              // Ignorer les emails non pertinents
+              // Ignorer les emails non pertinents (pour le comptage)
               if (
                 classification.type === TypeEmail.AUTRE ||
                 classification.type === TypeEmail.RAPPEL ||
                 classification.confidence < 0.7
               ) {
                 ignoredCount++;
-                return;
-              }
-
-              // Stocker pour le batch de fusion
-              if (extraction) {
-                extractionResults.set(emailId, {
-                  email,
-                  classification: {
-                    type: classification.type,
-                    confidence: classification.confidence
-                  },
-                  extraction
-                });
+              } else {
+                analyzedCount++;
               }
             }
           }
@@ -492,35 +443,12 @@ export function ExtractionPanel() {
         fromLLMCount =
           (resumeFromPause ? previousState.fromLLM : 0) + stats.fromLLM;
 
-        // Traiter les résultats de fusion en batch
-        for (const [, data] of extractionResults) {
-          fusionInputs.push({
-            email: data.email,
-            extraction: data.extraction,
-            classification: data.classification
-          });
-
-          // Sauvegarder par batch
-          if (fusionInputs.length >= BATCH_SIZE) {
-            setAnalysisState((prev) => ({
-              ...prev,
-              message: `Sauvegarde des formations...`
-            }));
-            await saveFormationsBatch();
-          }
-        }
-
         // Si l'analyse a été interrompue, garder les emails restants pour reprise
         if (stats.aborted) {
           const processedIds = new Set(results.keys());
           pendingEmailsRef.current = emailsToAnalyze.filter(
             (e) => !processedIds.has(e.id)
           );
-        }
-
-        // Sauvegarder le dernier batch
-        if (fusionInputs.length > 0) {
-          await saveFormationsBatch();
         }
 
         // Rafraîchir les compteurs
@@ -531,8 +459,7 @@ export function ExtractionPanel() {
           setAnalysisState((prev) => ({
             ...prev,
             status: "paused",
-            formationsCreees: totalCreated,
-            formationsMisesAJour: totalUpdated,
+            emailsAnalyses: analyzedCount,
             emailsIgnores: ignoredCount,
             fromCache: fromCacheCount,
             fromLLM: fromLLMCount,
@@ -542,16 +469,15 @@ export function ExtractionPanel() {
           pendingEmailsRef.current = [];
           const doneMessage =
             stats.errors > 0
-              ? `Analyse terminée. ${stats.errors} email(s) en erreur.`
-              : "Analyse terminée.";
+              ? `Analyse terminée. ${stats.errors} email(s) en erreur. Lancez la fusion depuis le Dashboard.`
+              : "Analyse terminée. Lancez la fusion depuis le Dashboard pour générer les formations.";
 
           setAnalysisState({
             status: "done",
             currentCount: stats.processed,
             totalCount: stats.total,
             message: doneMessage,
-            formationsCreees: totalCreated,
-            formationsMisesAJour: totalUpdated,
+            emailsAnalyses: analyzedCount,
             emailsIgnores: ignoredCount,
             emailsEnErreur: stats.errors,
             fromCache: fromCacheCount,
@@ -559,14 +485,6 @@ export function ExtractionPanel() {
           });
         }
       } catch (error) {
-        // Sauvegarder le batch en cours si possible
-        if (fusionInputs.length > 0) {
-          try {
-            await saveFormationsBatch();
-          } catch {
-            // Ignorer
-          }
-        }
         await refreshCounts();
 
         // Extraire le message d'erreur lisible
@@ -587,12 +505,11 @@ export function ExtractionPanel() {
         setAnalysisState((prev) => ({
           ...prev,
           status: "error",
-          formationsCreees: totalCreated,
-          formationsMisesAJour: totalUpdated,
+          emailsAnalyses: analyzedCount,
           emailsIgnores: ignoredCount,
           fromCache: fromCacheCount,
           fromLLM: fromLLMCount,
-          errorMessage: `${userFriendlyMessage}${totalCreated + totalUpdated > 0 ? ` (${totalCreated + totalUpdated} formations sauvegardées)` : ""}`,
+          errorMessage: userFriendlyMessage,
           message: `Erreur: ${errorMessage}`
         }));
       }
@@ -821,10 +738,7 @@ export function ExtractionPanel() {
         <div className="mb-4 p-4 bg-green-900/30 border border-green-600 rounded-lg text-green-300">
           <p className="font-medium">{analysisState.message}</p>
           <div className="text-sm mt-2 space-y-1">
-            <p>✅ {analysisState.formationsCreees} formations créées</p>
-            <p>
-              🔄 {analysisState.formationsMisesAJour} formations mises à jour
-            </p>
+            <p>✅ {analysisState.emailsAnalyses} emails analysés avec succès</p>
             <p>
               ⏭️ {analysisState.emailsIgnores} emails ignorés (rappels, autres)
             </p>
@@ -838,6 +752,13 @@ export function ExtractionPanel() {
                 l'analyse pour réessayer)
               </p>
             )}
+            <p className="text-cyan-300 mt-2">
+              🔀 Allez sur le{" "}
+              <Link to="/" className="underline hover:text-cyan-100">
+                Dashboard
+              </Link>{" "}
+              pour lancer la fusion et générer les formations.
+            </p>
           </div>
         </div>
       )}
@@ -848,10 +769,7 @@ export function ExtractionPanel() {
           <p className="font-medium">Erreur lors de l'analyse</p>
           <p className="text-sm mt-1">{analysisState.errorMessage}</p>
           <div className="text-sm mt-2 space-y-1 text-red-200">
-            <p>✅ {analysisState.formationsCreees} formations créées</p>
-            <p>
-              🔄 {analysisState.formationsMisesAJour} formations mises à jour
-            </p>
+            <p>✅ {analysisState.emailsAnalyses} emails analysés</p>
             <p>⏭️ {analysisState.emailsIgnores} emails ignorés</p>
             <p>
               💾 {analysisState.fromCache} depuis le cache,{" "}

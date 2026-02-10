@@ -11,18 +11,33 @@ import { TopCoursesChart } from "./TopCoursesChart";
 import { TypePieChart } from "./TypePieChart";
 import { exportToJson, exportToCsv, exportToPdf } from "../../services/export";
 import { db } from "../../stores/db";
+import {
+  runFusion,
+  countAnalyzedEmails,
+  type FusionState
+} from "../../services/fusion";
 
 /**
  * Dashboard principal avec statistiques et graphiques
  */
 export function Dashboard() {
-  const { formations, loading, error } = useFormations();
+  const {
+    formations,
+    loading,
+    error,
+    refresh: refreshFormations
+  } = useFormations();
   const [exporting, setExporting] = useState<"json" | "csv" | "pdf" | null>(
     null
   );
   const [resetting, setResetting] = useState(false);
   const [emailsCount, setEmailsCount] = useState<number>(0);
   const [unprocessedCount, setUnprocessedCount] = useState<number>(0);
+
+  // État de la fusion
+  const [analyzedCount, setAnalyzedCount] = useState<number>(0);
+  const [fusionState, setFusionState] = useState<FusionState | null>(null);
+  const [isFusing, setIsFusing] = useState(false);
 
   // Charger les compteurs d'emails
   const refreshEmailCounts = useCallback(async () => {
@@ -32,6 +47,10 @@ export function Dashboard() {
       .count();
     setEmailsCount(total);
     setUnprocessedCount(unprocessed);
+
+    // Compter les emails analysés prêts à fusionner
+    const analyzed = await countAnalyzedEmails();
+    setAnalyzedCount(analyzed.withCache);
   }, []);
 
   useEffect(() => {
@@ -53,6 +72,25 @@ export function Dashboard() {
       await refreshEmailCounts();
     } finally {
       setResetting(false);
+    }
+  };
+
+  // Handler pour lancer la fusion
+  const handleFusion = async () => {
+    setIsFusing(true);
+    setFusionState(null);
+    try {
+      await runFusion({
+        geocode: true,
+        onProgress: (state) => {
+          setFusionState(state);
+        }
+      });
+      // Rafraîchir les formations après fusion
+      await refreshFormations();
+      await refreshEmailCounts();
+    } finally {
+      setIsFusing(false);
     }
   };
 
@@ -134,6 +172,88 @@ export function Dashboard() {
               ? "Tous non analysés"
               : "Marquer tous comme non analysés"}
           </button>
+        </div>
+      )}
+
+      {/* Section Fusion des emails analysés */}
+      {(analyzedCount > 0 || isFusing || fusionState) && (
+        <div className="p-4 bg-cyan-900/20 border border-cyan-600/50 rounded-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-medium text-cyan-200">
+                🔀 Fusion des emails analysés
+              </h2>
+              <p className="text-sm text-cyan-300/70 mt-1">
+                {analyzedCount} email{analyzedCount > 1 ? "s" : ""} analysé
+                {analyzedCount > 1 ? "s" : ""} prêt
+                {analyzedCount > 1 ? "s" : ""} à fusionner
+                {formations.length > 0 && (
+                  <span className="ml-2">
+                    • {formations.length} formation
+                    {formations.length > 1 ? "s" : ""} existante
+                    {formations.length > 1 ? "s" : ""}
+                  </span>
+                )}
+              </p>
+            </div>
+            <button
+              onClick={handleFusion}
+              disabled={isFusing || analyzedCount === 0}
+              className="btn px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-cyan-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              {isFusing ? (
+                <span className="animate-spin">⏳</span>
+              ) : (
+                <span>🔀</span>
+              )}
+              {isFusing ? "Fusion en cours..." : "Lancer la fusion"}
+            </button>
+          </div>
+
+          {/* Progression de la fusion */}
+          {fusionState && (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm text-cyan-300">{fusionState.message}</p>
+
+              {fusionState.status === "geocoding" &&
+                fusionState.geocodageTotal > 0 && (
+                  <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-cyan-500 transition-all duration-300"
+                      style={{
+                        width: `${(fusionState.geocodageEnCours / fusionState.geocodageTotal) * 100}%`
+                      }}
+                    />
+                  </div>
+                )}
+
+              {fusionState.status === "done" && (
+                <div className="text-sm space-y-1 text-cyan-200">
+                  <p>
+                    ✅ {fusionState.formationsCreees} formation
+                    {fusionState.formationsCreees > 1 ? "s" : ""} créée
+                    {fusionState.formationsCreees > 1 ? "s" : ""}
+                  </p>
+                  <p>
+                    🔄 {fusionState.formationsMisesAJour} formation
+                    {fusionState.formationsMisesAJour > 1 ? "s" : ""} mise
+                    {fusionState.formationsMisesAJour > 1 ? "s" : ""} à jour
+                  </p>
+                  <p>
+                    ⏭️ {fusionState.emailsIgnores} email
+                    {fusionState.emailsIgnores > 1 ? "s" : ""} ignoré
+                    {fusionState.emailsIgnores > 1 ? "s" : ""}
+                  </p>
+                </div>
+              )}
+
+              {fusionState.status === "error" && (
+                <p className="text-sm text-red-400">
+                  ❌ {fusionState.errorMessage}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
