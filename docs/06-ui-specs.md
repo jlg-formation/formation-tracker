@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-L'interface est une **Single Page Application** en français, composée de 4 pages principales accessibles via une barre de navigation.
+L'interface est une **Single Page Application** en français, composée de 5 pages principales accessibles via une barre de navigation.
 
 ---
 
@@ -12,7 +12,7 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                          HEADER                                      │   │
-│  │  [Logo] ORSYS Training Tracker    [Dashboard] [Carte] [Liste] [⚙️]  │   │
+│  │  [Logo] ORSYS Training Tracker    [Dashboard] [Carte] [Liste] [Mails bruts] [⚙️]  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -194,6 +194,20 @@ Objectif : visualiser les formations **données par le passé** (avec option d'a
 
 ---
 
+## Page 4 : Mails bruts
+
+Objectif : consulter les **emails bruts** et l'**analyse** associée.
+
+Exigences :
+
+- À l’arrivée sur cette page, afficher la **liste de tous les emails**.
+- La liste doit être **paginée** (environ **7 000** emails).
+- Pour chaque email, permettre d’ouvrir un **accordéon** qui affiche :
+  - l’email brut ;
+  - l’analyse réalisée pour cet email.
+
+---
+
 ## Page détail : Formation
 
 Cette page est accessible en cliquant sur une formation depuis la page **Formations** (liste).
@@ -258,7 +272,7 @@ Objectifs :
 
 ---
 
-## Page 4 : Paramètres
+## Page 5 : Paramètres
 
 ### Layout
 
@@ -293,12 +307,9 @@ Objectifs :
 │  │       ou ⏳ Test en cours...                                           │  │
 │  │                                                                        │  │
 │  │  ───────────────────────────────────────────────────────────────────   │  │
-│  │  Modèle OpenAI : [▼ GPT-4o Mini - Rapide et économique (~0.15$/1M) ]  │  │
-│  │                  ├─ GPT-4o Mini - Recommandé (~0.15$/1M tokens)       │  │
-│  │                  ├─ GPT-4o - Plus puissant (~2.50$/1M tokens)         │  │
-│  │                  ├─ GPT-4 Turbo (~10$/1M tokens)                      │  │
-│  │                  ├─ GPT-3.5 Turbo - Économique (~0.50$/1M tokens)     │  │
-│  │                  └─ O3 Mini - Raisonnement (~1.10$/1M tokens)         │  │
+│  │  Modèle OpenAI : [▼ GPT-4o (par défaut) ]                              │  │
+│  │                  ├─ GPT-4o (par défaut)                                │  │
+│  │                  └─ GPT-4o Mini (optionnel)                             │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
@@ -458,6 +469,8 @@ L'application est **mobile-first** et utilise les classes responsives de Tailwin
 │ │   Carte         │ │
 │ ├─────────────────┤ │
 │ │   Formations    │ │
+│ ├─────────────────┤ │
+│ │   Mails bruts   │ │
 │ ├─────────────────┤ │
 │ │ ⚙️ Paramètres   │ │
 │ └─────────────────┘ │

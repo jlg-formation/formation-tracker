@@ -290,22 +290,21 @@ Format de réponse :
 ```typescript
 // Modèles disponibles (configurable dans Paramètres)
 const OPENAI_MODELS = [
-  { id: "gpt-4o-mini", name: "GPT-4o Mini", pricing: "~0.15$/1M tokens" }, // Recommandé
-  { id: "gpt-4o", name: "GPT-4o", pricing: "~2.50$/1M tokens" },
-  { id: "gpt-4-turbo", name: "GPT-4 Turbo", pricing: "~10$/1M tokens" },
-  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", pricing: "~0.50$/1M tokens" },
-  { id: "o3-mini", name: "O3 Mini", pricing: "~1.10$/1M tokens" }
+  { id: "gpt-4o", name: "GPT-4o" },
+  { id: "gpt-4o-mini", name: "GPT-4o Mini" }
 ];
 
 const OPENAI_CONFIG = {
-  model: settings.openaiModel || "gpt-4o-mini", // Configurable par l'utilisateur
+  // Conformément au brief : GPT-4o est le modèle de référence.
+  // Le modèle reste configurable dans les Paramètres.
+  model: settings.openaiModel || "gpt-4o",
   temperature: 0.1, // Faible pour extraction précise
   max_tokens: 2000,
   response_format: { type: "json_object" }
 };
 ```
 
-> **Note** : Le modèle est sélectionnable dans les Paramètres. GPT-4o Mini est recommandé pour un bon rapport qualité/prix.
+> **Note** : Le modèle est sélectionnable dans les Paramètres.
 
 ---
 
@@ -329,28 +328,9 @@ Si `confidence < 0.7` sur la classification :
 
 ---
 
-## Optimisation des coûts
+## Optimisation
 
-### Tokens estimés par email
-
-| Étape          | Input | Output | Total     |
-| -------------- | ----- | ------ | --------- |
-| Classification | ~500  | ~50    | ~550      |
-| Extraction     | ~800  | ~300   | ~1100     |
-| **Total**      | ~1300 | ~350   | **~1650** |
-
-### Coût estimé (GPT-4o, février 2026)
-
-- Input : $2.50 / 1M tokens
-- Output : $10.00 / 1M tokens
-
-Pour 1000 emails :
-
-- Input : 1.3M tokens × $2.50 = $3.25
-- Output : 350K tokens × $10 = $3.50
-- **Total ≈ $7 pour 1000 emails**
-
-### Stratégies d'optimisation
+### Stratégies
 
 1. **Cache** : Ne pas retraiter les emails déjà traités
 2. **Batch** : Possibilité de regrouper plusieurs emails (si API le supporte)

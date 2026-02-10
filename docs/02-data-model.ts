@@ -194,6 +194,15 @@ export interface EmailRaw {
   body: string;
   /** Corps HTML (optionnel) */
   bodyHtml?: string;
+  /** Analyse associée (pour la page « Mails bruts ») */
+  analysis?: {
+    /** Résultat de classification (si disponible) */
+    classification?: ClassificationResult;
+    /** Résultat d'extraction (si disponible) */
+    extraction?: ExtractionResult;
+    /** Erreur d'analyse si l'email n'a pas pu être traité */
+    error?: string;
+  };
   /** Déjà traité ? */
   processed: boolean;
   /** Type d'email détecté */
