@@ -47,6 +47,7 @@ import type {
   ExtractionResultIntra,
   ExtractionResultAnnulation,
   ExtractionResultBonCommande,
+  ExtractionResultBonCommandeMulti,
   ExtractionResultFacturation
 } from "./types";
 import { createLLMError, type LLMErrorCode } from "./types";
@@ -947,16 +948,21 @@ function convertAnnulationToFormation(
 }
 
 /**
- * Convertit le résultat d'extraction bon de commande en Formation partielle
+ * Convertit un résultat brut d'extraction bon de commande en Formation partielle
  */
-function convertBonCommandeToFormation(
+function convertSingleBonCommandeToFormation(
   raw: ExtractionResultBonCommande,
-  emailId: string
-): ExtractionResult {
+  emailId: string,
+  now: string
+): {
+  formation: Partial<Formation>;
+  fieldsExtracted: string[];
+  fieldsMissing: string[];
+  warnings: string[];
+} {
   const fieldsExtracted: string[] = [];
   const fieldsMissing: string[] = [];
   const warnings: string[] = [];
-  const now = new Date().toISOString();
 
   const formation: Partial<Formation> = {
     typeSession: TypeSession.INTRA,
@@ -1016,8 +1022,14 @@ function convertBonCommandeToFormation(
     fieldsMissing.push("dateFin");
   }
 
-  formation.dates =
-    raw.dateDebut && raw.dateFin ? [raw.dateDebut, raw.dateFin] : [];
+  // Utiliser les dates du tableau si présent, sinon construire à partir de dateDebut/dateFin
+  if (raw.dates && raw.dates.length > 0) {
+    formation.dates = raw.dates;
+    fieldsExtracted.push("dates");
+  } else {
+    formation.dates =
+      raw.dateDebut && raw.dateFin ? [raw.dateDebut, raw.dateFin] : [];
+  }
 
   if (raw.nombreJours) {
     formation.nombreJours = raw.nombreJours;
@@ -1029,6 +1041,11 @@ function convertBonCommandeToFormation(
   if (raw.nombreHeures) {
     formation.nombreHeures = raw.nombreHeures;
     fieldsExtracted.push("nombreHeures");
+  }
+
+  // Partie numéro (pour traçabilité)
+  if (raw.partieNumero) {
+    warnings.push(`Partie ${raw.partieNumero} de la formation`);
   }
 
   // Lieu
@@ -1074,6 +1091,78 @@ function convertBonCommandeToFormation(
   }
 
   return { formation, fieldsExtracted, fieldsMissing, warnings };
+}
+
+/**
+ * Convertit le résultat d'extraction bon de commande en Formation(s) partielle(s)
+ * Supporte les bons de commande multi-parties (plusieurs formations)
+ */
+function convertBonCommandeToFormation(
+  raw: ExtractionResultBonCommandeMulti | ExtractionResultBonCommande,
+  emailId: string
+): ExtractionResult {
+  const now = new Date().toISOString();
+
+  // Vérifier si c'est un résultat multi-formations
+  if (
+    "formations" in raw &&
+    Array.isArray(raw.formations) &&
+    raw.formations.length > 0
+  ) {
+    const allFormations: Partial<Formation>[] = [];
+    const allFieldsExtracted: string[] = [];
+    const allFieldsMissing: string[] = [];
+    const allWarnings: string[] = [];
+
+    for (const formationRaw of raw.formations) {
+      const result = convertSingleBonCommandeToFormation(
+        formationRaw,
+        emailId,
+        now
+      );
+      allFormations.push(result.formation);
+
+      // Fusionner les champs (dédupliqués)
+      for (const field of result.fieldsExtracted) {
+        if (!allFieldsExtracted.includes(field)) {
+          allFieldsExtracted.push(field);
+        }
+      }
+      for (const field of result.fieldsMissing) {
+        if (!allFieldsMissing.includes(field)) {
+          allFieldsMissing.push(field);
+        }
+      }
+      allWarnings.push(...result.warnings);
+    }
+
+    // Si plusieurs formations, ajouter un warning informatif
+    if (allFormations.length > 1) {
+      allWarnings.unshift(
+        `Bon de commande multi-parties : ${allFormations.length} formations créées`
+      );
+    }
+
+    return {
+      formation: allFormations[0], // Première formation (rétrocompatibilité)
+      formations: allFormations, // Toutes les formations
+      fieldsExtracted: allFieldsExtracted,
+      fieldsMissing: allFieldsMissing,
+      warnings: allWarnings
+    };
+  }
+
+  // Cas simple : une seule formation (format legacy ou résultat direct)
+  const singleRaw = raw as ExtractionResultBonCommande;
+  const result = convertSingleBonCommandeToFormation(singleRaw, emailId, now);
+
+  return {
+    formation: result.formation,
+    formations: [result.formation],
+    fieldsExtracted: result.fieldsExtracted,
+    fieldsMissing: result.fieldsMissing,
+    warnings: result.warnings
+  };
 }
 
 /**
@@ -1252,7 +1341,9 @@ export async function extractFormation(
       );
     case TypeEmail.BON_COMMANDE:
       return convertBonCommandeToFormation(
-        rawResult as ExtractionResultBonCommande,
+        rawResult as
+          | ExtractionResultBonCommandeMulti
+          | ExtractionResultBonCommande,
         email.id
       );
     case TypeEmail.INFO_FACTURATION:

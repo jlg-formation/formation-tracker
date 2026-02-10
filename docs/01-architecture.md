@@ -100,6 +100,10 @@ Après extraction, si le géocodage est absent ou imprécis, l'utilisateur peut 
   - `accuse-reception` : accusé de réception de documents administratifs ("Service Suivi Qualité Logistique"). Preuve forte que la session a eu lieu.
     Ces emails peuvent contenir des informations partielles : on peut créer/mettre à jour une formation **incomplète** si nécessaire.
 - Mention **« Annulé et remplacé »** : à traiter comme une **annulation** ; indique qu'une nouvelle session est probablement créée en remplacement (ex. changement de dates et/ou de code formation). La session de remplacement est gérée par les emails ultérieurs (nouvelle convocation / bon de commande).
+- **Formations multi-parties (bon de commande)** : un email de `bon-commande` peut contenir **plusieurs formations** sous forme de "parties" (ex. "1ère partie : Du 21 au 22 janvier", "2ème partie : Le 29 janvier"). Dans ce cas :
+  - **Créer autant de formations que de parties** distinctes.
+  - **Lier l'email** (son ID) à **toutes les formations créées** via le champ `emailIds`.
+  - Chaque formation conserve le même `titre`, `codeEtendu`, `referenceIntra`, etc., mais avec ses propres dates (`dateDebut`, `dateFin`, `dates`).
 
 ---
 

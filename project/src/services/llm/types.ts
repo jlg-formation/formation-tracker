@@ -212,12 +212,21 @@ export interface ExtractionResultBonCommande {
   client: string | null;
   dateDebut: string | null;
   dateFin: string | null;
+  dates: string[] | null;
   nombreJours: number | null;
   nombreHeures: number | null;
+  partieNumero: number | null;
   lieu: { nom: string; adresse?: string } | null;
   nombreParticipants: number | null;
   niveauPersonnalisation: string | null;
   entiteFacturation: string | null;
+}
+
+/**
+ * Résultat brut de l'extraction d'un bon de commande multi-formations
+ */
+export interface ExtractionResultBonCommandeMulti {
+  formations: ExtractionResultBonCommande[];
 }
 
 /**
@@ -240,14 +249,17 @@ export type ExtractionResultRaw =
   | ExtractionResultIntra
   | ExtractionResultAnnulation
   | ExtractionResultBonCommande
+  | ExtractionResultBonCommandeMulti
   | ExtractionResultFacturation;
 
 /**
  * Résultat structuré de l'extraction
  */
 export interface ExtractionResult {
-  /** Formation extraite (partielle) */
+  /** Formation extraite (partielle) - unique */
   formation: Partial<Formation>;
+  /** Formations extraites (partielles) - multiples pour bon de commande multi-parties */
+  formations?: Partial<Formation>[];
   /** Champs extraits avec succès */
   fieldsExtracted: string[];
   /** Champs manquants */

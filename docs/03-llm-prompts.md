@@ -238,6 +238,9 @@ Format de réponse :
 
 ### Prompt extraction : Bon de commande
 
+Un bon de commande peut contenir **plusieurs formations** sous forme de "parties" (ex. "1ère partie : Du 21 au 22 janvier", "2ème partie : Le 29 janvier").
+Dans ce cas, retourner un **tableau** de formations, une par partie.
+
 ```
 Extrais les informations de ce bon de commande de formation :
 
@@ -245,28 +248,39 @@ Extrais les informations de ce bon de commande de formation :
 {body}
 ---
 
+Règles importantes :
+- Si l'email contient plusieurs "parties" (ex: "1ère partie", "2ème partie"), crée UNE formation par partie avec ses dates propres.
+- Sinon, retourne une seule formation.
+- Retourne TOUJOURS un tableau (même pour une seule formation).
+
 Format de réponse :
 {
-  "titre": "Intitulé complet de la formation",
-  "codeEtendu": "Code formation",
-  "referenceIntra": "Numéro de référence intra",
-  "referenceCommande": "Référence de commande",
-  "client": "Nom de l'entreprise",
-  "dateDebut": "YYYY-MM-DD",
-  "dateFin": "YYYY-MM-DD",
-  "nombreJours": nombre,
-  "nombreHeures": nombre (si précisé),
-  "lieu": {
-    "nom": "Description du lieu",
-    "adresse": "Adresse si précisée"
-  },
-  "nombreParticipants": nombre,
-  "niveauPersonnalisation": "standard|spécifique|ultra-spécifique",
-  "facturation": {
-    "entite": "Entité à facturer (ORSYS, ORSYS INSTITUT, etc.)",
-    "tarifAnimation": nombre (HT),
-    "plafondFrais": nombre (TTC)
-  }
+  "formations": [
+    {
+      "titre": "Intitulé complet de la formation",
+      "codeEtendu": "Code formation",
+      "referenceIntra": "Numéro de référence intra",
+      "referenceCommande": "Référence de commande",
+      "client": "Nom de l'entreprise",
+      "dateDebut": "YYYY-MM-DD",
+      "dateFin": "YYYY-MM-DD",
+      "dates": ["YYYY-MM-DD", ...],
+      "nombreJours": nombre,
+      "nombreHeures": nombre (si précisé),
+      "partieNumero": numéro de la partie (1, 2, 3...),
+      "lieu": {
+        "nom": "Description du lieu",
+        "adresse": "Adresse si précisée"
+      },
+      "nombreParticipants": nombre,
+      "niveauPersonnalisation": "standard|spécifique|ultra-spécifique",
+      "facturation": {
+        "entite": "Entité à facturer (ORSYS, ORSYS INSTITUT, etc.)",
+        "tarifAnimation": nombre (HT),
+        "plafondFrais": nombre (TTC)
+      }
+    }
+  ]
 }
 ```
 

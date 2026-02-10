@@ -184,6 +184,7 @@ Format de réponse :
 
 /**
  * Génère le prompt d'extraction pour un bon de commande
+ * Un bon de commande peut contenir plusieurs formations ("parties")
  */
 export function buildExtractionPromptBonCommande(body: string): string {
   return `Extrais les informations de ce bon de commande de formation :
@@ -192,24 +193,35 @@ export function buildExtractionPromptBonCommande(body: string): string {
 ${body}
 ---
 
+Règles importantes :
+- Si l'email contient plusieurs "parties" (ex: "1ère partie", "2ème partie"), crée UNE formation par partie avec ses dates propres.
+- Sinon, retourne une seule formation.
+- Retourne TOUJOURS un tableau (même pour une seule formation).
+
 Format de réponse :
 {
-  "titre": "Intitulé complet de la formation",
-  "codeEtendu": "Code formation",
-  "referenceIntra": "Numéro de référence intra",
-  "referenceCommande": "Référence de commande",
-  "client": "Nom de l'entreprise",
-  "dateDebut": "YYYY-MM-DD",
-  "dateFin": "YYYY-MM-DD",
-  "nombreJours": nombre,
-  "nombreHeures": nombre (si précisé),
-  "lieu": {
-    "nom": "Description du lieu",
-    "adresse": "Adresse si précisée"
-  },
-  "nombreParticipants": nombre,
-  "niveauPersonnalisation": "standard|spécifique|ultra-spécifique",
-  "entiteFacturation": "Entité à facturer (ORSYS, ORSYS INSTITUT, etc.)"
+  "formations": [
+    {
+      "titre": "Intitulé complet de la formation",
+      "codeEtendu": "Code formation",
+      "referenceIntra": "Numéro de référence intra",
+      "referenceCommande": "Référence de commande",
+      "client": "Nom de l'entreprise",
+      "dateDebut": "YYYY-MM-DD",
+      "dateFin": "YYYY-MM-DD",
+      "dates": ["YYYY-MM-DD", ...],
+      "nombreJours": nombre,
+      "nombreHeures": nombre (si précisé),
+      "partieNumero": numéro de la partie (1, 2, 3...),
+      "lieu": {
+        "nom": "Description du lieu",
+        "adresse": "Adresse si précisée"
+      },
+      "nombreParticipants": nombre,
+      "niveauPersonnalisation": "standard|spécifique|ultra-spécifique",
+      "entiteFacturation": "Entité à facturer (ORSYS, ORSYS INSTITUT, etc.)"
+    }
+  ]
 }`;
 }
 

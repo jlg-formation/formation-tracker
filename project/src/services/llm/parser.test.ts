@@ -500,11 +500,16 @@ describe("LLM Extraction Prompts", () => {
   });
 
   describe("buildExtractionPromptBonCommande", () => {
-    it("génère un prompt pour extraction bon commande", () => {
+    it("génère un prompt pour extraction bon commande multi-parties", () => {
       const prompt = buildExtractionPromptBonCommande("Corps bon commande");
       expect(prompt).toContain("Corps bon commande");
       expect(prompt).toContain("bon de commande");
       expect(prompt).toContain("Format de réponse");
+      // Vérifier le support multi-parties
+      expect(prompt).toContain("formations");
+      expect(prompt).toContain("parties");
+      expect(prompt).toContain("partieNumero");
+      expect(prompt).toContain("TOUJOURS un tableau");
     });
   });
 
@@ -751,18 +756,23 @@ describe("LLM Extraction", () => {
   });
 
   describe("extractFormation - Bon de commande", () => {
-    it("extrait correctement un bon de commande", async () => {
+    it("extrait correctement un bon de commande simple (format formations[])", async () => {
       const extractedData = {
-        titre: "L'intelligence artificielle au service des développeurs",
-        codeEtendu: "GIAZZ1",
-        referenceIntra: "81982/1",
-        referenceCommande: "GIAZZ1-2026-05-04",
-        client: "CONDUENT BUSINESS SOLUTIONS FRANCE SAS",
-        dateDebut: "2026-05-04",
-        dateFin: "2026-05-06",
-        nombreJours: 3,
-        nombreHeures: 21,
-        entiteFacturation: "ORSYS"
+        formations: [
+          {
+            titre: "L'intelligence artificielle au service des développeurs",
+            codeEtendu: "GIAZZ1",
+            referenceIntra: "81982/1",
+            referenceCommande: "GIAZZ1-2026-05-04",
+            client: "CONDUENT BUSINESS SOLUTIONS FRANCE SAS",
+            dateDebut: "2026-05-04",
+            dateFin: "2026-05-06",
+            dates: ["2026-05-04", "2026-05-05", "2026-05-06"],
+            nombreJours: 3,
+            nombreHeures: 21,
+            entiteFacturation: "ORSYS"
+          }
+        ]
       };
 
       mockFetch.mockResolvedValueOnce(mockExtractionResponse(extractedData));
@@ -783,6 +793,106 @@ describe("LLM Extraction", () => {
       );
       expect(result.formation.facturation?.entite).toBe("ORSYS");
       expect(result.formation.nombreHeures).toBe(21);
+      expect(result.formation.dates).toEqual([
+        "2026-05-04",
+        "2026-05-05",
+        "2026-05-06"
+      ]);
+      // formations[] doit aussi être présent
+      expect(result.formations).toBeDefined();
+      expect(result.formations).toHaveLength(1);
+    });
+
+    it("extrait correctement un bon de commande multi-parties", async () => {
+      const extractedData = {
+        formations: [
+          {
+            titre: "Cybersécurité et intelligence artificielle",
+            codeEtendu: "XXXZZ3",
+            referenceIntra: "79757",
+            client: "Conseil régional des Hauts-de-France",
+            dateDebut: "2026-01-21",
+            dateFin: "2026-01-22",
+            dates: ["2026-01-21", "2026-01-22"],
+            nombreJours: 2,
+            partieNumero: 1,
+            entiteFacturation: "ORSYS"
+          },
+          {
+            titre: "Cybersécurité et intelligence artificielle",
+            codeEtendu: "XXXZZ3",
+            referenceIntra: "79757",
+            client: "Conseil régional des Hauts-de-France",
+            dateDebut: "2026-01-29",
+            dateFin: "2026-01-29",
+            dates: ["2026-01-29"],
+            nombreJours: 1,
+            partieNumero: 2,
+            entiteFacturation: "ORSYS"
+          }
+        ]
+      };
+
+      mockFetch.mockResolvedValueOnce(mockExtractionResponse(extractedData));
+
+      const result = await extractFormation(
+        SAMPLE_EMAILS.intra, // Utiliser l'email intra multi-parties
+        TypeEmail.BON_COMMANDE,
+        "test-key"
+      );
+
+      // Doit créer 2 formations
+      expect(result.formations).toBeDefined();
+      expect(result.formations).toHaveLength(2);
+
+      // Première formation = partie 1
+      expect(result.formations![0].dateDebut).toBe("2026-01-21");
+      expect(result.formations![0].dateFin).toBe("2026-01-22");
+      expect(result.formations![0].dates).toEqual(["2026-01-21", "2026-01-22"]);
+      expect(result.formations![0].nombreJours).toBe(2);
+
+      // Deuxième formation = partie 2
+      expect(result.formations![1].dateDebut).toBe("2026-01-29");
+      expect(result.formations![1].dateFin).toBe("2026-01-29");
+      expect(result.formations![1].dates).toEqual(["2026-01-29"]);
+      expect(result.formations![1].nombreJours).toBe(1);
+
+      // Toutes les formations ont le même emailId
+      expect(result.formations![0].emailIds).toContain("email-2");
+      expect(result.formations![1].emailIds).toContain("email-2");
+
+      // Le champ formation (rétrocompatibilité) = première formation
+      expect(result.formation.dateDebut).toBe("2026-01-21");
+
+      // Warning informatif
+      expect(result.warnings).toContainEqual(
+        expect.stringContaining("2 formations créées")
+      );
+    });
+
+    it("gère le format legacy sans tableau formations", async () => {
+      // Cas où le LLM retourne le format legacy (objet plat)
+      const extractedData = {
+        titre: "Formation test",
+        codeEtendu: "TEST01",
+        dateDebut: "2026-06-01",
+        dateFin: "2026-06-02",
+        nombreJours: 2,
+        entiteFacturation: "ORSYS"
+      };
+
+      mockFetch.mockResolvedValueOnce(mockExtractionResponse(extractedData));
+
+      const result = await extractFormation(
+        SAMPLE_EMAILS.bonCommande,
+        TypeEmail.BON_COMMANDE,
+        "test-key"
+      );
+
+      // Doit fonctionner en mode single formation
+      expect(result.formation.codeEtendu).toBe("TEST01");
+      expect(result.formations).toBeDefined();
+      expect(result.formations).toHaveLength(1);
     });
   });
 
