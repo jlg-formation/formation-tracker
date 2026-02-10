@@ -80,6 +80,7 @@ export function FormationDetailPage() {
   const { formationId } = useParams<{ formationId: string }>();
   const [formation, setFormation] = useState<Formation | null>(null);
   const [emails, setEmails] = useState<EmailRaw[]>([]);
+  const [missingEmailIds, setMissingEmailIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,6 +119,9 @@ export function FormationDetailPage() {
           Boolean(e)
         );
 
+        const existingIds = new Set(existingEmails.map((e) => e.id));
+        const missingIds = f.emailIds.filter((id) => !existingIds.has(id));
+
         existingEmails.sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );
@@ -125,6 +129,7 @@ export function FormationDetailPage() {
         if (!cancelled) {
           setFormation(f);
           setEmails(existingEmails);
+          setMissingEmailIds(missingIds);
           setGpsCorrectionMode(false);
           setCandidateGps(null);
           setGpsError(null);
@@ -553,6 +558,21 @@ export function FormationDetailPage() {
             Debug — utile en cas d'extraction incorrecte
           </div>
         </div>
+
+        {missingEmailIds.length > 0 && (
+          <div className="mb-4 bg-amber-900/20 border border-amber-500/40 rounded-lg p-3 text-amber-200">
+            <div className="text-sm font-semibold">
+              Emails bruts manquants dans le cache : {missingEmailIds.length}
+            </div>
+            <div className="text-xs text-amber-200/80 mt-1">
+              La formation référence ces IDs dans <span className="font-mono">emailIds</span>, mais ils ne sont pas présents dans IndexedDB.
+              Cela arrive typiquement après un import partiel ou un nettoyage du cache des emails.
+            </div>
+            <div className="text-xs text-amber-100/80 mt-2 font-mono break-all">
+              {missingEmailIds.join(", ")}
+            </div>
+          </div>
+        )}
 
         {emails.length === 0 ? (
           <div className="text-sm text-gray-400">
