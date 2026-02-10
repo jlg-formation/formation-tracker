@@ -11,7 +11,7 @@ Audit “Spécifs/Docs vs Code” (inputs: `input/*`, docs: `docs/*`, code: `pro
   - Code: `project/src/utils/stats.ts` (fonction `calculateStats`: `StatutFormation.ANNULEE` est exclu de `total/parAnnee/parCode/inter/intra/participants`)
   - Action: aucune (garder les tests à jour si refactor ultérieur).
 
-- [ ] id016 (Géocodage) Il est interdit de géocoder une formation **annulée**, mais la page Carte propose un géocodage en masse sans exclure le statut `annulée`.
+- [x] id016 (Géocodage) Il est interdit de géocoder une formation **annulée**, mais la page Carte propose un géocodage en masse sans exclure le statut `annulée`.
   - Source: `input/clarifications/006-geocoding-statut.md`, `docs/05-geocoding.md`, `docs/01-architecture.md`
   - Code: `project/src/components/pages/MapPage.tsx` (calcul `formationsWithoutGPS` + boucle `handleGeocodeFormations`), `project/src/services/geocoding/index.ts` (`geocodeAddress`)
   - Action: filtrer `formationsWithoutGPS` pour exclure `statut === "annulée"` (et empêcher toute mise à jour GPS sur une formation annulée), + ajouter un test unitaire ciblé (ex: MapPage logic / util) ou test d'intégration léger.

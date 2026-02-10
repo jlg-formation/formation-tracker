@@ -3,12 +3,8 @@
  */
 
 import { db } from "./db";
-import type {
-  Formation,
-  FormationFilters,
-  StatutFormation,
-  TypeSession
-} from "../types";
+import type { Formation, FormationFilters } from "../types";
+import { StatutFormation, TypeSession } from "../types";
 import { generateId } from "../types";
 
 /**
@@ -41,9 +37,27 @@ export async function updateFormation(
     return undefined;
   }
 
+  const becomesOrIsCancelled =
+    existing.statut === StatutFormation.ANNULEE ||
+    updates.statut === StatutFormation.ANNULEE;
+
+  // Règle métier : il est interdit de géocoder (donc de modifier le GPS)
+  // d'une formation annulée. On bloque toute mise à jour de lieu.gps dans ce cas.
+  let sanitizedUpdates = updates;
+  if (becomesOrIsCancelled && updates.lieu && "gps" in updates.lieu) {
+    sanitizedUpdates = {
+      ...updates,
+      lieu: {
+        ...existing.lieu,
+        ...updates.lieu,
+        gps: existing.lieu.gps
+      }
+    };
+  }
+
   const updatedFormation: Formation = {
     ...existing,
-    ...updates,
+    ...sanitizedUpdates,
     updatedAt: new Date().toISOString()
   };
 

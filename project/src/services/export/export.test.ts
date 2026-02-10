@@ -2,7 +2,7 @@
  * Tests pour les services d'export
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterAll } from "vitest";
 import "fake-indexeddb/auto";
 import type { Formation } from "../../types";
 import {
@@ -25,7 +25,11 @@ const mockAppendChild = vi.fn();
 const mockRemoveChild = vi.fn();
 const mockClick = vi.fn();
 
-vi.stubGlobal("document", {
+const originalDocument = (globalThis as any).document;
+const originalURL = (globalThis as any).URL;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).document = {
   createElement: mockCreateElement.mockReturnValue({
     href: "",
     download: "",
@@ -35,11 +39,19 @@ vi.stubGlobal("document", {
     appendChild: mockAppendChild,
     removeChild: mockRemoveChild
   }
-});
+};
 
-vi.stubGlobal("URL", {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).URL = {
   createObjectURL: vi.fn(() => "blob:test"),
   revokeObjectURL: vi.fn()
+};
+
+afterAll(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).document = originalDocument;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).URL = originalURL;
 });
 
 // Formations de test

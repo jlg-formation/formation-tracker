@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "currentStep": 18,
-  "lastUpdated": "2026-02-09T19:43:00.000Z",
+  "lastUpdated": "2026-02-10T13:28:10.7330844Z",
   "todos": {
     "id001": {
       "status": "completed",
@@ -35,6 +35,12 @@
       "startedAt": "2026-02-09T15:38:50.2596680Z",
       "completedAt": "2026-02-09T15:44:31.345Z",
       "note": "Page détail formation dédiée (route) + accès depuis carte et liste + affichage emails bruts rattachés"
+    },
+    "id016": {
+      "status": "completed",
+      "startedAt": "2026-02-10T13:28:10.7330844Z",
+      "completedAt": "2026-02-10T13:28:10.7330844Z",
+      "note": "Bloque toute mise à jour de lieu.gps sur une formation annulée (ou qui devient annulée) au niveau du store, avec tests unitaires."
     }
   },
   "steps": {

@@ -2,12 +2,20 @@
  * Tests du service de géocodage
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  afterAll
+} from "vitest";
 import "fake-indexeddb/auto";
 
-// Mock fetch avant d'importer les modules
+// Mock fetch pour les appels réseau
 const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
+const originalFetch = globalThis.fetch;
 
 // Import après le mock
 import { nominatimAdapter, resetRateLimiter } from "./nominatim";
@@ -18,12 +26,19 @@ import {
   clearGeocache,
   clearFailedGeocacheEntries,
   getGeocacheStats,
-  preloadKnownLocations
+  preloadKnownLocations,
+  googleAdapter
 } from "./index";
 import { db } from "../../stores/db";
+import { saveSettings } from "../../stores/settingsStore";
 
 describe("Geocoding Service", () => {
   beforeEach(async () => {
+    // Installer le mock fetch avant chaque test
+    // (les modules appellent fetch à l'exécution, pas à l'import)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (globalThis as any).fetch = mockFetch;
+
     // Réinitialiser le rate limiter avant chaque test
     resetRateLimiter();
     // Nettoyer la base de données
@@ -35,6 +50,12 @@ describe("Geocoding Service", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterAll(() => {
+    // Restaurer fetch
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (globalThis as any).fetch = originalFetch;
   });
 
   // ===========================================================================
@@ -150,6 +171,67 @@ describe("Geocoding Service", () => {
   });
 
   // ===========================================================================
+  // Tests googleAdapter
+  // ===========================================================================
+
+  describe("googleAdapter", () => {
+    it("retourne name = google", () => {
+      expect(googleAdapter.name).toBe("google");
+    });
+
+    it("retourne null si la clé API n'est pas configurée", async () => {
+      await saveSettings({
+        geocodingProvider: "google",
+        googleApiKey: undefined
+      });
+
+      const result = await googleAdapter.geocode("Paris");
+
+      expect(result.gps).toBeNull();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("géocode une adresse avec succès", async () => {
+      await saveSettings({
+        geocodingProvider: "google",
+        googleApiKey: "AIzaTEST"
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: "OK",
+          results: [
+            {
+              formatted_address: "Paris, France",
+              geometry: {
+                location: { lat: 48.8566, lng: 2.3522 },
+                location_type: "ROOFTOP"
+              }
+            }
+          ]
+        })
+      });
+
+      const result = await googleAdapter.geocode("Paris");
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const url = String(mockFetch.mock.calls[0]?.[0]);
+      expect(url).toContain("maps.googleapis.com");
+      expect(url).toContain("geocode/json");
+      expect(url).toContain("address=Paris");
+      expect(url).toContain("key=AIzaTEST");
+
+      expect(result.gps).not.toBeNull();
+      expect(result.gps?.lat).toBeCloseTo(48.8566, 4);
+      expect(result.gps?.lng).toBeCloseTo(2.3522, 4);
+      expect(result.formattedAddress).toBe("Paris, France");
+      expect(result.confidence).toBe(1);
+    });
+  });
+
+  // ===========================================================================
   // Tests geocodeAddress (avec cache)
   // ===========================================================================
 
@@ -215,6 +297,39 @@ describe("Geocoding Service", () => {
       const cached = await db.geocache.get("adresse inconnue");
       expect(cached).not.toBeNull();
       expect(cached?.gps).toBeNull();
+    });
+
+    it("utilise le provider Google si configuré", async () => {
+      await saveSettings({
+        geocodingProvider: "google",
+        googleApiKey: "AIzaTEST"
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: "OK",
+          results: [
+            {
+              formatted_address: "Lyon, France",
+              geometry: {
+                location: { lat: 45.764, lng: 4.8357 },
+                location_type: "APPROXIMATE"
+              }
+            }
+          ]
+        })
+      });
+
+      const result = await geocodeAddress("Lyon");
+      expect(result).not.toBeNull();
+      expect(result?.lat).toBeCloseTo(45.764, 4);
+      expect(result?.lng).toBeCloseTo(4.8357, 4);
+
+      const cached = await db.geocache.get("lyon");
+      expect(cached).not.toBeNull();
+      expect(cached?.provider).toBe("google");
     });
   });
 

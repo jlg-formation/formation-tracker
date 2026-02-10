@@ -5,19 +5,22 @@
 
 import type { GeocodingAdapter, GeocodingResult } from "./adapter";
 import { nominatimAdapter } from "./nominatim";
+import { googleAdapter } from "./google";
 import { db } from "../../stores/db";
 import type { GeocacheEntry, CoordonneesGPS } from "../../types";
 
 // Ré-export des types et adapters
 export type { GeocodingAdapter, GeocodingResult } from "./adapter";
 export { nominatimAdapter } from "./nominatim";
+export { googleAdapter } from "./google";
 
 /**
  * Map des adapters disponibles
  */
 const adapters: Record<string, GeocodingAdapter> = {
-  nominatim: nominatimAdapter
-  // google et mapbox peuvent être ajoutés plus tard
+  nominatim: nominatimAdapter,
+  google: googleAdapter
+  // mapbox peut être ajouté plus tard
 };
 
 /**
