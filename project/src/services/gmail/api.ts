@@ -101,8 +101,7 @@ export async function getMessageMetadata(
 
   const data = await response.json();
   const subjectHeader = data.payload?.headers?.find(
-    (h: { name: string; value: string }) =>
-      h.name.toLowerCase() === "subject"
+    (h: { name: string; value: string }) => h.name.toLowerCase() === "subject"
   );
 
   return {
