@@ -27,7 +27,8 @@ import {
   clearFailedGeocacheEntries,
   getGeocacheStats,
   preloadKnownLocations,
-  googleAdapter
+  googleAdapter,
+  mapboxAdapter
 } from "./index";
 import { db } from "../../stores/db";
 import { saveSettings } from "../../stores/settingsStore";
@@ -232,6 +233,64 @@ describe("Geocoding Service", () => {
   });
 
   // ===========================================================================
+  // Tests mapboxAdapter
+  // ===========================================================================
+
+  describe("mapboxAdapter", () => {
+    it("retourne name = mapbox", () => {
+      expect(mapboxAdapter.name).toBe("mapbox");
+    });
+
+    it("retourne null si la clé API n'est pas configurée", async () => {
+      await saveSettings({
+        geocodingProvider: "mapbox",
+        mapboxApiKey: undefined
+      });
+
+      const result = await mapboxAdapter.geocode("Paris");
+      expect(result.gps).toBeNull();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("géocode une adresse avec succès", async () => {
+      await saveSettings({
+        geocodingProvider: "mapbox",
+        mapboxApiKey: "pkTEST"
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          features: [
+            {
+              center: [2.3522, 48.8566],
+              place_name: "Paris, France",
+              relevance: 0.91
+            }
+          ]
+        })
+      });
+
+      const result = await mapboxAdapter.geocode("Paris");
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const url = String(mockFetch.mock.calls[0]?.[0]);
+      expect(url).toContain("api.mapbox.com");
+      expect(url).toContain("geocoding/v5/mapbox.places");
+      expect(url).toContain("Paris.json");
+      expect(url).toContain("access_token=pkTEST");
+      expect(url).toContain("limit=1");
+
+      expect(result.gps).not.toBeNull();
+      expect(result.gps?.lat).toBeCloseTo(48.8566, 4);
+      expect(result.gps?.lng).toBeCloseTo(2.3522, 4);
+      expect(result.formattedAddress).toBe("Paris, France");
+      expect(result.confidence).toBeCloseTo(0.91, 2);
+    });
+  });
+
+  // ===========================================================================
   // Tests geocodeAddress (avec cache)
   // ===========================================================================
 
@@ -330,6 +389,36 @@ describe("Geocoding Service", () => {
       const cached = await db.geocache.get("lyon");
       expect(cached).not.toBeNull();
       expect(cached?.provider).toBe("google");
+    });
+
+    it("utilise le provider Mapbox si configuré", async () => {
+      await saveSettings({
+        geocodingProvider: "mapbox",
+        mapboxApiKey: "pkTEST"
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          features: [
+            {
+              center: [4.8357, 45.764],
+              place_name: "Lyon, France",
+              relevance: 0.88
+            }
+          ]
+        })
+      });
+
+      const result = await geocodeAddress("Lyon");
+      expect(result).not.toBeNull();
+      expect(result?.lat).toBeCloseTo(45.764, 4);
+      expect(result?.lng).toBeCloseTo(4.8357, 4);
+
+      const cached = await db.geocache.get("lyon");
+      expect(cached).not.toBeNull();
+      expect(cached?.provider).toBe("mapbox");
     });
   });
 
