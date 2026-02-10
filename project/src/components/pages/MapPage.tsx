@@ -80,7 +80,9 @@ export function MapPage() {
     for (let i = 0; i < formationsWithoutGPS.length; i++) {
       // Vérifier si l'utilisateur a demandé l'interruption
       if (geocodingCancelledRef.current) {
-        console.log(`Géocodage interrompu à ${i}/${formationsWithoutGPS.length}`);
+        console.log(
+          `Géocodage interrompu à ${i}/${formationsWithoutGPS.length}`
+        );
         break;
       }
 
@@ -125,7 +127,9 @@ export function MapPage() {
     }
 
     setGeocodingStats({ success, failed });
-    setGeocodingStatus(geocodingCancelledRef.current ? "cancelled" : "completed");
+    setGeocodingStatus(
+      geocodingCancelledRef.current ? "cancelled" : "completed"
+    );
 
     // Rafraîchir la liste des formations
     await refresh();
@@ -208,21 +212,23 @@ export function MapPage() {
             )}
 
             {/* Résultat */}
-            {(geocodingStatus === "completed" || geocodingStatus === "cancelled") && geocodingStats && (
-              <div className="text-sm">
-                {geocodingStatus === "cancelled" && (
-                  <span className="text-yellow-400 mr-2">⏹️ Interrompu</span>
-                )}
-                <span className="text-green-400">
-                  ✅ {geocodingStats.success} géocodées
-                </span>
-                {geocodingStats.failed > 0 && (
-                  <span className="ml-2 text-orange-400">
-                    ⚠️ {geocodingStats.failed} échecs
+            {(geocodingStatus === "completed" ||
+              geocodingStatus === "cancelled") &&
+              geocodingStats && (
+                <div className="text-sm">
+                  {geocodingStatus === "cancelled" && (
+                    <span className="text-yellow-400 mr-2">⏹️ Interrompu</span>
+                  )}
+                  <span className="text-green-400">
+                    ✅ {geocodingStats.success} géocodées
                   </span>
-                )}
-              </div>
-            )}
+                  {geocodingStats.failed > 0 && (
+                    <span className="ml-2 text-orange-400">
+                      ⚠️ {geocodingStats.failed} échecs
+                    </span>
+                  )}
+                </div>
+              )}
           </div>
         )}
       </div>

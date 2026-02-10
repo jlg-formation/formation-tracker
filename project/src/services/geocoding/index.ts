@@ -136,14 +136,16 @@ export async function clearGeocache(): Promise<void> {
  * @returns Nombre d'entrées supprimées
  */
 export async function clearFailedGeocacheEntries(): Promise<number> {
-  const failedEntries = await db.geocache.filter((entry) => entry.gps === null).toArray();
+  const failedEntries = await db.geocache
+    .filter((entry) => entry.gps === null)
+    .toArray();
   const addresses = failedEntries.map((e) => e.adresse);
-  
+
   if (addresses.length > 0) {
     await db.geocache.bulkDelete(addresses);
     console.log(`Cleared ${addresses.length} failed geocache entries`);
   }
-  
+
   return addresses.length;
 }
 
