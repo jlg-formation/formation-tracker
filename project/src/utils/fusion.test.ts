@@ -17,6 +17,7 @@ import {
   TypeEmail,
   NiveauPersonnalisation
 } from "../types";
+import { VIRTUAL_FORMATION_ADDRESS } from "./virtualFormations";
 
 // =============================================================================
 // HELPERS POUR CRÉER DES DONNÉES DE TEST
@@ -197,6 +198,29 @@ describe("fusionnerEmails", () => {
 
       expect(result.created).toHaveLength(3);
       expect(result.stats.formationsCreees).toBe(3);
+    });
+
+    it("devrait forcer l'adresse d'une formation virtuelle (CV) lors de la création", () => {
+      const input = createFusionInput({
+        titre: "Formation virtuelle",
+        codeEtendu: "GIAPA1CV1",
+        dateDebut: "2024-03-18",
+        dateFin: "2024-03-19",
+        nombreJours: 2,
+        typeSession: TypeSession.INTER,
+        lieu: {
+          nom: "En ligne",
+          adresse: "Adresse incorrecte",
+          gps: { lat: 48.9, lng: 2.2 }
+        }
+      });
+
+      const result = fusionnerEmails([input]);
+      expect(result.created).toHaveLength(1);
+
+      const formation = result.created[0];
+      expect(formation.lieu.adresse).toBe(VIRTUAL_FORMATION_ADDRESS);
+      expect(formation.lieu.gps).toBeNull();
     });
   });
 
@@ -443,6 +467,29 @@ describe("fusionnerEmails", () => {
       expect(result.stats.formationsCreees).toBe(2);
       expect(result.stats.emailsFusionnes).toBe(1);
       expect(result.stats.emailsIgnores).toBe(1);
+    });
+
+    it("devrait forcer l'adresse d'une formation virtuelle (CV) lors d'une mise à jour", () => {
+      const existingFormation = createFullFormation({
+        codeEtendu: "GIAPA1CV2",
+        lieu: {
+          nom: "En ligne",
+          adresse: "Adresse incorrecte",
+          gps: { lat: 48.9, lng: 2.2 }
+        }
+      });
+
+      const input = createFusionInput({
+        codeEtendu: "GIAPA1CV2",
+        dateDebut: existingFormation.dateDebut
+      });
+
+      const result = fusionnerEmails([input], [existingFormation]);
+      expect(result.updated).toHaveLength(1);
+
+      const updated = result.updated[0];
+      expect(updated.lieu.adresse).toBe(VIRTUAL_FORMATION_ADDRESS);
+      expect(updated.lieu.gps).toBeNull();
     });
   });
 });

@@ -15,7 +15,8 @@ import {
 import { exportToJson, parseExportJson } from "../../services/export";
 import {
   getAllFormations,
-  clearFormations
+  clearFormations,
+  correctVirtualFormationsAddress
 } from "../../stores/formationsStore";
 import { db } from "../../stores/db";
 import type { CoordonneesGPS } from "../../types";
@@ -163,6 +164,14 @@ export function SettingsPage() {
     withCoords: number;
     withoutCoords: number;
   } | null>(null);
+
+  // État pour la correction des formations virtuelles
+  const [virtualFixStatus, setVirtualFixStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [virtualFixMessage, setVirtualFixMessage] = useState<string | null>(
+    null
+  );
 
   // État pour la gestion des données locales
   const [formationsCount, setFormationsCount] = useState(0);
@@ -701,6 +710,46 @@ export function SettingsPage() {
     }
   };
 
+  /**
+   * Corrige l'adresse des formations virtuelles (clarification 014) sans relancer
+   * une analyse LLM.
+   */
+  const handleFixVirtualFormationsAddress = async () => {
+    if (
+      !confirm(
+        "Corriger l'adresse des formations virtuelles (CV) ? Les coordonnées GPS seront invalidées (remises à vide) pour les formations non annulées afin de permettre un re-géocodage."
+      )
+    ) {
+      return;
+    }
+
+    setVirtualFixStatus("loading");
+    setVirtualFixMessage(null);
+    try {
+      const result = await correctVirtualFormationsAddress();
+
+      // Rafraîchir le compteur formations affiché dans la section données locales
+      const formations = await getAllFormations();
+      setFormationsCount(formations.length);
+
+      setVirtualFixStatus("success");
+      setVirtualFixMessage(
+        `${result.updated} formation(s) corrigée(s) (scannées : ${result.scanned}).`
+      );
+      setTimeout(() => {
+        setVirtualFixStatus("idle");
+        setVirtualFixMessage(null);
+      }, 4000);
+    } catch (err) {
+      setVirtualFixStatus("error");
+      setVirtualFixMessage(
+        err instanceof Error
+          ? err.message
+          : "Erreur lors de la correction des formations virtuelles"
+      );
+    }
+  };
+
   // Charger les stats du cache au montage
   useEffect(() => {
     loadGeocacheStats();
@@ -1163,6 +1212,37 @@ export function SettingsPage() {
             requête/seconde. Google et Mapbox offrent de meilleures
             performances.
           </p>
+
+          <div className="pt-2">
+            <button
+              onClick={handleFixVirtualFormationsAddress}
+              disabled={virtualFixStatus === "loading"}
+              className="btn px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-md transition-colors"
+            >
+              {virtualFixStatus === "loading" ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin">⏳</span> Correction en
+                  cours...
+                </span>
+              ) : (
+                "corriger adresse des formation virtuel"
+              )}
+            </button>
+
+            {virtualFixMessage && (
+              <div
+                className={`mt-3 p-3 rounded text-sm ${
+                  virtualFixStatus === "success"
+                    ? "bg-green-900/30 border border-green-600 text-green-300"
+                    : virtualFixStatus === "error"
+                      ? "bg-red-900/30 border border-red-600 text-red-300"
+                      : "bg-blue-900/30 border border-blue-600 text-blue-300"
+                }`}
+              >
+                {virtualFixMessage}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

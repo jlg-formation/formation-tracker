@@ -144,6 +144,13 @@ Règles :
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après.
 ```
 
+### Post-traitements métier (après extraction)
+
+Certaines règles sont appliquées **après** l'extraction LLM, pendant l'analyse des formations.
+
+- **Formations virtuelles (classe virtuelle / CV)** : si `codeEtendu` se termine par `CV<n>` où `<n>` est un chiffre (`0`…`9`), alors l'adresse du lieu est forcée à :
+  - `2 allée du Commandant Charcot 77200 TORCY (France)`
+
 ### Prompt extraction : Convocation Inter
 
 ```

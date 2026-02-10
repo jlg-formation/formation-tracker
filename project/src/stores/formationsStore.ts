@@ -6,6 +6,7 @@ import { db } from "./db";
 import type { Formation, FormationFilters } from "../types";
 import { StatutFormation, TypeSession } from "../types";
 import { generateId } from "../types";
+import { applyVirtualFormationAddress } from "../utils/virtualFormations";
 
 /**
  * Ajoute une nouvelle formation
@@ -243,4 +244,37 @@ export async function getFormationsByYear(year: number): Promise<Formation[]> {
     .where("dateDebut")
     .between(startDate, endDate, true, true)
     .toArray();
+}
+
+/**
+ * Corrige l'adresse des formations virtuelles (clarification 014) sans relancer
+ * une analyse LLM.
+ *
+ * - Identifie les formations dont `codeEtendu` se termine par `CV<n>` (0..9)
+ * - Force `lieu.adresse` à l'adresse virtuelle
+ * - Met `lieu.gps` à null si la formation n'est pas annulée
+ *
+ * @returns Nombre de formations mises à jour
+ */
+export async function correctVirtualFormationsAddress(): Promise<{
+  scanned: number;
+  updated: number;
+}> {
+  const formations = await db.formations.toArray();
+  const now = new Date().toISOString();
+  const toUpdate: Formation[] = [];
+
+  for (const formation of formations) {
+    const changed = applyVirtualFormationAddress(formation);
+    if (!changed) continue;
+
+    formation.updatedAt = now;
+    toUpdate.push(formation);
+  }
+
+  if (toUpdate.length > 0) {
+    await db.formations.bulkPut(toUpdate);
+  }
+
+  return { scanned: formations.length, updated: toUpdate.length };
 }

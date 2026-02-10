@@ -174,38 +174,15 @@ export function MapView({
     );
   }, [formations]);
 
-  // Grouper les formations par lieu (pour éviter les marqueurs superposés)
-  const groupedFormations = useMemo(() => {
-    const groups = new Map<string, Formation[]>();
-
-    formationsWithGPS.forEach((formation) => {
-      const key = `${formation.lieu.gps!.lat.toFixed(4)},${formation.lieu.gps!.lng.toFixed(4)}`;
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(formation);
-    });
-
-    return Array.from(groups.entries()).map(([key, formationsList]) => {
-      const temporalStatuses = formationsList.map((f) =>
-        getFormationTemporalStatus(f)
-      );
-
-      const hasFuture = temporalStatuses.includes("future");
-      const hasPast = temporalStatuses.includes("passee");
-
-      return {
-        key,
-        lat: formationsList[0].lieu.gps!.lat,
-        lng: formationsList[0].lieu.gps!.lng,
-        formations: formationsList,
-        lieu: formationsList[0].lieu,
-        // Si le lieu contient au moins une formation future, on le marque "future".
-        // (La spec prévoit un filtre Période; en pratique les lieux seront rarement mixtes.)
-        markerVariant:
-          hasFuture && !hasPast ? "future" : hasFuture ? "future" : "passee"
-      } as const;
-    });
+  // Compter les lieux uniques (info seulement, le clustering gère la lisibilité)
+  const uniqueLocationCount = useMemo(() => {
+    const keys = new Set<string>();
+    for (const f of formationsWithGPS) {
+      const lat = f.lieu!.gps!.lat;
+      const lng = f.lieu!.gps!.lng;
+      keys.add(`${lat.toFixed(4)},${lng.toFixed(4)}`);
+    }
+    return keys.size;
   }, [formationsWithGPS]);
 
   const handleMarkerClick = (formation: Formation) => {
@@ -291,8 +268,8 @@ export function MapView({
             {formationsWithGPS.length}
           </span>{" "}
           formation{formationsWithGPS.length > 1 ? "s" : ""} sur{" "}
-          {groupedFormations.length} lieu
-          {groupedFormations.length > 1 ? "x" : ""}
+          {uniqueLocationCount} lieu
+          {uniqueLocationCount > 1 ? "x" : ""}
         </span>
       </div>
 
@@ -312,100 +289,86 @@ export function MapView({
         <MarkerClusterGroup
           chunkedLoading
           iconCreateFunction={createClusterCustomIcon}
+          spiderfyOnMaxZoom
+          showCoverageOnHover={false}
+          zoomToBoundsOnClick
         >
-          {groupedFormations.map((group) => (
-            <Marker
-              key={group.key}
-              position={[group.lat, group.lng]}
-              icon={
-                group.markerVariant === "future" ? futurePinIcon : pastPinIcon
-              }
-              eventHandlers={{
-                add: (e) => {
-                  (
-                    e.target as unknown as { formationCount?: number }
-                  ).formationCount = group.formations.length;
-                },
-                click: () => handleMarkerClick(group.formations[0])
-              }}
-            >
-              <Popup className="formation-popup" maxWidth={350} minWidth={280}>
-                <div className="p-1">
-                  {/* Lieu */}
-                  <div className="font-semibold text-gray-900 text-base mb-2">
-                    📍 {group.lieu.nom || group.lieu.adresse}
-                  </div>
+          {formationsWithGPS.map((formation) => {
+            const temporalStatus = getFormationTemporalStatus(formation);
+            const markerVariant =
+              temporalStatus === "future" ? "future" : "passee";
 
-                  {/* Liste des formations à ce lieu */}
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {group.formations.slice(0, 5).map((formation) => {
-                      const statutBadge = getStatutBadge(formation.statut);
-                      const typeBadge = getTypeBadge(formation.typeSession);
+            const statutBadge = getStatutBadge(formation.statut);
+            const typeBadge = getTypeBadge(formation.typeSession);
 
-                      return (
-                        <div
-                          key={formation.id}
-                          className="p-2 bg-gray-50 rounded border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-                          onClick={() => handleMarkerClick(formation)}
-                        >
-                          {/* Titre */}
-                          <div className="font-medium text-gray-800 text-sm leading-tight">
-                            {formation.titre}
-                          </div>
+            return (
+              <Marker
+                key={formation.id}
+                position={[formation.lieu!.gps!.lat, formation.lieu!.gps!.lng]}
+                icon={markerVariant === "future" ? futurePinIcon : pastPinIcon}
+                eventHandlers={{
+                  click: () => handleMarkerClick(formation)
+                }}
+              >
+                <Popup
+                  className="formation-popup"
+                  maxWidth={350}
+                  minWidth={280}
+                >
+                  <div className="p-1">
+                    {/* Lieu */}
+                    <div className="font-semibold text-gray-900 text-base mb-2">
+                      📍 {formation.lieu?.nom || formation.lieu?.adresse}
+                    </div>
 
-                          {/* Code */}
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {formation.codeEtendu}
-                            {formation.codeFormation &&
-                              ` (${formation.codeFormation})`}
-                          </div>
-
-                          {/* Dates */}
-                          <div className="text-xs text-gray-600 mt-1">
-                            📅 {formatDate(formation.dateDebut)}
-                            {formation.dateDebut !== formation.dateFin && (
-                              <> → {formatDate(formation.dateFin)}</>
-                            )}
-                            <span className="ml-1 text-gray-400">
-                              ({formation.nombreJours}j)
-                            </span>
-                          </div>
-
-                          {/* Badges */}
-                          <div className="flex gap-1.5 mt-1.5">
-                            <span
-                              className={`text-xs px-1.5 py-0.5 rounded border ${typeBadge.className}`}
-                            >
-                              {typeBadge.text}
-                            </span>
-                            <span
-                              className={`text-xs px-1.5 py-0.5 rounded border ${statutBadge.className}`}
-                            >
-                              {statutBadge.text}
-                            </span>
-                          </div>
-
-                          {/* Client (intra) */}
-                          {formation.client && (
-                            <div className="text-xs text-purple-600 mt-1">
-                              🏢 {formation.client}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    {/* Message si plus de 5 formations */}
-                    {group.formations.length > 5 && (
-                      <div className="text-center text-xs text-gray-500 py-1">
-                        + {group.formations.length - 5} autre(s) formation(s)
+                    <div
+                      className="p-2 bg-gray-50 rounded border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleMarkerClick(formation)}
+                    >
+                      <div className="font-medium text-gray-800 text-sm leading-tight">
+                        {formation.titre}
                       </div>
-                    )}
+
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {formation.codeEtendu}
+                        {formation.codeFormation &&
+                          ` (${formation.codeFormation})`}
+                      </div>
+
+                      <div className="text-xs text-gray-600 mt-1">
+                        📅 {formatDate(formation.dateDebut)}
+                        {formation.dateDebut !== formation.dateFin && (
+                          <> → {formatDate(formation.dateFin)}</>
+                        )}
+                        <span className="ml-1 text-gray-400">
+                          ({formation.nombreJours}j)
+                        </span>
+                      </div>
+
+                      <div className="flex gap-1.5 mt-1.5">
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded border ${typeBadge.className}`}
+                        >
+                          {typeBadge.text}
+                        </span>
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded border ${statutBadge.className}`}
+                        >
+                          {statutBadge.text}
+                        </span>
+                      </div>
+
+                      {formation.client && (
+                        <div className="text-xs text-purple-600 mt-1">
+                          🏢 {formation.client}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+                </Popup>
+              </Marker>
+            );
+          })}
         </MarkerClusterGroup>
       </MapContainer>
 

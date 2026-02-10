@@ -12,6 +12,7 @@ import {
   getFormationKey,
   generateFormationId
 } from "../types";
+import { applyVirtualFormationAddress } from "./virtualFormations";
 
 /**
  * Résultat de la fusion d'un ensemble d'emails
@@ -210,6 +211,9 @@ function creerFormationDepuisInputs(inputs: FusionInput[]): Formation {
   // Générer l'ID basé sur le code et la date
   formation.id = generateFormationId(formation.codeEtendu, formation.dateDebut);
 
+  // Post-traitements métier (clarification 014)
+  applyVirtualFormationAddress(formation);
+
   return formation;
 }
 
@@ -246,6 +250,9 @@ function fusionnerAvecExistante(
       formation.statut = StatutFormation.ANNULEE;
     }
   }
+
+  // Post-traitements métier (clarification 014)
+  applyVirtualFormationAddress(formation);
 
   return formation;
 }

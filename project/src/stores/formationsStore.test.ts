@@ -17,10 +17,12 @@ import {
   findFormationByKey,
   upsertFormation,
   countFormations,
-  getFormationsByYear
+  getFormationsByYear,
+  correctVirtualFormationsAddress
 } from "./formationsStore";
 import { StatutFormation, TypeSession, NiveauPersonnalisation } from "../types";
 import type { Formation } from "../types";
+import { VIRTUAL_FORMATION_ADDRESS } from "../utils/virtualFormations";
 
 // Formation de test de base
 const createTestFormation = (
@@ -200,6 +202,65 @@ describe("formationsStore", () => {
 
       const formations = await getAllFormations();
       expect(formations).toHaveLength(3);
+    });
+  });
+
+  describe("correctVirtualFormationsAddress", () => {
+    it("devrait corriger uniquement les formations virtuelles et respecter la règle GPS des formations annulées", async () => {
+      const virtualConfirmed = await addFormation(
+        createTestFormation({
+          codeEtendu: "GIAPA1CV1",
+          statut: StatutFormation.CONFIRMEE,
+          lieu: {
+            nom: "En ligne",
+            adresse: "Adresse incorrecte",
+            gps: { lat: 48.1, lng: 2.3 }
+          }
+        })
+      );
+
+      const virtualCancelled = await addFormation(
+        createTestFormation({
+          codeEtendu: "GIAPA1CV2",
+          statut: StatutFormation.ANNULEE,
+          lieu: {
+            nom: "En ligne",
+            adresse: "Adresse incorrecte",
+            gps: { lat: 49.1, lng: 3.3 }
+          }
+        })
+      );
+
+      const nonVirtual = await addFormation(
+        createTestFormation({
+          codeEtendu: "GIAPA1",
+          lieu: {
+            nom: "ORSYS",
+            adresse: "Adresse OK",
+            gps: { lat: 47.1, lng: 1.3 }
+          }
+        })
+      );
+
+      const result = await correctVirtualFormationsAddress();
+      expect(result.scanned).toBe(3);
+      expect(result.updated).toBe(2);
+
+      const storedVirtualConfirmed = await getFormation(virtualConfirmed.id);
+      expect(storedVirtualConfirmed?.lieu.adresse).toBe(
+        VIRTUAL_FORMATION_ADDRESS
+      );
+      expect(storedVirtualConfirmed?.lieu.gps).toBeNull();
+
+      const storedVirtualCancelled = await getFormation(virtualCancelled.id);
+      expect(storedVirtualCancelled?.lieu.adresse).toBe(
+        VIRTUAL_FORMATION_ADDRESS
+      );
+      expect(storedVirtualCancelled?.lieu.gps).toEqual({ lat: 49.1, lng: 3.3 });
+
+      const storedNonVirtual = await getFormation(nonVirtual.id);
+      expect(storedNonVirtual?.lieu.adresse).toBe("Adresse OK");
+      expect(storedNonVirtual?.lieu.gps).toEqual({ lat: 47.1, lng: 1.3 });
     });
   });
 

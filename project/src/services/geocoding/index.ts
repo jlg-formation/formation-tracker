@@ -29,11 +29,22 @@ const adapters: Record<string, GeocodingAdapter> = {
  * Normalise une adresse pour la clé de cache
  */
 export function normalizeAddress(address: string): string {
-  return address
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .replace(/[.,;]/g, "");
+  // Normalisation destinée aux clés de cache (pas au rendu UI)
+  // Objectifs : stabilité (accents, ponctuation) + déduplication.
+  return (
+    address
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      // Retire les diacritiques (ex: allée -> allee)
+      .replace(/[\u0300-\u036f]/g, "")
+      // Remplace la ponctuation par des espaces pour éviter de coller les mots
+      .replace(/[.,;:()[\]{}]/g, " ")
+      .replace(/["“”]/g, " ")
+      .replace(/['’]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
 /**
@@ -60,6 +71,7 @@ export async function geocodeAddress(
 ): Promise<CoordonneesGPS | null> {
   // Normaliser l'adresse pour la clé de cache
   const normalizedAddress = normalizeAddress(address);
+  const requestAddress = address.trim().replace(/\s+/g, " ");
 
   if (!normalizedAddress) {
     return null;
@@ -78,7 +90,7 @@ export async function geocodeAddress(
 
   // Appeler le provider
   const adapter = await getGeocodingProvider();
-  const result = await adapter.geocode(normalizedAddress);
+  const result = await adapter.geocode(requestAddress || normalizedAddress);
 
   // Mettre en cache (même si null, pour éviter de re-tenter)
   try {
@@ -201,11 +213,12 @@ export async function preloadKnownLocations(): Promise<number> {
   let count = 0;
 
   for (const [address, gps] of Object.entries(KNOWN_LOCATIONS)) {
+    const normalizedKey = normalizeAddress(address);
     try {
-      const existing = await db.geocache.get(address);
+      const existing = await db.geocache.get(normalizedKey);
       if (!existing) {
         await db.geocache.put({
-          adresse: address,
+          adresse: normalizedKey,
           gps,
           provider: "nominatim", // Fictif (données pré-définies)
           cachedAt: new Date().toISOString()

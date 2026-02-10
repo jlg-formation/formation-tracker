@@ -89,7 +89,7 @@ describe("Geocoding Service", () => {
     it("normalise une adresse complexe", () => {
       expect(
         normalizeAddress("1, Parvis de La Défense;  92044 PARIS LA DEFENSE")
-      ).toBe("1 parvis de la défense 92044 paris la defense");
+      ).toBe("1 parvis de la defense 92044 paris la defense");
     });
   });
 
@@ -520,7 +520,7 @@ describe("Geocoding Service", () => {
       expect(count).toBeGreaterThan(0);
 
       // Vérifier qu'une adresse connue est dans le cache
-      const orsysDefense = await db.geocache.get("orsys paris la défense");
+      const orsysDefense = await db.geocache.get("orsys paris la defense");
       expect(orsysDefense).not.toBeNull();
       expect(orsysDefense?.gps?.lat).toBeCloseTo(48.8925, 4);
     });

@@ -75,6 +75,8 @@ ORSYS Training Tracker est une **Single Page Application (SPA)** React qui perme
 
 - Les résultats d'analyse (classification + extraction) sont conservés pour affichage dans la page « Mails ».
 
+- **Règles métier (post-traitement)** : certaines règles sont appliquées après l'extraction (ex. formations virtuelles, voir plus bas).
+
 6. **Géocodage** : Les adresses sont converties en coordonnées GPS (sauf formations annulées)
 7. **Fusion** : Les emails relatifs à la même session sont fusionnés
 8. **Contrôles de cohérence** : Détection d'incohérences (ex. recouvrement de dates entre formations) et signalement dans l'interface (section « Erreurs » des paramètres)
@@ -98,6 +100,14 @@ Après extraction, si le géocodage est absent ou imprécis, l'utilisateur peut 
   - `accuse-reception` : accusé de réception de documents administratifs ("Service Suivi Qualité Logistique"). Preuve forte que la session a eu lieu.
     Ces emails peuvent contenir des informations partielles : on peut créer/mettre à jour une formation **incomplète** si nécessaire.
 - Mention **« Annulé et remplacé »** : à traiter comme une **annulation** ; indique qu'une nouvelle session est probablement créée en remplacement (ex. changement de dates et/ou de code formation). La session de remplacement est gérée par les emails ultérieurs (nouvelle convocation / bon de commande).
+
+---
+
+## Règles métier (formations)
+
+- **Formations virtuelles (classe virtuelle / CV)** : si `codeEtendu` se termine par `CV<n>` où `<n>` est un chiffre (`0`…`9`), alors l'adresse du lieu doit être forcée à :
+  - `2 allée du Commandant Charcot 77200 TORCY (France)`
+    Cette règle est appliquée pendant l'analyse des formations (post-traitement), avant le géocodage.
 
 ---
 

@@ -8,6 +8,10 @@ Règle métier (référence : clarification `006-geocoding-statut`) :
 
 - Il est **interdit de géocoder** une formation **annulée**.
 
+Règle métier (référence : clarification `014-formation-virtuel`) :
+
+- Pour les **formations virtuelles** (code étendu se terminant par `CV<n>` avec `<n>` chiffre `0`…`9`), l'adresse du lieu est forcée à `2 allée du Commandant Charcot 77200 TORCY (France)` avant géocodage.
+
 Dans certains cas :
 
 - aucune coordonnée n'est trouvée par le service de géocodage ;
