@@ -62,3 +62,22 @@ body {
   line-height: 1;
   font-weight: 700;
 }
+
+/* Pins carte (passées/futures) */
+.orsys-pin-icon {
+  background: transparent;
+  border: none;
+}
+
+.orsys-pin {
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+}
+
+.orsys-pin-icon--passee {
+  color: var(--color-orsys-primary);
+}
+
+.orsys-pin-icon--future {
+  color: var(--color-orsys-success);
+}

@@ -67,7 +67,7 @@ ORSYS Training Tracker est une **Single Page Application (SPA)** React qui perme
 3. **Cache IndexedDB** : Les emails déjà traités sont ignorés (économie API)
 4. **Classification LLM** : Chaque email est classifié (convocation, annulation, etc.)
 5. **Extraction LLM** : Les données structurées sont extraites en JSON
-6. **Géocodage** : Les adresses sont converties en coordonnées GPS
+6. **Géocodage** : Les adresses sont converties en coordonnées GPS (sauf formations annulées)
 7. **Fusion** : Les emails relatifs à la même session sont fusionnés
 8. **Contrôles de cohérence** : Détection d'incohérences (ex. recouvrement de dates entre formations) et signalement dans l'interface (section « Erreurs » des paramètres)
 9. **Stockage** : Les formations sont persistées dans IndexedDB
@@ -83,6 +83,7 @@ Après extraction, si le géocodage est absent ou imprécis, l'utilisateur peut 
 - **Annulations** : un email `annulation` marque la session comme **annulée**.
   - Par défaut, les formations **annulées** ne sont **pas incluses** dans les **statistiques globales**.
   - Elles sont **comptabilisées séparément** (ex. indicateur « Annulées »).
+  - Il est **interdit de géocoder** une formation **annulée**.
 - **Formations futures** : par défaut, les formations dont la date de début est dans le futur (non encore réalisées) ne sont **pas affichées** dans les statistiques ni dans les vues principales.
 - **Preuves de réalisation** :
   - `emargements` : suivi des signatures / feuille d'émargement (ex. "Service suivi qualité inter"). Preuve forte que la session a eu lieu.

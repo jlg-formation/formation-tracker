@@ -4,6 +4,10 @@
 
 Le géocodage convertit les adresses textuelles en coordonnées GPS pour affichage sur la carte Leaflet.
 
+Règle métier (référence : clarification `006-geocoding-statut`) :
+
+- Il est **interdit de géocoder** une formation **annulée**.
+
 Dans certains cas :
 
 - aucune coordonnée n'est trouvée par le service de géocodage ;

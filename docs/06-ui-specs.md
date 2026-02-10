@@ -38,7 +38,7 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 
 - Par défaut, les **statistiques globales** (KPI et graphiques) sont calculées **hors formations annulées**.
 - Les formations **annulées** sont **comptabilisées séparément** (KPI « Annulées »).
-- Par défaut, les **formations futures** (date de début postérieure à aujourd'hui, non encore réalisées) ne sont **pas affichées** dans les statistiques ni dans les vues (Dashboard, Carte, Liste).
+- Par défaut, les **formations futures** (date de début postérieure à aujourd'hui, non encore réalisées) ne sont **pas affichées** dans les statistiques ni dans les vues (Dashboard, Carte, Liste). La page **Carte** propose un filtre permettant d'afficher les formations futures si besoin.
 
 ### Layout
 
@@ -88,6 +88,8 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 
 ## Page 2 : Carte
 
+Objectif : visualiser les formations **données par le passé** (avec option d'affichage des formations futures via un filtre).
+
 ### Layout
 
 ```
@@ -95,7 +97,7 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 │                                CARTE                                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │  Filtres: [Année ▼] [Type ▼] [Statut ▼]           [Réinitialiser]    │  │
+│  │  Filtres: [Période ▼] [Année ▼] [Type ▼] [Statut ▼]   [Réinitialiser]│  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
@@ -119,14 +121,16 @@ L'interface est une **Single Page Application** en français, composée de 4 pag
 
 ### Fonctionnalités carte
 
-| Fonctionnalité      | Description                                                                                                   |
-| ------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Clustering**      | Regroupement des marqueurs proches (Leaflet.markercluster)                                                    |
-| **Popup**           | Au clic sur marqueur : nom lieu, nb formations, liste courte                                                  |
-| **Zoom**            | Contrôles zoom + molette souris                                                                               |
-| **Filtres**         | Filtre dynamique des marqueurs                                                                                |
-| **Centrage France** | Vue initiale centrée sur la France                                                                            |
-| **Données GPS**     | Les marqueurs utilisent les coordonnées GPS stockées pour chaque formation (géocodage ou correction manuelle) |
+| Fonctionnalité       | Description                                                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Clustering**       | Regroupement des marqueurs proches (Leaflet.markercluster)                                                    |
+| **Popup**            | Au clic sur marqueur : nom lieu, nb formations, liste courte                                                  |
+| **Zoom**             | Contrôles zoom + molette souris                                                                               |
+| **Filtres**          | Filtre dynamique des marqueurs                                                                                |
+| **Filtre période**   | Sélection : formations **passées**, **futures**, ou **les deux** (par défaut : **passées**)                   |
+| **Centrage France**  | Vue initiale centrée sur la France                                                                            |
+| **Données GPS**      | Les marqueurs utilisent les coordonnées GPS stockées pour chaque formation (géocodage ou correction manuelle) |
+| **Couleur marqueur** | Vert pour les formations **futures**, bleu pour les formations **passées**                                    |
 
 ### Popup marqueur
 

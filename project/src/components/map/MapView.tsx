@@ -9,6 +9,7 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import type { Formation } from "../../types";
 import { StatutFormation, TypeSession } from "../../types";
+import { getFormationTemporalStatus } from "../../utils/temporal";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
@@ -64,27 +65,22 @@ function createClusterCustomIcon(cluster: ClusterLike) {
 }
 
 /** Icône personnalisée pour les formations inter */
-const interIcon = new L.Icon({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+function createPinDivIcon(variant: "passee" | "future") {
+  return L.divIcon({
+    className: `orsys-pin-icon orsys-pin-icon--${variant}`,
+    iconSize: [28, 44],
+    iconAnchor: [14, 44],
+    popupAnchor: [0, -38],
+    html: `
+      <svg class="orsys-pin" width="28" height="44" viewBox="0 0 24 36" aria-hidden="true">
+        <path fill="currentColor" d="M12 36s9-10.2 9-19.1C21 8 16.9 4 12 4S3 8 3 16.9C3 25.8 12 36 12 36zm0-15.6a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z"/>
+      </svg>
+    `
+  });
+}
 
-/** Icône personnalisée pour les formations intra (légèrement différente) */
-const intraIcon = new L.Icon({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-  className: "intra-marker" // Pour styling CSS optionnel
-});
+const pastPinIcon = createPinDivIcon("passee");
+const futurePinIcon = createPinDivIcon("future");
 
 /** Composant pour ajuster la vue de la carte aux marqueurs */
 function FitBounds({ formations }: { formations: Formation[] }) {
@@ -190,13 +186,26 @@ export function MapView({
       groups.get(key)!.push(formation);
     });
 
-    return Array.from(groups.entries()).map(([key, formationsList]) => ({
-      key,
-      lat: formationsList[0].lieu.gps!.lat,
-      lng: formationsList[0].lieu.gps!.lng,
-      formations: formationsList,
-      lieu: formationsList[0].lieu
-    }));
+    return Array.from(groups.entries()).map(([key, formationsList]) => {
+      const temporalStatuses = formationsList.map((f) =>
+        getFormationTemporalStatus(f)
+      );
+
+      const hasFuture = temporalStatuses.includes("future");
+      const hasPast = temporalStatuses.includes("passee");
+
+      return {
+        key,
+        lat: formationsList[0].lieu.gps!.lat,
+        lng: formationsList[0].lieu.gps!.lng,
+        formations: formationsList,
+        lieu: formationsList[0].lieu,
+        // Si le lieu contient au moins une formation future, on le marque "future".
+        // (La spec prévoit un filtre Période; en pratique les lieux seront rarement mixtes.)
+        markerVariant:
+          hasFuture && !hasPast ? "future" : hasFuture ? "future" : "passee"
+      } as const;
+    });
   }, [formationsWithGPS]);
 
   const handleMarkerClick = (formation: Formation) => {
@@ -309,9 +318,7 @@ export function MapView({
               key={group.key}
               position={[group.lat, group.lng]}
               icon={
-                group.formations[0].typeSession === TypeSession.INTRA
-                  ? intraIcon
-                  : interIcon
+                group.markerVariant === "future" ? futurePinIcon : pastPinIcon
               }
               eventHandlers={{
                 add: (e) => {
@@ -407,11 +414,11 @@ export function MapView({
         <div className="flex items-center gap-4 text-xs text-gray-400">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-            <span>Inter</span>
+            <span>Passées</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-            <span>Intra</span>
+            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+            <span>Futures</span>
           </div>
         </div>
       </div>

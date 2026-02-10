@@ -7,6 +7,11 @@ import {
   preloadKnownLocations
 } from "../../services/geocoding";
 import { updateFormation } from "../../stores/formationsStore";
+import { StatutFormation } from "../../types";
+import {
+  type PeriodeCarte,
+  filterFormationsByPeriode
+} from "../../utils/temporal";
 
 /** Status du géocodage */
 type GeocodingStatus = "idle" | "running" | "completed" | "error";
@@ -14,6 +19,8 @@ type GeocodingStatus = "idle" | "running" | "completed" | "error";
 export function MapPage() {
   const { formations, loading, error, refresh } = useFormations();
   const navigate = useNavigate();
+
+  const [periode, setPeriode] = useState<PeriodeCarte>("passees");
 
   // État du géocodage
   const [geocodingStatus, setGeocodingStatus] =
@@ -30,12 +37,20 @@ export function MapPage() {
 
   // Calcul des formations sans GPS
   const formationsWithoutGPS = useMemo(() => {
-    return formations.filter((f) => !f.lieu?.gps?.lat || !f.lieu?.gps?.lng);
+    return formations.filter(
+      (f) =>
+        f.statut !== StatutFormation.ANNULEE &&
+        (!f.lieu?.gps?.lat || !f.lieu?.gps?.lng)
+    );
   }, [formations]);
 
   const formationsWithGPS = useMemo(() => {
     return formations.filter((f) => f.lieu?.gps?.lat && f.lieu?.gps?.lng);
   }, [formations]);
+
+  const formationsForMap = useMemo(() => {
+    return filterFormationsByPeriode(formations, periode);
+  }, [formations, periode]);
 
   /**
    * Géocode toutes les formations sans coordonnées GPS
@@ -62,6 +77,11 @@ export function MapPage() {
       });
 
       try {
+        if (formation.statut === StatutFormation.ANNULEE) {
+          failed++;
+          continue;
+        }
+
         // Construire l'adresse à géocoder
         const address = formation.lieu?.adresse || formation.lieu?.nom || "";
         if (!address.trim()) {
@@ -176,6 +196,24 @@ export function MapPage() {
         )}
       </div>
 
+      {/* Filtres (spec Carte) */}
+      {!loading && !error && formations.length > 0 && (
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <label className="text-sm text-gray-300 flex items-center gap-2">
+            <span className="text-gray-400">Période</span>
+            <select
+              value={periode}
+              onChange={(e) => setPeriode(e.target.value as PeriodeCarte)}
+              className="bg-[#16213e] border border-[#16213e] text-gray-200 rounded-md px-3 py-2 text-sm"
+            >
+              <option value="passees">Passées</option>
+              <option value="futures">Futures</option>
+              <option value="les-deux">Les deux</option>
+            </select>
+          </label>
+        </div>
+      )}
+
       {/* Erreur de géocodage */}
       {geocodingError && (
         <div className="mb-4 p-3 bg-red-900/20 border border-red-600 rounded-lg text-red-400 text-sm">
@@ -220,7 +258,7 @@ export function MapPage() {
       {!loading && !error && (
         <div className="h-[60vh] md:h-[65vh] lg:h-[70vh]">
           <MapView
-            formations={formations}
+            formations={formationsForMap}
             onFormationSelect={(formation) =>
               navigate(`/formations/${formation.id}`)
             }
