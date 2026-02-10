@@ -484,10 +484,13 @@ Objectif : consulter et corriger les entrées du **cache de géocodage** (adress
 Chaque enregistrement du cache de géocodage doit être éditable :
 
 1. Cliquer sur « éditer » :
-  - une carte s’affiche avec un pin aux coordonnées GPS (si déjà existantes)
-  - l’utilisateur repositionne manuellement les coordonnées GPS
+
+- une carte s’affiche avec un pin aux coordonnées GPS (si déjà existantes)
+- l’utilisateur repositionne manuellement les coordonnées GPS
+
 2. Cliquer sur le bouton « valider les nouvelles coordonnées GPS » :
-  - la carte n’est alors plus affichée
+
+- la carte n’est alors plus affichée
 
 ### Action globale
 
