@@ -5,6 +5,7 @@ const navLinks = [
   { to: "/carte", label: "Carte" },
   { to: "/formations", label: "Formations" },
   { to: "/mails", label: "Mails" },
+  { to: "/geocache", label: "Geocache" },
   { to: "/parametres", label: "⚙️ Paramètres" }
 ];
 

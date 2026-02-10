@@ -7,7 +7,8 @@ import {
   FormationsPage,
   MailsBrutsPage,
   MailDetailPage,
-  SettingsPage
+  SettingsPage,
+  GeocachePage
 } from "./components/pages";
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
             path="formations/:formationId"
             element={<FormationDetailPage />}
           />
+          <Route path="geocache" element={<GeocachePage />} />
           <Route path="parametres" element={<SettingsPage />} />
         </Route>
       </Routes>
