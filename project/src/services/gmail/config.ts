@@ -25,13 +25,14 @@ export const GMAIL_CONFIG = {
 };
 
 // =============================================================================
-// Filtrage des emails par sujet (optimisation coûts LLM)
-// Clarification 010 : éviter les appels LLM inutiles
+// Filtrage des emails à la source (clarification 010)
+// Les emails exclus ne sont JAMAIS récupérés ni stockés
 // =============================================================================
 
 /**
- * Patterns regex pour exclure certains emails avant l'analyse LLM.
- * Ces emails sont stockés en cache mais marqués comme traités avec type "autre".
+ * Patterns regex pour exclure certains emails à la source.
+ * Ces emails ne sont jamais récupérés depuis Gmail, ni stockés dans IndexedDB.
+ * Le filtrage s'applique sur le sujet de l'email.
  */
 export const EXCLUDED_SUBJECT_PATTERNS: RegExp[] = [
   /Planning ORSYS Réactualisé/i,
@@ -39,9 +40,9 @@ export const EXCLUDED_SUBJECT_PATTERNS: RegExp[] = [
 ];
 
 /**
- * Vérifie si un email doit être exclu de l'analyse LLM en fonction de son sujet.
+ * Vérifie si un email doit être exclu à la source en fonction de son sujet.
  * @param subject Sujet de l'email
- * @returns true si l'email doit être exclu (ne pas envoyer au LLM)
+ * @returns true si l'email doit être exclu (jamais récupéré ni stocké)
  */
 export function shouldExcludeEmail(subject: string): boolean {
   return EXCLUDED_SUBJECT_PATTERNS.some((pattern) => pattern.test(subject));

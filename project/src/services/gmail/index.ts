@@ -31,6 +31,7 @@ export {
 export {
   listMessages,
   getMessage,
+  getMessageMetadata,
   extractEmailBody,
   extractEmailHeaders,
   fetchAllMessageIds,

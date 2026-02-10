@@ -151,22 +151,26 @@ export function logout(): void {
 const GMAIL_QUERY = "from:orsys.fr after:2014/01/01";
 ```
 
-### Filtrage par regex (optimisation coûts LLM)
+### Filtrage à la source (avant récupération)
 
-Trop d'emails peuvent être extraits depuis Gmail, ce qui génère des appels LLM coûteux. Pour réduire ces coûts, certains emails sont **filtrés côté client** par expression régulière sur le sujet, **avant** l'envoi au LLM.
+Trop d'emails peuvent être extraits depuis Gmail, ce qui génère des appels LLM coûteux. Pour réduire ces coûts, certains emails sont **filtrés avant récupération** par expression régulière sur le sujet.
 
-**Emails exclus** (ne seront pas analysés par le LLM) :
+**Emails exclus** (ne seront jamais récupérés) :
 
-| Pattern (regex dans le sujet)   | Raison                               |
-| ------------------------------- | ------------------------------------ |
-| `/Planning ORSYS Réactualisé/i` | Emails de planning, non pertinents   |
-| `/Demande Intra /i`             | Demandes initiales (non engageantes) |
+| Pattern exact                | Raison                               |
+| ---------------------------- | ------------------------------------ |
+| `Planning ORSYS Réactualisé` | Emails de planning, non pertinents   |
+| `Demande Intra `             | Demandes initiales (non engageantes) |
 
-Ces emails sont quand même stockés en cache (IndexedDB) avec `processed: true` et `type: autre`, mais ne génèrent pas d'appel LLM.
+**Comportement** :
+
+- Les emails filtrés ne sont **jamais** récupérés depuis Gmail
+- Aucun stockage : ni cache, ni IndexedDB, ni mémoire applicative
+- Le filtrage s'effectue sur le `subject` du message lors du listing
 
 ```typescript
-// Filtrage côté client : emails à exclure (optimisation coûts LLM)
-// Ces emails sont filtrés par regex sur le sujet AVANT l'envoi au LLM
+// Filtrage à la source : emails à exclure (jamais récupérés)
+// Le filtrage s'applique lors du listing des messages Gmail
 const EXCLUDED_SUBJECT_PATTERNS = [
   /Planning ORSYS Réactualisé/i,
   /Demande Intra /i
@@ -174,6 +178,14 @@ const EXCLUDED_SUBJECT_PATTERNS = [
 
 function shouldExcludeEmail(subject: string): boolean {
   return EXCLUDED_SUBJECT_PATTERNS.some((pattern) => pattern.test(subject));
+}
+
+// Utilisation lors du listing
+async function fetchEmailsFromGmail(): Promise<GmailMessage[]> {
+  const messages = await listMessages();
+
+  // Filtrer AVANT récupération du contenu complet
+  return messages.filter((msg) => !shouldExcludeEmail(msg.snippet));
 }
 ```
 
@@ -385,29 +397,16 @@ export async function fetchNewEmails(
 
     for (const msg of response.messages || []) {
       if (!cachedIds.has(msg.id)) {
+        // Filtrage à la source : vérifier le snippet AVANT de récupérer le contenu
+        // Les emails exclus ne sont jamais récupérés ni stockés
+        if (shouldExcludeEmail(msg.snippet || "")) {
+          continue; // Ignorer complètement cet email
+        }
+
         // Nouveau message, récupérer le contenu complet
         const fullMessage = await getMessage(msg.id);
         const { text, html } = extractEmailBody(fullMessage);
         const headers = extractEmailHeaders(fullMessage);
-
-        // Filtrage par regex sur le sujet (optimisation coûts LLM)
-        if (shouldExcludeEmail(headers.subject)) {
-          // Email exclu, on le marque comme traité mais on ne l'envoie pas au LLM
-          const excludedEmail: EmailRaw = {
-            id: msg.id,
-            threadId: msg.threadId,
-            from: headers.from,
-            subject: headers.subject,
-            date: headers.date,
-            body: text,
-            bodyHtml: html,
-            processed: true, // Marqué comme traité
-            type: TypeEmail.AUTRE // Classé automatiquement
-          };
-          await db.emails.put(excludedEmail);
-          totalFetched++;
-          continue;
-        }
 
         const emailRaw: EmailRaw = {
           id: msg.id,

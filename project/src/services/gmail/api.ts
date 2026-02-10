@@ -68,6 +68,50 @@ export async function listMessages(
 }
 
 /**
+ * Récupère les métadonnées d'un message (headers uniquement, sans le corps)
+ * Utilisé pour le filtrage à la source (clarification 010)
+ * @param messageId ID du message Gmail
+ */
+export async function getMessageMetadata(
+  messageId: string
+): Promise<{ id: string; subject: string }> {
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error("Non authentifié. Veuillez vous connecter à Gmail.");
+  }
+
+  // format=metadata et metadataHeaders=Subject pour récupérer uniquement le sujet
+  const response = await fetch(
+    `${GMAIL_CONFIG.apiBase}/users/me/messages/${messageId}?format=metadata&metadataHeaders=Subject`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Session expirée. Veuillez vous reconnecter.");
+    }
+    throw new Error(
+      `Erreur API Gmail: ${response.status} ${response.statusText}`
+    );
+  }
+
+  const data = await response.json();
+  const subjectHeader = data.payload?.headers?.find(
+    (h: { name: string; value: string }) =>
+      h.name.toLowerCase() === "subject"
+  );
+
+  return {
+    id: messageId,
+    subject: subjectHeader?.value || ""
+  };
+}
+
+/**
  * Récupère un message complet par son ID
  * @param messageId ID du message Gmail
  */

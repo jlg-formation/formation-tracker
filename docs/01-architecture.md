@@ -97,11 +97,13 @@ Cette séparation permet de **relancer la fusion sans refaire l'analyse** (écon
 #### Étape 1 : Extraction + Analyse
 
 1. **Authentification Gmail** : OAuth 2.0 popup → token stocké
-2. **Requête Gmail** : `from:orsys.fr after:2014/01/01` → récupération des emails
-3. **Cache IndexedDB** : Les emails déjà téléchargés sont ignorés (économie API)
-4. **Classification LLM** : Chaque email est classifié (convocation, annulation, etc.)
-5. **Extraction LLM** : Les données structurées sont extraites en JSON
-6. **Stockage analyse** : Les résultats (classification + extraction JSON) sont stockés dans la table `emails` avec le flag `processed = true`
+2. **Requête Gmail** : `from:orsys.fr after:2014/01/01` → listing des emails
+3. **Filtrage à la source** : exclusion des emails non pertinents par regex sur le sujet (ex. `Planning ORSYS Réactualisé`, `Demande Intra `) → jamais récupérés ni stockés
+4. **Récupération** : téléchargement du contenu des emails filtrés
+5. **Cache IndexedDB** : Les emails déjà téléchargés sont ignorés (économie API)
+6. **Classification LLM** : Chaque email est classifié (convocation, annulation, etc.)
+7. **Extraction LLM** : Les données structurées sont extraites en JSON
+8. **Stockage analyse** : Les résultats (classification + extraction JSON) sont stockés dans la table `emails` avec le flag `processed = true`
 
 Les résultats d'analyse sont conservés pour affichage dans la page « Mails ».
 
@@ -121,7 +123,7 @@ Après extraction, si le géocodage est absent ou imprécis, l'utilisateur peut 
 ## Règles métier (emails)
 
 - **Engagement ORSYS** : une formation ne doit être considérée « confirmée » qu'à partir d'un email de **convocation** (`convocation-inter`/`convocation-intra`) ou d'un **bon de commande** (`bon-commande`).
-- **Demande intra** (`demande-intra`) : une demande de formation intra par email **n'engage pas ORSYS** et ne doit pas être comptabilisée comme une formation confirmée (emails à ignorer côté création/statistiques, éventuellement tracés dans le cache emails).
+- **Demande intra** (`demande-intra`) : une demande de formation intra par email **n'engage pas ORSYS** et ne doit pas être comptabilisée comme une formation confirmée. Les emails dont le sujet contient `Demande Intra ` sont **filtrés à la source** et ne sont jamais récupérés ni stockés.
 - **Annulations** : un email `annulation` marque la session comme **annulée**.
   - Par défaut, les formations **annulées** ne sont **pas incluses** dans les **statistiques globales**.
   - Elles sont **comptabilisées séparément** (ex. indicateur « Annulées »).

@@ -10,6 +10,7 @@ import { useGmailAuth } from "../../hooks/useGmailAuth";
 import {
   fetchAllMessageIds,
   getMessage,
+  getMessageMetadata,
   extractEmailHeaders,
   extractEmailBody,
   shouldExcludeEmail
@@ -208,15 +209,28 @@ export function ExtractionPanel() {
         }
 
         try {
-          // Récupérer le contenu du message
+          // Filtrage à la source (clarification 010) :
+          // Récupérer d'abord les métadonnées (sujet) AVANT le contenu complet
+          // Les emails filtrés ne sont JAMAIS récupérés en entier ni stockés
+          const metadata = await getMessageMetadata(messageId);
+          const isExcluded = shouldExcludeEmail(metadata.subject);
+
+          if (isExcluded) {
+            // Email filtré : ne pas récupérer le contenu, ne pas stocker
+            filteredEmails++;
+            setState((prev) => ({
+              ...prev,
+              currentCount: i + 1,
+              filteredEmails,
+              message: `Téléchargement des emails... (${i + 1}/${messageIds.length})`
+            }));
+            continue;
+          }
+
+          // Récupérer le contenu complet du message (uniquement si non filtré)
           const fullMessage = await getMessage(messageId);
           const headers = extractEmailHeaders(fullMessage);
           const body = extractEmailBody(fullMessage);
-
-          // Vérifier si l'email doit être exclu (filtrage par sujet)
-          // Optimisation coûts LLM : certains emails sont marqués comme traités
-          // sans passer par le LLM (clarification 010)
-          const isExcluded = shouldExcludeEmail(headers.subject);
 
           // Créer l'objet EmailRaw
           const emailRaw: EmailRaw = {
@@ -227,20 +241,12 @@ export function ExtractionPanel() {
             date: headers.date,
             body: body.text,
             bodyHtml: body.html,
-            // Si exclu, marquer comme traité pour éviter l'analyse LLM
-            processed: isExcluded,
-            // Si exclu, définir le type comme AUTRE
-            type: isExcluded ? TypeEmail.AUTRE : undefined
+            processed: false
           };
 
           // Stocker dans IndexedDB
           await db.emails.add(emailRaw);
-
-          if (isExcluded) {
-            filteredEmails++;
-          } else {
-            newEmails++;
-          }
+          newEmails++;
 
           setState((prev) => ({
             ...prev,
@@ -357,7 +363,6 @@ export function ExtractionPanel() {
           : "Analyse des emails..."
       });
 
-      const BATCH_SIZE = 5;
       let analyzedCount = resumeFromPause ? previousState.emailsAnalyses : 0;
       let ignoredCount = resumeFromPause ? previousState.emailsIgnores : 0;
       let fromCacheCount = resumeFromPause ? previousState.fromCache : 0;
@@ -413,7 +418,7 @@ export function ExtractionPanel() {
               }
 
               const classification = analyzeResult.classification;
-              const extraction = analyzeResult.extraction;
+              // Note: extraction est disponible dans analyzeResult.extraction si nécessaire
 
               // Marquer comme traité uniquement si l'analyse a réussi
               const emailToMark = await db.emails.get(emailId);
