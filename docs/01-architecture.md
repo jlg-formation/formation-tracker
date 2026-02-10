@@ -72,7 +72,9 @@ ORSYS Training Tracker est une **Single Page Application (SPA)** React qui perme
 3. **Cache IndexedDB** : Les emails déjà traités sont ignorés (économie API)
 4. **Classification LLM** : Chaque email est classifié (convocation, annulation, etc.)
 5. **Extraction LLM** : Les données structurées sont extraites en JSON
-  - Les résultats d'analyse (classification + extraction) sont conservés pour affichage dans la page « Mails bruts ».
+
+- Les résultats d'analyse (classification + extraction) sont conservés pour affichage dans la page « Mails bruts ».
+
 6. **Géocodage** : Les adresses sont converties en coordonnées GPS (sauf formations annulées)
 7. **Fusion** : Les emails relatifs à la même session sont fusionnés
 8. **Contrôles de cohérence** : Détection d'incohérences (ex. recouvrement de dates entre formations) et signalement dans l'interface (section « Erreurs » des paramètres)
