@@ -433,9 +433,13 @@ export function SettingsPage() {
     setDataOperationStatus("loading");
     try {
       await clearFormations();
+      // Réinitialiser le flag processed des emails pour permettre la régénération
+      await db.emails.toCollection().modify({ processed: false });
       setFormationsCount(0);
       setDataOperationStatus("success");
-      setDataOperationMessage("Toutes les formations ont été supprimées.");
+      setDataOperationMessage(
+        "Toutes les formations ont été supprimées. Les emails peuvent être ré-analysés."
+      );
       setTimeout(() => {
         setDataOperationStatus("idle");
         setDataOperationMessage(null);
@@ -493,9 +497,13 @@ export function SettingsPage() {
     setDataOperationStatus("loading");
     try {
       await db.llmCache.clear();
+      // Réinitialiser le flag processed des emails car ils devront être reclassifiés
+      await db.emails.toCollection().modify({ processed: false });
       setLlmCacheCount(0);
       setDataOperationStatus("success");
-      setDataOperationMessage("Cache LLM vidé.");
+      setDataOperationMessage(
+        "Cache LLM vidé. Les emails peuvent être ré-analysés."
+      );
       setTimeout(() => {
         setDataOperationStatus("idle");
         setDataOperationMessage(null);

@@ -7,32 +7,34 @@ import { StatutFormation, TypeSession } from "../types";
 
 /**
  * Statistiques globales des formations
+ * Note: Tous les comptages sont hors formations annulées, sauf `annulees`
  */
 export interface FormationStats {
-  /** Nombre total de formations */
+  /** Nombre total de formations (hors annulées) */
   total: number;
   /** Nombre de formations annulées */
   annulees: number;
-  /** Nombre total de jours de formation */
+  /** Nombre total de jours de formation (hors annulées) */
   totalJours: number;
-  /** Nombre total de participants */
+  /** Nombre total de participants (hors annulées) */
   totalParticipants: number;
-  /** Nombre de formations inter */
+  /** Nombre de formations inter (hors annulées) */
   inter: number;
-  /** Nombre de formations intra */
+  /** Nombre de formations intra (hors annulées) */
   intra: number;
-  /** Répartition par année */
+  /** Répartition par année (hors annulées) */
   parAnnee: Record<number, number>;
-  /** Répartition par code formation (top 10) */
+  /** Répartition par code formation (top 10, hors annulées) */
   parCode: Array<{ code: string; count: number; titre: string }>;
 }
 
 /**
  * Calcule toutes les statistiques à partir des formations
+ * Note: Les formations annulées sont exclues de tous les comptages sauf `annulees`
  */
 export function calculateStats(formations: Formation[]): FormationStats {
   const stats: FormationStats = {
-    total: formations.length,
+    total: 0,
     annulees: 0,
     totalJours: 0,
     totalParticipants: 0,
@@ -42,31 +44,34 @@ export function calculateStats(formations: Formation[]): FormationStats {
     parCode: []
   };
 
-  // Map pour compter par code formation
+  // Map pour compter par code formation (hors annulées)
   const codeCount = new Map<string, { count: number; titre: string }>();
 
   for (const formation of formations) {
-    // Comptage des annulations
+    // Comptage des annulations (séparé)
     if (formation.statut === StatutFormation.ANNULEE) {
       stats.annulees++;
+      // Les formations annulées ne sont pas comptées dans les autres stats
+      continue;
     }
 
-    // Total des jours (uniquement formations confirmées)
-    if (formation.statut === StatutFormation.CONFIRMEE) {
-      stats.totalJours += formation.nombreJours || 0;
-    }
+    // Total des formations (hors annulées)
+    stats.total++;
 
-    // Total des participants
+    // Total des jours (hors annulées)
+    stats.totalJours += formation.nombreJours || 0;
+
+    // Total des participants (hors annulées)
     stats.totalParticipants += formation.nombreParticipants || 0;
 
-    // Répartition inter/intra
+    // Répartition inter/intra (hors annulées)
     if (formation.typeSession === TypeSession.INTER) {
       stats.inter++;
     } else if (formation.typeSession === TypeSession.INTRA) {
       stats.intra++;
     }
 
-    // Répartition par année
+    // Répartition par année (hors annulées)
     if (formation.dateDebut) {
       const year = new Date(formation.dateDebut).getFullYear();
       if (!isNaN(year)) {
@@ -74,7 +79,7 @@ export function calculateStats(formations: Formation[]): FormationStats {
       }
     }
 
-    // Comptage par code formation
+    // Comptage par code formation (hors annulées)
     const code = formation.codeEtendu || formation.codeFormation || "INCONNU";
     const existing = codeCount.get(code);
     if (existing) {
@@ -95,10 +100,12 @@ export function calculateStats(formations: Formation[]): FormationStats {
 
 /**
  * Calcule le pourcentage de formations annulées
+ * Note: Basé sur le total incluant les annulées (total + annulees)
  */
 export function calculateCancellationRate(stats: FormationStats): number {
-  if (stats.total === 0) return 0;
-  return Math.round((stats.annulees / stats.total) * 100);
+  const totalWithCancelled = stats.total + stats.annulees;
+  if (totalWithCancelled === 0) return 0;
+  return Math.round((stats.annulees / totalWithCancelled) * 100);
 }
 
 /**
@@ -118,12 +125,11 @@ export function calculateIntraRate(stats: FormationStats): number {
 }
 
 /**
- * Calcule la moyenne de jours par formation
+ * Calcule la moyenne de jours par formation (hors annulées)
  */
 export function calculateAvgDaysPerFormation(stats: FormationStats): number {
-  const confirmed = stats.total - stats.annulees;
-  if (confirmed === 0) return 0;
-  return Math.round((stats.totalJours / confirmed) * 10) / 10;
+  if (stats.total === 0) return 0;
+  return Math.round((stats.totalJours / stats.total) * 10) / 10;
 }
 
 /**

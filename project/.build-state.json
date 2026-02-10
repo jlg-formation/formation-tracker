@@ -1,19 +1,19 @@
 {
   "version": "1.0",
   "currentStep": 18,
-  "lastUpdated": "2026-02-09T18:07:03.4589514Z",
+  "lastUpdated": "2026-02-09T19:43:00.000Z",
   "todos": {
+    "id001": {
+      "status": "completed",
+      "startedAt": "2026-02-09T19:42:00.000Z",
+      "completedAt": "2026-02-09T19:43:00.000Z",
+      "note": "Refactoré calculateStats() pour exclure les formations annulées de tous les comptages (total, parAnnee, parCode, inter/intra, totalParticipants). Mise à jour des tests et fonctions helper."
+    },
     "id003": {
       "status": "completed",
       "startedAt": "2026-02-09T18:04:59.6421903Z",
       "completedAt": "2026-02-09T18:07:03.4589514Z",
       "note": "Ajout du mode de correction manuelle GPS sur la page détail formation (corriger position via clic carte + validation, persistance IndexedDB)"
-    },
-    "id001": {
-      "status": "completed",
-      "startedAt": "2026-02-09T15:27:28.0366143Z",
-      "completedAt": "2026-02-09T15:28:36.6636372Z",
-      "note": "Ajout du clustering Leaflet.markercluster sur la carte + compteur visible sur l'icône de cluster (affiche le total de formations)"
     },
     "id033": {
       "status": "completed",

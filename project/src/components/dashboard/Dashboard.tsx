@@ -2,7 +2,7 @@
  * Composant Dashboard - Affiche le tableau de bord principal
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { useFormations } from "../../hooks/useFormations";
 import { calculateStats, getEmptyStats } from "../../utils/stats";
 import { StatsCards } from "./StatsCards";
@@ -10,6 +10,7 @@ import { YearlyChart } from "./YearlyChart";
 import { TopCoursesChart } from "./TopCoursesChart";
 import { TypePieChart } from "./TypePieChart";
 import { exportToJson, exportToCsv, exportToPdf } from "../../services/export";
+import { db } from "../../stores/db";
 
 /**
  * Dashboard principal avec statistiques et graphiques
@@ -19,6 +20,41 @@ export function Dashboard() {
   const [exporting, setExporting] = useState<"json" | "csv" | "pdf" | null>(
     null
   );
+  const [resetting, setResetting] = useState(false);
+  const [emailsCount, setEmailsCount] = useState<number>(0);
+  const [unprocessedCount, setUnprocessedCount] = useState<number>(0);
+
+  // Charger les compteurs d'emails
+  const refreshEmailCounts = useCallback(async () => {
+    const total = await db.emails.count();
+    const unprocessed = await db.emails
+      .filter((e) => e.processed === false)
+      .count();
+    setEmailsCount(total);
+    setUnprocessedCount(unprocessed);
+  }, []);
+
+  useEffect(() => {
+    refreshEmailCounts();
+  }, [refreshEmailCounts]);
+
+  // Handler pour réinitialiser le flag processed
+  const handleResetProcessed = async () => {
+    if (
+      !confirm(
+        "Réinitialiser tous les emails comme 'non analysés' ? Cela permettra de relancer l'analyse LLM."
+      )
+    ) {
+      return;
+    }
+    setResetting(true);
+    try {
+      await db.emails.toCollection().modify({ processed: false });
+      await refreshEmailCounts();
+    } finally {
+      setResetting(false);
+    }
+  };
 
   // Calcul des statistiques
   const stats = useMemo(() => {
@@ -67,6 +103,40 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Bouton de réinitialisation des emails */}
+      {emailsCount > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-amber-900/20 border border-amber-600/50 rounded-lg">
+          <div>
+            <h2 className="text-lg font-medium text-amber-200">
+              🔄 Réanalyser les emails
+            </h2>
+            <p className="text-sm text-amber-300/70 mt-1">
+              {emailsCount} email{emailsCount > 1 ? "s" : ""} en cache
+              {unprocessedCount > 0 && (
+                <span className="ml-2 text-amber-400">
+                  ({unprocessedCount} non analysé
+                  {unprocessedCount > 1 ? "s" : ""})
+                </span>
+              )}
+            </p>
+          </div>
+          <button
+            onClick={handleResetProcessed}
+            disabled={resetting || unprocessedCount === emailsCount}
+            className="btn px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+          >
+            {resetting ? (
+              <span className="animate-spin">⏳</span>
+            ) : (
+              <span>🔄</span>
+            )}
+            {unprocessedCount === emailsCount
+              ? "Tous non analysés"
+              : "Marquer tous comme non analysés"}
+          </button>
+        </div>
+      )}
+
       {/* En-tête avec boutons d'export */}
       {formations.length > 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-gray-800/50 border border-gray-700 rounded-lg">

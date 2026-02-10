@@ -6,7 +6,7 @@ Audit “Spécifs/Docs vs Code” (inputs: `input/*`, docs: `docs/*`, code: `pro
 
 ### Incohérences
 
-- [ ] id001 (Stats) Les KPI + graphiques du Dashboard doivent être calculés **hors formations annulées** (les annulées comptées séparément), mais le calcul actuel inclut les annulées dans `total`, `parAnnee`, `parCode`, `inter/intra`, `totalParticipants`.
+- [x] id001 (Stats) Les KPI + graphiques du Dashboard doivent être calculés **hors formations annulées** (les annulées comptées séparément), mais le calcul actuel inclut les annulées dans `total`, `parAnnee`, `parCode`, `inter/intra`, `totalParticipants`.
   - Source: `docs/06-ui-specs.md` (règle annulations Dashboard), `input/clarifications/004-annulation.md`
   - Code: `project/src/utils/stats.ts` (fonction `calculateStats`), `project/src/components/dashboard/StatsCards.tsx`, `project/src/components/dashboard/YearlyChart.tsx`, `project/src/components/dashboard/TopCoursesChart.tsx`, `project/src/components/dashboard/TypePieChart.tsx`
   - Action: refactorer `calculateStats()` pour ne compter que `StatutFormation.CONFIRMEE` dans les totaux/graphes, garder `annulees` séparé, puis adapter les composants.
