@@ -301,14 +301,17 @@ export async function getGeocodingProvider(): Promise<GeocodingAdapter> {
 }
 
 export async function geocodeAddress(
-  address: string
+  address: string,
+  options?: { forceRefresh?: boolean }
 ): Promise<CoordonneesGPS | null> {
   // Normaliser l'adresse
   const normalizedAddress = normalizeAddress(address);
 
+  const forceRefresh = options?.forceRefresh === true;
+
   // Vérifier le cache
   const cached = await db.geocache.get(normalizedAddress);
-  if (cached) {
+  if (cached && !forceRefresh) {
     console.log(`Geocache hit: ${normalizedAddress}`);
     return cached.gps;
   }
@@ -317,7 +320,10 @@ export async function geocodeAddress(
   const adapter = await getGeocodingProvider();
   const result = await adapter.geocode(normalizedAddress);
 
-  // Mettre en cache (même si null, pour éviter de re-tenter)
+  // Mettre en cache le résultat.
+  // Important (clarification 012-geocodage) : la relance manuelle doit pouvoir
+  // re-tenter les échecs. Pour cela, on supporte `forceRefresh` qui ignore
+  // explicitement le cache (y compris lorsque `gps` vaut null).
   const cacheEntry: GeocacheEntry = {
     adresse: normalizedAddress,
     gps: result.gps,
@@ -327,6 +333,12 @@ export async function geocodeAddress(
   await db.geocache.put(cacheEntry);
 
   return result.gps;
+}
+
+export async function geocodeAddressForceRefresh(
+  address: string
+): Promise<CoordonneesGPS | null> {
+  return geocodeAddress(address, { forceRefresh: true });
 }
 
 function normalizeAddress(address: string): string {
@@ -340,19 +352,34 @@ function normalizeAddress(address: string): string {
 // Géocodage en batch avec rate limiting
 export async function geocodeBatch(
   addresses: string[],
+  options?: { forceRefresh?: boolean },
   onProgress?: (current: number, total: number) => void
 ): Promise<Map<string, CoordonneesGPS | null>> {
   const results = new Map<string, CoordonneesGPS | null>();
 
   for (let i = 0; i < addresses.length; i++) {
     const address = addresses[i];
-    const gps = await geocodeAddress(address);
+    const gps = await geocodeAddress(address, options);
     results.set(address, gps);
     onProgress?.(i + 1, addresses.length);
   }
 
   return results;
 }
+
+---
+
+## Relancer le géocodage (retry des échecs)
+
+Référence : clarification `012-geocodage`.
+
+Constat : le géocodage échoue souvent (résultat `gps: null`). La fonctionnalité « relancer le géocodage » doit **re-tenter** ces échecs et **ré-appeler réellement** le provider, même si une entrée de cache existe.
+
+Règles :
+
+- Ne jamais géocoder une formation **annulée** (clarification `006-geocoding-statut`).
+- La relance vise en priorité les formations dont `lieu.adresse` est renseignée et `lieu.gps` est `null` (ou manifestement erronée), et/ou les entrées de cache avec `gps: null`.
+- Implémentation recommandée : appeler `geocodeBatch(..., { forceRefresh: true })` sur les adresses concernées.
 ```
 
 ---

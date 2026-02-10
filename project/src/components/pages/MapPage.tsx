@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFormations } from "../../hooks/useFormations";
 import { MapView } from "../map";
 import {
   geocodeAddress,
-  preloadKnownLocations
+  preloadKnownLocations,
+  clearFailedGeocacheEntries
 } from "../../services/geocoding";
 import { updateFormation } from "../../stores/formationsStore";
 import { StatutFormation } from "../../types";
@@ -14,7 +15,7 @@ import {
 } from "../../utils/temporal";
 
 /** Status du géocodage */
-type GeocodingStatus = "idle" | "running" | "completed" | "error";
+type GeocodingStatus = "idle" | "running" | "completed" | "cancelled" | "error";
 
 export function MapPage() {
   const { formations, loading, error, refresh } = useFormations();
@@ -34,6 +35,9 @@ export function MapPage() {
     success: number;
     failed: number;
   } | null>(null);
+
+  // Ref pour l'interruption du géocodage
+  const geocodingCancelledRef = useRef(false);
 
   // Calcul des formations sans GPS
   const formationsWithoutGPS = useMemo(() => {
@@ -58,10 +62,14 @@ export function MapPage() {
   const handleGeocodeFormations = async () => {
     if (formationsWithoutGPS.length === 0) return;
 
+    geocodingCancelledRef.current = false;
     setGeocodingStatus("running");
     setGeocodingError(null);
     setGeocodingStats(null);
     setGeocodingProgress({ current: 0, total: formationsWithoutGPS.length });
+
+    // Supprimer les entrées en échec du cache pour permettre un nouveau géocodage
+    await clearFailedGeocacheEntries();
 
     // Précharger les adresses ORSYS connues d'abord
     await preloadKnownLocations();
@@ -70,6 +78,12 @@ export function MapPage() {
     let failed = 0;
 
     for (let i = 0; i < formationsWithoutGPS.length; i++) {
+      // Vérifier si l'utilisateur a demandé l'interruption
+      if (geocodingCancelledRef.current) {
+        console.log(`Géocodage interrompu à ${i}/${formationsWithoutGPS.length}`);
+        break;
+      }
+
       const formation = formationsWithoutGPS[i];
       setGeocodingProgress({
         current: i + 1,
@@ -111,10 +125,17 @@ export function MapPage() {
     }
 
     setGeocodingStats({ success, failed });
-    setGeocodingStatus("completed");
+    setGeocodingStatus(geocodingCancelledRef.current ? "cancelled" : "completed");
 
     // Rafraîchir la liste des formations
     await refresh();
+  };
+
+  /**
+   * Interrompt le géocodage en cours
+   */
+  const handleCancelGeocoding = () => {
+    geocodingCancelledRef.current = true;
   };
 
   return (
@@ -176,12 +197,22 @@ export function MapPage() {
                   {geocodingProgress.current}/{geocodingProgress.total}
                 </span>
                 <span className="animate-spin text-indigo-400">⏳</span>
+                <button
+                  onClick={handleCancelGeocoding}
+                  className="btn px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors text-sm font-medium"
+                  title="Arrêter le géocodage"
+                >
+                  Arrêter
+                </button>
               </div>
             )}
 
             {/* Résultat */}
-            {geocodingStatus === "completed" && geocodingStats && (
+            {(geocodingStatus === "completed" || geocodingStatus === "cancelled") && geocodingStats && (
               <div className="text-sm">
+                {geocodingStatus === "cancelled" && (
+                  <span className="text-yellow-400 mr-2">⏹️ Interrompu</span>
+                )}
                 <span className="text-green-400">
                   ✅ {geocodingStats.success} géocodées
                 </span>

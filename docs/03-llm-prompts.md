@@ -315,34 +315,17 @@ const OPENAI_MODELS = [
     pricing: "~0.15$/1M tokens"
   },
   {
-    id: "gpt-4o",
-    name: "GPT-4o",
-    description: "Plus puissant, plus cher",
-    pricing: "~2.50$/1M tokens"
-  },
-  {
-    id: "gpt-4-turbo",
-    name: "GPT-4 Turbo",
-    description: "Version turbo de GPT-4",
-    pricing: "~10$/1M tokens"
-  },
-  {
     id: "gpt-3.5-turbo",
     name: "GPT-3.5 Turbo",
     description: "Ancien modèle, très économique",
     pricing: "~0.50$/1M tokens"
-  },
-  {
-    id: "o3-mini",
-    name: "O3 Mini",
-    description: "Modèle de raisonnement économique",
-    pricing: "~1.10$/1M tokens"
   }
 ];
 
 const OPENAI_CONFIG = {
-  // Conformément aux clarifications : le modèle est OpenAI et orienté coût.
-  // Le modèle reste configurable dans les Paramètres, avec affichage indicatif des prix.
+  // Conformément aux clarifications : modèles OpenAI + orientés coût.
+  // La liste proposée à l'utilisateur privilégie les modèles économiques (<= ~0.50$/1M tokens),
+  // avec affichage indicatif du prix.
   model: settings.openaiModel || "gpt-5-nano",
   temperature: 0.1, // Faible pour extraction précise
   max_tokens: 2000,

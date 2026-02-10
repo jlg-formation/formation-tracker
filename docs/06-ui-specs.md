@@ -121,16 +121,17 @@ Objectif : visualiser les formations **données par le passé** (avec option d'a
 
 ### Fonctionnalités carte
 
-| Fonctionnalité       | Description                                                                                                   |
-| -------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Clustering**       | Regroupement des marqueurs proches (Leaflet.markercluster)                                                    |
-| **Popup**            | Au clic sur marqueur : nom lieu, nb formations, liste courte                                                  |
-| **Zoom**             | Contrôles zoom + molette souris                                                                               |
-| **Filtres**          | Filtre dynamique des marqueurs                                                                                |
-| **Filtre période**   | Sélection : formations **passées**, **futures**, ou **les deux** (par défaut : **passées**)                   |
-| **Centrage France**  | Vue initiale centrée sur la France                                                                            |
-| **Données GPS**      | Les marqueurs utilisent les coordonnées GPS stockées pour chaque formation (géocodage ou correction manuelle) |
-| **Couleur marqueur** | Vert pour les formations **futures**, bleu pour les formations **passées**                                    |
+| Fonctionnalité        | Description                                                                                                    |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Clustering**        | Regroupement des marqueurs proches (Leaflet.markercluster)                                                     |
+| **Popup**             | Au clic sur marqueur : nom lieu, nb formations, liste courte                                                   |
+| **Zoom**              | Contrôles zoom + molette souris                                                                                |
+| **Filtres**           | Filtre dynamique des marqueurs                                                                                 |
+| **Filtre période**    | Sélection : formations **passées**, **futures**, ou **les deux** (par défaut : **passées**)                    |
+| **Centrage France**   | Vue initiale centrée sur la France                                                                             |
+| **Données GPS**       | Les marqueurs utilisent les coordonnées GPS stockées pour chaque formation (géocodage ou correction manuelle)  |
+| **Couleur marqueur**  | Vert pour les formations **futures**, bleu pour les formations **passées**                                     |
+| **Relance géocodage** | Action « Relancer le géocodage » : retente les échecs (`gps` manquant) et ré-appelle le provider (clarif. 012) |
 
 ### Popup marqueur
 
@@ -387,9 +388,8 @@ Objectifs :
 │  │                  ├─ GPT-4.1 Nano (~0.10$/1M)                           │  │
 │  │                  ├─ GPT-4o Mini (~0.15$/1M)                            │  │
 │  │                  ├─ GPT-3.5 Turbo (~0.50$/1M)                          │  │
-│  │                  └─ ... (autres modèles plus chers)                    │  │
 │  │                                                                        │  │
-│  │  ℹ️ Privilégier les modèles économiques (< 0.50$/1M tokens)             │  │
+│  │  ℹ️ Liste limitée aux modèles économiques (≈ <= 0.50$/1M tokens)         │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │

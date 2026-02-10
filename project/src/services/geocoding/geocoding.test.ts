@@ -16,6 +16,7 @@ import {
   geocodeAddress,
   geocodeBatch,
   clearGeocache,
+  clearFailedGeocacheEntries,
   getGeocacheStats,
   preloadKnownLocations
 } from "./index";
@@ -328,6 +329,92 @@ describe("Geocoding Service", () => {
       const count2 = await preloadKnownLocations();
 
       expect(count2).toBe(0);
+    });
+  });
+
+  // ===========================================================================
+  // Tests clearFailedGeocacheEntries
+  // ===========================================================================
+
+  describe("clearFailedGeocacheEntries", () => {
+    it("supprime les entrées en échec (gps === null)", async () => {
+      // Ajouter des entrées réussies et échouées
+      await db.geocache.put({
+        adresse: "adresse-succes",
+        gps: { lat: 48.5, lng: 2.3 },
+        provider: "nominatim",
+        cachedAt: new Date().toISOString()
+      });
+      await db.geocache.put({
+        adresse: "adresse-echec-1",
+        gps: null,
+        provider: "nominatim",
+        cachedAt: new Date().toISOString()
+      });
+      await db.geocache.put({
+        adresse: "adresse-echec-2",
+        gps: null,
+        provider: "nominatim",
+        cachedAt: new Date().toISOString()
+      });
+
+      // Vérifier l'état initial
+      const totalBefore = await db.geocache.count();
+      expect(totalBefore).toBe(3);
+
+      // Supprimer les échecs
+      const deletedCount = await clearFailedGeocacheEntries();
+      expect(deletedCount).toBe(2);
+
+      // Vérifier qu'il ne reste que l'entrée réussie
+      const totalAfter = await db.geocache.count();
+      expect(totalAfter).toBe(1);
+
+      const successEntry = await db.geocache.get("adresse-succes");
+      expect(successEntry).not.toBeNull();
+      expect(successEntry?.gps?.lat).toBe(48.5);
+
+      const failedEntry = await db.geocache.get("adresse-echec-1");
+      expect(failedEntry).toBeUndefined();
+    });
+
+    it("retourne 0 si aucune entrée en échec", async () => {
+      // Ajouter uniquement des entrées réussies
+      await db.geocache.put({
+        adresse: "adresse-succes",
+        gps: { lat: 48.5, lng: 2.3 },
+        provider: "nominatim",
+        cachedAt: new Date().toISOString()
+      });
+
+      const deletedCount = await clearFailedGeocacheEntries();
+      expect(deletedCount).toBe(0);
+
+      const total = await db.geocache.count();
+      expect(total).toBe(1);
+    });
+
+    it("permet de retenter le géocodage après suppression", async () => {
+      const address = "adresse-test-retry";
+
+      // Simuler un échec initial
+      await db.geocache.put({
+        adresse: address,
+        gps: null,
+        provider: "nominatim",
+        cachedAt: new Date().toISOString()
+      });
+
+      // Vérifier que geocodeAddress retourne null (depuis le cache)
+      const resultBefore = await geocodeAddress(address);
+      expect(resultBefore).toBeNull();
+
+      // Supprimer les échecs
+      await clearFailedGeocacheEntries();
+
+      // L'entrée n'est plus en cache
+      const cached = await db.geocache.get(address);
+      expect(cached).toBeUndefined();
     });
   });
 });
