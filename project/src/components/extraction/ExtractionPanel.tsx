@@ -10,10 +10,8 @@ import { useGmailAuth } from "../../hooks/useGmailAuth";
 import {
   fetchAllMessageIds,
   getMessage,
-  getMessageMetadata,
   extractEmailHeaders,
-  extractEmailBody,
-  shouldExcludeEmail
+  extractEmailBody
 } from "../../services/gmail";
 import {
   analyzeEmailBatchWithCache,
@@ -190,7 +188,7 @@ export function ExtractionPanel() {
 
       let newEmails = 0;
       let skippedEmails = 0;
-      let filteredEmails = 0;
+      const filteredEmails = 0;
 
       for (let i = 0; i < messageIds.length; i++) {
         const messageId = messageIds[i];
@@ -209,23 +207,8 @@ export function ExtractionPanel() {
         }
 
         try {
-          // Filtrage à la source (clarification 010) :
-          // Récupérer d'abord les métadonnées (sujet) AVANT le contenu complet
-          // Les emails filtrés ne sont JAMAIS récupérés en entier ni stockés
-          const metadata = await getMessageMetadata(messageId);
-          const isExcluded = shouldExcludeEmail(metadata.subject);
-
-          if (isExcluded) {
-            // Email filtré : ne pas récupérer le contenu, ne pas stocker
-            filteredEmails++;
-            setState((prev) => ({
-              ...prev,
-              currentCount: i + 1,
-              filteredEmails,
-              message: `Téléchargement des emails... (${i + 1}/${messageIds.length})`
-            }));
-            continue;
-          }
+          // Clarification 010 : le filtrage doit être fait dès la recherche Gmail (paramètre q).
+          // Ici, on ne refiltre pas : les IDs exclus ne sont jamais listés.
 
           // Récupérer le contenu complet du message (uniquement si non filtré)
           const fullMessage = await getMessage(messageId);

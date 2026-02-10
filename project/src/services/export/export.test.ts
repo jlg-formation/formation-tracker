@@ -25,11 +25,15 @@ const mockAppendChild = vi.fn();
 const mockRemoveChild = vi.fn();
 const mockClick = vi.fn();
 
-const originalDocument = (globalThis as any).document;
-const originalURL = (globalThis as any).URL;
+const g = globalThis as unknown as {
+  document?: unknown;
+  URL?: unknown;
+};
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(globalThis as any).document = {
+const originalDocument = g.document;
+const originalURL = g.URL;
+
+g.document = {
   createElement: mockCreateElement.mockReturnValue({
     href: "",
     download: "",
@@ -39,19 +43,16 @@ const originalURL = (globalThis as any).URL;
     appendChild: mockAppendChild,
     removeChild: mockRemoveChild
   }
-};
+} as unknown;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(globalThis as any).URL = {
+g.URL = {
   createObjectURL: vi.fn(() => "blob:test"),
   revokeObjectURL: vi.fn()
-};
+} as unknown;
 
 afterAll(() => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).document = originalDocument;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).URL = originalURL;
+  g.document = originalDocument;
+  g.URL = originalURL;
 });
 
 // Formations de test

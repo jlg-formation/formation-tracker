@@ -384,4 +384,4 @@ Si `confidence < 0.7` sur la classification :
 
 1. **Cache** : Ne pas retraiter les emails déjà traités
 2. **Batch** : Possibilité de regrouper plusieurs emails (si API le supporte)
-3. **Filtrage à la source** : Certains emails sont exclus avant récupération depuis Gmail (ex. `Planning ORSYS Réactualisé`, `Demande Intra `). Voir [04-gmail-api.md](04-gmail-api.md#filtrage-à-la-source-avant-récupération)
+3. **Filtrage à la source** : Certains emails sont exclus **dès la recherche Gmail** (paramètre `q`, exclusions sur `subject`) avant toute récupération (ex. `Planning ORSYS Réactualisé`, `Demande Intra `). Voir [04-gmail-api.md](04-gmail-api.md#filtrage-à-la-source-avant-récupération)

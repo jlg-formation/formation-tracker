@@ -148,7 +148,28 @@ export function logout(): void {
 
 ```typescript
 // Tous les emails d'ORSYS depuis 2014
-const GMAIL_QUERY = "from:orsys.fr after:2014/01/01";
+// IMPORTANT : la réduction du volume doit se faire ici, dans la requête Gmail (q).
+// Les emails exclus ne doivent jamais être listés ni récupérés via l'API Gmail.
+const BASE_GMAIL_QUERY = "from:orsys.fr after:2014/01/01";
+
+// Patterns exacts : l'email est exclu si le sujet CONTIENT l'une de ces sous-chaînes.
+// (Gmail search ne supporte pas les regex; on utilise donc -subject:"..." pour exclure.
+// Voir clarification: input/clarifications/010-reduction-mails.md)
+const EXCLUDED_SUBJECT_CONTAINS = [
+  "Planning ORSYS Réactualisé",
+  "Demande Intra "
+];
+
+function escapeGmailQuotedTerm(term: string): string {
+  return term.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+export const GMAIL_QUERY = [
+  BASE_GMAIL_QUERY,
+  ...EXCLUDED_SUBJECT_CONTAINS.map(
+    (s) => `-subject:"${escapeGmailQuotedTerm(s)}"`
+  )
+].join(" ");
 ```
 
 ### Filtrage à la source (avant récupération)
@@ -166,27 +187,12 @@ Trop d'emails peuvent être extraits depuis Gmail, ce qui génère des appels LL
 
 - Les emails filtrés ne sont **jamais** récupérés depuis Gmail
 - Aucun stockage : ni cache, ni IndexedDB, ni mémoire applicative
-- Le filtrage s'effectue sur le `subject` du message lors du listing
+- Le filtre doit avoir lieu **dès la recherche/listing** (paramètre `q` de Gmail). **Jamais ensuite**.
 
 ```typescript
-// Filtrage à la source : emails à exclure (jamais récupérés)
-// Le filtrage s'applique lors du listing des messages Gmail
-const EXCLUDED_SUBJECT_PATTERNS = [
-  /Planning ORSYS Réactualisé/i,
-  /Demande Intra /i
-];
-
-function shouldExcludeEmail(subject: string): boolean {
-  return EXCLUDED_SUBJECT_PATTERNS.some((pattern) => pattern.test(subject));
-}
-
-// Utilisation lors du listing
-async function fetchEmailsFromGmail(): Promise<GmailMessage[]> {
-  const messages = await listMessages();
-
-  // Filtrer AVANT récupération du contenu complet
-  return messages.filter((msg) => !shouldExcludeEmail(msg.snippet));
-}
+// Implémentation attendue (à la source) : enrichir la query Gmail.
+// Exemple : from:orsys.fr after:2014/01/01 -subject:"Planning ORSYS Réactualisé" -subject:"Demande Intra "
+export const GMAIL_QUERY = `${BASE_GMAIL_QUERY} -subject:"Planning ORSYS Réactualisé" -subject:"Demande Intra "`;
 ```
 
 ### Listing des messages
@@ -397,11 +403,8 @@ export async function fetchNewEmails(
 
     for (const msg of response.messages || []) {
       if (!cachedIds.has(msg.id)) {
-        // Filtrage à la source : vérifier le snippet AVANT de récupérer le contenu
-        // Les emails exclus ne sont jamais récupérés ni stockés
-        if (shouldExcludeEmail(msg.snippet || "")) {
-          continue; // Ignorer complètement cet email
-        }
+        // IMPORTANT : le filtrage à la source est fait dans la requête Gmail (GMAIL_QUERY).
+        // À ce stade, on ne refiltre pas : les emails exclus n'ont jamais été listés.
 
         // Nouveau message, récupérer le contenu complet
         const fullMessage = await getMessage(msg.id);

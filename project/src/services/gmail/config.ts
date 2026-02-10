@@ -14,8 +14,12 @@ export const GMAIL_CONFIG = {
   /** URL de base de l'API Gmail */
   apiBase: "https://gmail.googleapis.com/gmail/v1",
 
-  /** Query pour filtrer les emails ORSYS depuis 2014 */
-  query: "from:orsys.fr after:2014/01/01",
+  /**
+   * Query Gmail (paramètre `q`) pour filtrer les emails ORSYS depuis 2014.
+   * IMPORTANT (clarification 010) : les exclusions doivent se faire ici, dès la recherche,
+   * afin que les emails filtrés ne soient jamais listés/récupérés ni stockés.
+   */
+  query: "",
 
   /** Nombre max de messages par requête */
   maxResults: 100,
@@ -30,23 +34,33 @@ export const GMAIL_CONFIG = {
 // =============================================================================
 
 /**
- * Patterns regex pour exclure certains emails à la source.
- * Ces emails ne sont jamais récupérés depuis Gmail, ni stockés dans IndexedDB.
- * Le filtrage s'applique sur le sujet de l'email.
+ * Sous-chaînes à exclure si le sujet CONTIENT le texte.
+ * La recherche Gmail ne supportant pas les regex côté serveur, on utilise `-subject:"..."`.
  */
-export const EXCLUDED_SUBJECT_PATTERNS: RegExp[] = [
-  /Planning ORSYS Réactualisé/i,
-  /Demande Intra /i
+export const EXCLUDED_SUBJECT_CONTAINS = [
+  "Planning ORSYS Réactualisé",
+  "Demande Intra "
 ];
 
-/**
- * Vérifie si un email doit être exclu à la source en fonction de son sujet.
- * @param subject Sujet de l'email
- * @returns true si l'email doit être exclu (jamais récupéré ni stocké)
- */
-export function shouldExcludeEmail(subject: string): boolean {
-  return EXCLUDED_SUBJECT_PATTERNS.some((pattern) => pattern.test(subject));
+function escapeGmailQuotedTerm(term: string): string {
+  return term.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
+
+/**
+ * Construit la query Gmail avec exclusions à la source.
+ * @param afterDate Date minimale au format YYYY/MM/DD (défaut: 2014/01/01)
+ */
+export function buildGmailQuery(afterDate: string = "2014/01/01"): string {
+  const baseQuery = `from:orsys.fr after:${afterDate}`;
+  const exclusions = EXCLUDED_SUBJECT_CONTAINS.map(
+    (s) => `-subject:"${escapeGmailQuotedTerm(s)}"`
+  ).join(" ");
+
+  return exclusions ? `${baseQuery} ${exclusions}` : baseQuery;
+}
+
+// Initialiser la query par défaut (2014/01/01)
+GMAIL_CONFIG.query = buildGmailQuery();
 
 // =============================================================================
 // Clés localStorage

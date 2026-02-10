@@ -11,8 +11,8 @@ export {
   getGoogleClientId,
   setGoogleClientId,
   clearGoogleClientId,
-  EXCLUDED_SUBJECT_PATTERNS,
-  shouldExcludeEmail
+  EXCLUDED_SUBJECT_CONTAINS,
+  buildGmailQuery
 } from "./config";
 
 // Authentification
@@ -31,7 +31,6 @@ export {
 export {
   listMessages,
   getMessage,
-  getMessageMetadata,
   extractEmailBody,
   extractEmailHeaders,
   fetchAllMessageIds,

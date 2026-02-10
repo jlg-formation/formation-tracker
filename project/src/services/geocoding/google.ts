@@ -29,6 +29,12 @@ function confidenceFromLocationType(locationType: unknown): number {
   }
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 export const googleAdapter: GeocodingAdapter = {
   name: "google",
 
@@ -63,21 +69,35 @@ export const googleAdapter: GeocodingAdapter = {
         return { gps: null };
       }
 
-      const data: any = await response.json();
+      const data: unknown = await response.json();
+      const dataObj = asRecord(data);
+      const status = dataObj?.status;
+      const resultsUnknown = dataObj?.results;
 
-      if (data?.status !== "OK" || !Array.isArray(data?.results)) {
-        console.warn(`Google geocoding: ${data?.status || "UNKNOWN"}`);
+      if (status !== "OK" || !Array.isArray(resultsUnknown)) {
+        console.warn(
+          `Google geocoding: ${typeof status === "string" ? status : "UNKNOWN"}`
+        );
         return { gps: null };
       }
 
-      if (data.results.length === 0) {
+      const results = resultsUnknown as unknown[];
+      if (results.length === 0) {
         return { gps: null };
       }
 
-      const result = data.results[0];
-      const location = result?.geometry?.location;
-      const lat = typeof location?.lat === "number" ? location.lat : null;
-      const lng = typeof location?.lng === "number" ? location.lng : null;
+      const resultObj = asRecord(results[0]);
+      const geometryObj = asRecord(resultObj?.geometry);
+      const locationObj = asRecord(geometryObj?.location);
+
+      const lat =
+        typeof locationObj?.lat === "number"
+          ? (locationObj.lat as number)
+          : null;
+      const lng =
+        typeof locationObj?.lng === "number"
+          ? (locationObj.lng as number)
+          : null;
 
       if (lat === null || lng === null) {
         return { gps: null };
@@ -86,10 +106,10 @@ export const googleAdapter: GeocodingAdapter = {
       return {
         gps: { lat, lng },
         formattedAddress:
-          typeof result?.formatted_address === "string"
-            ? result.formatted_address
+          typeof resultObj?.formatted_address === "string"
+            ? (resultObj.formatted_address as string)
             : undefined,
-        confidence: confidenceFromLocationType(result?.geometry?.location_type)
+        confidence: confidenceFromLocationType(geometryObj?.location_type)
       };
     } catch (error) {
       console.error("Google geocoding error:", error);

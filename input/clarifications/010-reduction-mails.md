@@ -21,3 +21,5 @@ Exclure les emails dont le sujet contient :
 
 - Les emails filtrés ne doivent **jamais** être récupérés depuis Gmail.
 - Aucun stockage : ni cache, ni IndexedDB, ni mémoire applicative.
+
+Le filtre doit avoir lieu des la recherche de mails. Jamais ensuite.

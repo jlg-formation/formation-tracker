@@ -8,6 +8,12 @@ import { getSettings } from "../../stores/settingsStore";
 
 const MAPBOX_GEOCODE_URL = "https://api.mapbox.com/geocoding/v5/mapbox.places";
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 async function getApiKey(): Promise<string | null> {
   const settings = await getSettings();
   const apiKey = settings.mapboxApiKey;
@@ -47,16 +53,23 @@ export const mapboxAdapter: GeocodingAdapter = {
         return { gps: null };
       }
 
-      const data: any = await response.json();
-      const features = Array.isArray(data?.features) ? data.features : [];
+      const data: unknown = await response.json();
+      const dataObj = asRecord(data);
+      const featuresUnknown = dataObj?.features;
+      const features = Array.isArray(featuresUnknown)
+        ? (featuresUnknown as unknown[])
+        : [];
       if (features.length === 0) {
         return { gps: null };
       }
 
-      const feature = features[0];
-      const center = Array.isArray(feature?.center) ? feature.center : null;
-      const lng = typeof center?.[0] === "number" ? center[0] : null;
-      const lat = typeof center?.[1] === "number" ? center[1] : null;
+      const featureObj = asRecord(features[0]);
+      const centerUnknown = featureObj?.center;
+      const center = Array.isArray(centerUnknown) ? centerUnknown : null;
+      const lng =
+        typeof center?.[0] === "number" ? (center[0] as number) : null;
+      const lat =
+        typeof center?.[1] === "number" ? (center[1] as number) : null;
 
       if (lat === null || lng === null) {
         return { gps: null };
@@ -65,11 +78,13 @@ export const mapboxAdapter: GeocodingAdapter = {
       return {
         gps: { lat, lng },
         formattedAddress:
-          typeof feature?.place_name === "string"
-            ? feature.place_name
+          typeof featureObj?.place_name === "string"
+            ? (featureObj.place_name as string)
             : undefined,
         confidence:
-          typeof feature?.relevance === "number" ? feature.relevance : 0.5
+          typeof featureObj?.relevance === "number"
+            ? (featureObj.relevance as number)
+            : 0.5
       };
     } catch (error) {
       console.error("Mapbox geocoding error:", error);

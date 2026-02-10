@@ -1,96 +1,30 @@
 /**
  * Tests pour la configuration Gmail et le filtrage des emails
- * Clarification 010 : filtrage par regex pour économiser les appels LLM
+ * Clarification 010 : filtrage à la source via la query Gmail (q)
  */
 
 import { describe, it, expect } from "vitest";
-import { shouldExcludeEmail, EXCLUDED_SUBJECT_PATTERNS } from "./config";
+import { buildGmailQuery, EXCLUDED_SUBJECT_CONTAINS } from "./config";
 
-describe("shouldExcludeEmail", () => {
-  describe("Emails à exclure (ne pas envoyer au LLM)", () => {
-    it("doit exclure 'Planning ORSYS Réactualisé'", () => {
-      expect(shouldExcludeEmail("Planning ORSYS Réactualisé")).toBe(true);
-      expect(
-        shouldExcludeEmail("Planning ORSYS Réactualisé - Février 2026")
-      ).toBe(true);
-      expect(shouldExcludeEmail("[Important] Planning ORSYS Réactualisé")).toBe(
-        true
-      );
-    });
-
-    it("doit exclure 'Planning ORSYS Réactualisé' (insensible à la casse)", () => {
-      expect(shouldExcludeEmail("planning orsys réactualisé")).toBe(true);
-      expect(shouldExcludeEmail("PLANNING ORSYS RÉACTUALISÉ")).toBe(true);
-    });
-
-    it("doit exclure 'Demande Intra '", () => {
-      expect(shouldExcludeEmail("Demande Intra - Formation Angular")).toBe(
-        true
-      );
-      expect(shouldExcludeEmail("Demande Intra Client ABC")).toBe(true);
-      expect(shouldExcludeEmail("Re: Demande Intra Formation")).toBe(true);
-    });
-
-    it("doit exclure 'Demande Intra ' (insensible à la casse)", () => {
-      expect(shouldExcludeEmail("demande intra formation")).toBe(true);
-      expect(shouldExcludeEmail("DEMANDE INTRA URGENTE")).toBe(true);
-    });
+describe("buildGmailQuery (clarification 010)", () => {
+  it("doit inclure la base query ORSYS", () => {
+    const q = buildGmailQuery();
+    expect(q).toContain("from:orsys.fr");
+    expect(q).toContain("after:2014/01/01");
   });
 
-  describe("Emails à garder (envoyer au LLM)", () => {
-    it("ne doit pas exclure les convocations inter", () => {
-      expect(shouldExcludeEmail("Confirmation animation inter - GIAPA1")).toBe(
-        false
-      );
-      expect(shouldExcludeEmail("Convocation formation inter")).toBe(false);
-    });
-
-    it("ne doit pas exclure les convocations intra", () => {
-      expect(
-        shouldExcludeEmail("Confirmation animation intra - ABC Corp")
-      ).toBe(false);
-      expect(shouldExcludeEmail("Convocation formation intra")).toBe(false);
-    });
-
-    it("ne doit pas exclure les annulations", () => {
-      expect(shouldExcludeEmail("SESSION ANNULEE - GIAPA1")).toBe(false);
-      expect(shouldExcludeEmail("Annulation formation")).toBe(false);
-    });
-
-    it("ne doit pas exclure les bons de commande", () => {
-      expect(shouldExcludeEmail("Bon de commande - Formation")).toBe(false);
-    });
-
-    it("ne doit pas exclure les émargements", () => {
-      expect(shouldExcludeEmail("Service suivi qualité inter")).toBe(false);
-      expect(shouldExcludeEmail("Feuille d'émargement")).toBe(false);
-    });
-
-    it("ne doit pas exclure les accusés de réception", () => {
-      expect(shouldExcludeEmail("Service Suivi Qualité Logistique")).toBe(
-        false
-      );
-    });
-
-    it("ne doit pas exclure 'DemandeIntra' (sans espace)", () => {
-      // Le pattern est "Demande Intra " avec un espace
-      expect(shouldExcludeEmail("DemandeIntra")).toBe(false);
-    });
-
-    it("ne doit pas exclure les sujets vides", () => {
-      expect(shouldExcludeEmail("")).toBe(false);
-    });
+  it('doit exclure les sujets configurés via -subject":..."', () => {
+    const q = buildGmailQuery();
+    for (const term of EXCLUDED_SUBJECT_CONTAINS) {
+      expect(q).toContain(`-subject:"${term}"`);
+    }
   });
 
-  describe("EXCLUDED_SUBJECT_PATTERNS", () => {
-    it("doit contenir exactement 2 patterns", () => {
-      expect(EXCLUDED_SUBJECT_PATTERNS).toHaveLength(2);
-    });
-
-    it("doit avoir des patterns RegExp valides", () => {
-      for (const pattern of EXCLUDED_SUBJECT_PATTERNS) {
-        expect(pattern).toBeInstanceOf(RegExp);
-      }
-    });
+  it("doit appliquer afterDate tout en conservant les exclusions", () => {
+    const q = buildGmailQuery("2026/01/01");
+    expect(q).toContain("after:2026/01/01");
+    for (const term of EXCLUDED_SUBJECT_CONTAINS) {
+      expect(q).toContain(`-subject:"${term}"`);
+    }
   });
 });

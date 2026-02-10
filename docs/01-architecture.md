@@ -98,7 +98,7 @@ Cette séparation permet de **relancer la fusion sans refaire l'analyse** (écon
 
 1. **Authentification Gmail** : OAuth 2.0 popup → token stocké
 2. **Requête Gmail** : `from:orsys.fr after:2014/01/01` → listing des emails
-3. **Filtrage à la source** : exclusion des emails non pertinents par regex sur le sujet (ex. `Planning ORSYS Réactualisé`, `Demande Intra `) → jamais récupérés ni stockés
+3. **Filtrage à la source** : exclusion des emails non pertinents **dès la requête Gmail** (paramètre `q`, exclusions sur le `subject` : ex. `Planning ORSYS Réactualisé`, `Demande Intra `) → jamais listés, jamais récupérés, jamais stockés
 4. **Récupération** : téléchargement du contenu des emails filtrés
 5. **Cache IndexedDB** : Les emails déjà téléchargés sont ignorés (économie API)
 6. **Classification LLM** : Chaque email est classifié (convocation, annulation, etc.)
