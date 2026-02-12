@@ -23,6 +23,10 @@ export function MapPage() {
 
   const [periode, setPeriode] = useState<PeriodeCarte>("passees");
 
+  const [mapDisplayMode, setMapDisplayMode] = useState<
+    "cluster" | "unclustered" | "jitter"
+  >("cluster");
+
   // État du géocodage
   const [geocodingStatus, setGeocodingStatus] =
     useState<GeocodingStatus>("idle");
@@ -248,6 +252,23 @@ export function MapPage() {
               <option value="les-deux">Les deux</option>
             </select>
           </label>
+
+          <label className="text-sm text-gray-300 flex items-center gap-2">
+            <span className="text-gray-400">Mode</span>
+            <select
+              value={mapDisplayMode}
+              onChange={(e) =>
+                setMapDisplayMode(
+                  e.target.value as "cluster" | "unclustered" | "jitter"
+                )
+              }
+              className="bg-[#16213e] border border-[#16213e] text-gray-200 rounded-md px-3 py-2 text-sm"
+            >
+              <option value="cluster">Clusterisé</option>
+              <option value="unclustered">Non clusterisé</option>
+              <option value="jitter">Non clusterisé avec jittering</option>
+            </select>
+          </label>
         </div>
       )}
 
@@ -296,6 +317,7 @@ export function MapPage() {
         <div className="h-[60vh] md:h-[65vh] lg:h-[70vh]">
           <MapView
             formations={formationsForMap}
+            displayMode={mapDisplayMode}
             onFormationSelect={(formation) =>
               navigate(`/formations/${formation.id}`)
             }

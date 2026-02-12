@@ -10,6 +10,7 @@ import L from "leaflet";
 import type { Formation } from "../../types";
 import { StatutFormation, TypeSession } from "../../types";
 import { getFormationTemporalStatus } from "../../utils/temporal";
+import { getJitteredLatLng } from "../../utils/mapJitter";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
@@ -32,6 +33,8 @@ L.Icon.Default.mergeOptions({
 interface MapViewProps {
   /** Liste des formations à afficher */
   formations: Formation[];
+  /** Mode d'affichage des marqueurs */
+  displayMode?: "cluster" | "unclustered" | "jitter";
   /** Callback quand une formation est sélectionnée */
   onFormationSelect?: (formation: Formation) => void;
   /** Hauteur de la carte (défaut: 100%) */
@@ -83,35 +86,31 @@ const pastPinIcon = createPinDivIcon("passee");
 const futurePinIcon = createPinDivIcon("future");
 
 /** Composant pour ajuster la vue de la carte aux marqueurs */
-function FitBounds({ formations }: { formations: Formation[] }) {
+function FitBounds({
+  positions
+}: {
+  positions: Array<{ lat: number; lng: number }>;
+}) {
   const map = useMap();
   const prevBoundsRef = useRef<string>("");
 
   useEffect(() => {
-    const validFormations = formations.filter(
-      (f) => f.lieu?.gps?.lat && f.lieu?.gps?.lng
-    );
-
-    if (validFormations.length === 0) return;
+    if (positions.length === 0) return;
 
     // Créer une clé unique pour les bounds actuelles
-    const boundsKey = validFormations
-      .map((f) => `${f.lieu.gps!.lat},${f.lieu.gps!.lng}`)
-      .join("|");
+    const boundsKey = positions.map((p) => `${p.lat},${p.lng}`).join("|");
 
     // Ne pas refaire le fit si les bounds n'ont pas changé
     if (boundsKey === prevBoundsRef.current) return;
     prevBoundsRef.current = boundsKey;
 
-    const bounds = L.latLngBounds(
-      validFormations.map((f) => [f.lieu.gps!.lat, f.lieu.gps!.lng])
-    );
+    const bounds = L.latLngBounds(positions.map((p) => [p.lat, p.lng]));
 
     map.fitBounds(bounds, {
       padding: [50, 50],
       maxZoom: 12
     });
-  }, [formations, map]);
+  }, [positions, map]);
 
   return null;
 }
@@ -159,6 +158,7 @@ function getTypeBadge(type: string): { text: string; className: string } {
  */
 export function MapView({
   formations,
+  displayMode = "cluster",
   onFormationSelect,
   height = "100%",
   className = ""
@@ -173,6 +173,59 @@ export function MapView({
         !isNaN(f.lieu.gps.lng)
     );
   }, [formations]);
+
+  const formationsForRender = useMemo(() => {
+    if (displayMode !== "jitter") return formationsWithGPS;
+
+    const byCoordKey = new Map<string, Formation[]>();
+    for (const formation of formationsWithGPS) {
+      const lat = formation.lieu!.gps!.lat;
+      const lng = formation.lieu!.gps!.lng;
+      const key = `${lat},${lng}`;
+      const arr = byCoordKey.get(key);
+      if (arr) arr.push(formation);
+      else byCoordKey.set(key, [formation]);
+    }
+
+    // Trier pour garantir un jitter stable (par id) à coords identiques
+    for (const list of byCoordKey.values()) {
+      list.sort((a, b) => a.id.localeCompare(b.id));
+    }
+
+    return formationsWithGPS.map((formation) => {
+      const lat = formation.lieu!.gps!.lat;
+      const lng = formation.lieu!.gps!.lng;
+      const key = `${lat},${lng}`;
+      const group = byCoordKey.get(key) ?? [formation];
+      const index = Math.max(
+        0,
+        group.findIndex((f) => f.id === formation.id)
+      );
+      const total = group.length;
+
+      if (total <= 1 || index === 0) return formation;
+
+      const jittered = getJitteredLatLng({ lat, lng, index, total });
+      return {
+        ...formation,
+        lieu: {
+          ...formation.lieu,
+          gps: {
+            ...formation.lieu!.gps!,
+            lat: jittered.lat,
+            lng: jittered.lng
+          }
+        }
+      };
+    });
+  }, [displayMode, formationsWithGPS]);
+
+  const displayedPositions = useMemo(() => {
+    return formationsForRender.map((f) => ({
+      lat: f.lieu!.gps!.lat,
+      lng: f.lieu!.gps!.lng
+    }));
+  }, [formationsForRender]);
 
   // Compter les lieux uniques (info seulement, le clustering gère la lisibilité)
   const uniqueLocationCount = useMemo(() => {
@@ -284,92 +337,183 @@ export function MapView({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <FitBounds formations={formationsWithGPS} />
+        <FitBounds positions={displayedPositions} />
 
-        <MarkerClusterGroup
-          chunkedLoading
-          iconCreateFunction={createClusterCustomIcon}
-          spiderfyOnMaxZoom
-          showCoverageOnHover={false}
-          zoomToBoundsOnClick
-        >
-          {formationsWithGPS.map((formation) => {
-            const temporalStatus = getFormationTemporalStatus(formation);
-            const markerVariant =
-              temporalStatus === "future" ? "future" : "passee";
+        {displayMode === "cluster" ? (
+          <MarkerClusterGroup
+            chunkedLoading
+            iconCreateFunction={createClusterCustomIcon}
+            spiderfyOnMaxZoom
+            showCoverageOnHover={false}
+            zoomToBoundsOnClick
+          >
+            {formationsForRender.map((formation) => {
+              const temporalStatus = getFormationTemporalStatus(formation);
+              const markerVariant =
+                temporalStatus === "future" ? "future" : "passee";
 
-            const statutBadge = getStatutBadge(formation.statut);
-            const typeBadge = getTypeBadge(formation.typeSession);
+              const statutBadge = getStatutBadge(formation.statut);
+              const typeBadge = getTypeBadge(formation.typeSession);
 
-            return (
-              <Marker
-                key={formation.id}
-                position={[formation.lieu!.gps!.lat, formation.lieu!.gps!.lng]}
-                icon={markerVariant === "future" ? futurePinIcon : pastPinIcon}
-                eventHandlers={{
-                  click: () => handleMarkerClick(formation)
-                }}
-              >
-                <Popup
-                  className="formation-popup"
-                  maxWidth={350}
-                  minWidth={280}
+              return (
+                <Marker
+                  key={formation.id}
+                  position={[
+                    formation.lieu!.gps!.lat,
+                    formation.lieu!.gps!.lng
+                  ]}
+                  icon={
+                    markerVariant === "future" ? futurePinIcon : pastPinIcon
+                  }
+                  eventHandlers={{
+                    click: () => handleMarkerClick(formation)
+                  }}
                 >
-                  <div className="p-1">
-                    {/* Lieu */}
-                    <div className="font-semibold text-gray-900 text-base mb-2">
-                      📍 {formation.lieu?.nom || formation.lieu?.adresse}
-                    </div>
-
-                    <div
-                      className="p-2 bg-gray-50 rounded border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => handleMarkerClick(formation)}
-                    >
-                      <div className="font-medium text-gray-800 text-sm leading-tight">
-                        {formation.titre}
+                  <Popup
+                    className="formation-popup"
+                    maxWidth={350}
+                    minWidth={280}
+                  >
+                    <div className="p-1">
+                      {/* Lieu */}
+                      <div className="font-semibold text-gray-900 text-base mb-2">
+                        📍 {formation.lieu?.nom || formation.lieu?.adresse}
                       </div>
 
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {formation.codeEtendu}
-                        {formation.codeFormation &&
-                          ` (${formation.codeFormation})`}
-                      </div>
-
-                      <div className="text-xs text-gray-600 mt-1">
-                        📅 {formatDate(formation.dateDebut)}
-                        {formation.dateDebut !== formation.dateFin && (
-                          <> → {formatDate(formation.dateFin)}</>
-                        )}
-                        <span className="ml-1 text-gray-400">
-                          ({formation.nombreJours}j)
-                        </span>
-                      </div>
-
-                      <div className="flex gap-1.5 mt-1.5">
-                        <span
-                          className={`text-xs px-1.5 py-0.5 rounded border ${typeBadge.className}`}
-                        >
-                          {typeBadge.text}
-                        </span>
-                        <span
-                          className={`text-xs px-1.5 py-0.5 rounded border ${statutBadge.className}`}
-                        >
-                          {statutBadge.text}
-                        </span>
-                      </div>
-
-                      {formation.client && (
-                        <div className="text-xs text-purple-600 mt-1">
-                          🏢 {formation.client}
+                      <div
+                        className="p-2 bg-gray-50 rounded border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => handleMarkerClick(formation)}
+                      >
+                        <div className="font-medium text-gray-800 text-sm leading-tight">
+                          {formation.titre}
                         </div>
-                      )}
+
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {formation.codeEtendu}
+                          {formation.codeFormation &&
+                            ` (${formation.codeFormation})`}
+                        </div>
+
+                        <div className="text-xs text-gray-600 mt-1">
+                          📅 {formatDate(formation.dateDebut)}
+                          {formation.dateDebut !== formation.dateFin && (
+                            <> → {formatDate(formation.dateFin)}</>
+                          )}
+                          <span className="ml-1 text-gray-400">
+                            ({formation.nombreJours}j)
+                          </span>
+                        </div>
+
+                        <div className="flex gap-1.5 mt-1.5">
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded border ${typeBadge.className}`}
+                          >
+                            {typeBadge.text}
+                          </span>
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded border ${statutBadge.className}`}
+                          >
+                            {statutBadge.text}
+                          </span>
+                        </div>
+
+                        {formation.client && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            🏢 {formation.client}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-        </MarkerClusterGroup>
+                  </Popup>
+                </Marker>
+              );
+            })}
+          </MarkerClusterGroup>
+        ) : (
+          <>
+            {formationsForRender.map((formation) => {
+              const temporalStatus = getFormationTemporalStatus(formation);
+              const markerVariant =
+                temporalStatus === "future" ? "future" : "passee";
+
+              const statutBadge = getStatutBadge(formation.statut);
+              const typeBadge = getTypeBadge(formation.typeSession);
+
+              return (
+                <Marker
+                  key={formation.id}
+                  position={[
+                    formation.lieu!.gps!.lat,
+                    formation.lieu!.gps!.lng
+                  ]}
+                  icon={
+                    markerVariant === "future" ? futurePinIcon : pastPinIcon
+                  }
+                  eventHandlers={{
+                    click: () => handleMarkerClick(formation)
+                  }}
+                >
+                  <Popup
+                    className="formation-popup"
+                    maxWidth={350}
+                    minWidth={280}
+                  >
+                    <div className="p-1">
+                      {/* Lieu */}
+                      <div className="font-semibold text-gray-900 text-base mb-2">
+                        📍 {formation.lieu?.nom || formation.lieu?.adresse}
+                      </div>
+
+                      <div
+                        className="p-2 bg-gray-50 rounded border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => handleMarkerClick(formation)}
+                      >
+                        <div className="font-medium text-gray-800 text-sm leading-tight">
+                          {formation.titre}
+                        </div>
+
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {formation.codeEtendu}
+                          {formation.codeFormation &&
+                            ` (${formation.codeFormation})`}
+                        </div>
+
+                        <div className="text-xs text-gray-600 mt-1">
+                          📅 {formatDate(formation.dateDebut)}
+                          {formation.dateDebut !== formation.dateFin && (
+                            <> → {formatDate(formation.dateFin)}</>
+                          )}
+                          <span className="ml-1 text-gray-400">
+                            ({formation.nombreJours}j)
+                          </span>
+                        </div>
+
+                        <div className="flex gap-1.5 mt-1.5">
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded border ${typeBadge.className}`}
+                          >
+                            {typeBadge.text}
+                          </span>
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded border ${statutBadge.className}`}
+                          >
+                            {statutBadge.text}
+                          </span>
+                        </div>
+
+                        {formation.client && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            🏢 {formation.client}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
+          </>
+        )}
       </MapContainer>
 
       {/* Légende */}
