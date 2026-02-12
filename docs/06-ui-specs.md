@@ -115,7 +115,7 @@ Le Dashboard affiche une section permettant de **lancer la fusion séparément d
 
 ## Page 2 : Carte
 
-Objectif : visualiser les formations **données par le passé** (avec option d'affichage des formations futures via un filtre).
+Objectif : visualiser les formations **données par le passé** (avec option d'affichage des formations futures via un filtre) et voir d'un coup d'œil tous les lieux où une formation a été donnée.
 
 ### Layout
 
@@ -124,7 +124,7 @@ Objectif : visualiser les formations **données par le passé** (avec option d'a
 │                                CARTE                                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │  Filtres: [Période ▼] [Année ▼] [Type ▼] [Statut ▼]   [Réinitialiser]│  │
+│  │  Filtres: [Période ▼] [Année ▼] [Type ▼] [Statut ▼] [Mode ▼] [Réinitialiser]│  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
@@ -148,17 +148,17 @@ Objectif : visualiser les formations **données par le passé** (avec option d'a
 
 ### Fonctionnalités carte
 
-| Fonctionnalité        | Description                                                                                                    |
-| --------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **Clustering**        | Regroupement des marqueurs proches (Leaflet.markercluster)                                                     |
-| **Popup**             | Au clic sur marqueur : nom lieu, nb formations, liste courte                                                   |
-| **Zoom**              | Contrôles zoom + molette souris                                                                                |
-| **Filtres**           | Filtre dynamique des marqueurs                                                                                 |
-| **Filtre période**    | Sélection : formations **passées**, **futures**, ou **les deux** (par défaut : **passées**)                    |
-| **Centrage France**   | Vue initiale centrée sur la France                                                                             |
-| **Données GPS**       | Les marqueurs utilisent les coordonnées GPS stockées pour chaque formation (géocodage ou correction manuelle)  |
-| **Couleur marqueur**  | Vert pour les formations **futures**, bleu pour les formations **passées**                                     |
-| **Relance géocodage** | Action « Relancer le géocodage » : retente les échecs (`gps` manquant) et ré-appelle le provider (clarif. 012) |
+| Fonctionnalité        | Description                                                                                                            |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Mode d'affichage**  | Menu déroulant avec 3 modes : **clusterisé** (affichage actuel), **non clusterisé**, **non clusterisé avec jittering** |
+| **Popup**             | Au clic sur marqueur : nom lieu, nb formations, liste courte                                                           |
+| **Zoom**              | Contrôles zoom + molette souris                                                                                        |
+| **Filtres**           | Filtre dynamique des marqueurs                                                                                         |
+| **Filtre période**    | Sélection : formations **passées**, **futures**, ou **les deux** (par défaut : **passées**)                            |
+| **Centrage France**   | Vue initiale centrée sur la France                                                                                     |
+| **Données GPS**       | Les marqueurs utilisent les coordonnées GPS stockées pour chaque formation (géocodage ou correction manuelle)          |
+| **Couleur marqueur**  | Vert pour les formations **futures**, bleu pour les formations **passées**                                             |
+| **Relance géocodage** | Action « Relancer le géocodage » : retente les échecs (`gps` manquant) et ré-appelle le provider (clarif. 012)         |
 
 ### Popup marqueur
 

@@ -177,7 +177,7 @@ project/src/
 │   ├── map/
 │   │   ├── MapView.tsx         # Page carte
 │   │   ├── FormationMarker.tsx # Marqueur Leaflet
-│   │   └── MarkerCluster.tsx   # Clustering
+│   │   └── MarkerCluster.tsx   # Mode clusterisé (clustering)
 │   │
 │   ├── formations/
 │   │   ├── FormationList.tsx   # Liste filtrable
